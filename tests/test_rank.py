@@ -16,3 +16,6 @@ class TestRank(TestCase):
 
     def test_order(self):
         self.assertEqual(4, Rank.TEN.order())
+
+    def test_greater_than(self):
+        self.assertGreater(Rank.ACE, Rank.JACK)
