@@ -4,4 +4,7 @@ class Player:
         self.name = name
 
     def __repr__(self):
-        pass
+        return f"{__class__.__name__}(\"{self.name}\")"
+
+    def __str__(self):
+        return self.name
