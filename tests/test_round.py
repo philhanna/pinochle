@@ -16,13 +16,12 @@ class TestRound(TestCase):
         pass
 
     def test_player_iterator(self):
-        dealer = Player("Dad")
-        round = Round(self.players, dealer)
-        limit = 10
-        for player in round.player_iterator():
-            print(player)
-            limit -= 1
-            if limit <= 0:
+        john, ellie, dad, mom = self.players
+        dealer = dad
+        actual = []
+        for player in Round(self.players, dealer).player_iterator():
+            actual.append(player)
+            if len(actual) == 6:
                 break
-        pass
-
+        expected = [mom, john, ellie, dad, mom, john]
+        self.assertListEqual(expected, actual)
