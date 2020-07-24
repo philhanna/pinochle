@@ -23,9 +23,13 @@ class Hand:
         return {k:list(g) for k, g in groupby(cards, key=lambda card: card.suit.value)}
 
     def __str__(self):
-        """ Prints the organized hand """
+        """ Prints the organized hand
+
+        The organized hand is a map of suit value (e.g., "Hearts")
+        to a descending list of cards of that suit
+        """
         entries = []
         for k, v in self.organized().items():
-            line = k + ":" + " ".join([card.rank.value for card in v])
+            line = ", ".join([card.rank.value for card in v]) + " of " + k
             entries.append(line)
-        return "\n".join(entries)
+        return ";".join(entries)

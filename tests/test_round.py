@@ -25,3 +25,11 @@ class TestRound(TestCase):
                 break
         expected = [mom, john, ellie, dad, mom, john]
         self.assertListEqual(expected, actual)
+
+    def test_deal(self):
+        john, ellie, dad, mom = self.players
+        dealer = john
+        round = Round(self.players, dealer)
+        round.deal()
+        for player in self.players:
+            self.assertEqual(12, len(player.hand.cards))
