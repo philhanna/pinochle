@@ -7,6 +7,6 @@ class TestCard(TestCase):
 
     def test_str(self):
         card = Card(Rank.QUEEN, Suit.SPADES)
-        expected = "Queen of spades"
+        expected = "queen of spades"
         actual = str(card)
         self.assertEqual(expected, actual)

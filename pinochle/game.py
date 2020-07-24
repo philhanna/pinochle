@@ -13,7 +13,7 @@ class Game:
         deck = Deck()
         deck.shuffle()
         loop_limit = 32
-        for _ in range(loop_limit):  # Limit to prevent runaway loop
+        for attempt in range(loop_limit):  # Limit to prevent runaway loop
             cards = deck.cards.copy() # Copy because we are going to remove cards
             players_choosing = defaultdict(list)
             for player in self.players:
