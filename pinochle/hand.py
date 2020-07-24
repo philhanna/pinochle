@@ -1,7 +1,5 @@
 from itertools import groupby
 
-from pinochle import Suit
-
 
 class Hand:
     """ The list of cards in a player's hand """
@@ -12,9 +10,11 @@ class Hand:
 
     @property
     def cards(self):
+        """ Returns the list of cards in the hand"""
         return self._cards
 
     def add(self, card):
+        """ Adds a card to the hand """
         self._cards.append(card)
 
     def organized(self):
@@ -23,6 +23,7 @@ class Hand:
         return {k:list(g) for k, g in groupby(cards, key=lambda card: card.suit.value)}
 
     def __str__(self):
+        """ Prints the organized hand """
         entries = []
         for k, v in self.organized().items():
             line = k + ":" + " ".join([card.rank.value for card in v])
