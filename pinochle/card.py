@@ -38,6 +38,7 @@ class CardParser:
 
         for ch in s.upper():
 
+            # To begin with, we are looking for the start of a rank name
             if state == 0:
                 if ch == '1':
                     state = 1
@@ -47,6 +48,7 @@ class CardParser:
                     rank = rankmap[ch]
                     state = 2
 
+            # After a "1", we are expecting a "0" to get a rank of TEN
             elif state == 1:
                 if ch == '0':
                     rank = Rank.TEN
@@ -54,6 +56,7 @@ class CardParser:
                 else:
                     return None
 
+            # After the rank is known, look for the first letter of a suit name
             elif state == 2:
                 if ch not in "HCDS":
                     return None
@@ -67,6 +70,7 @@ rankmap = {
     "J": Rank.JACK,
     "9": Rank.NINE
 }
+
 suitmap = {
     'H': Suit.HEARTS,
     'C': Suit.CLUBS,
