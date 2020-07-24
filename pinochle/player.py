@@ -16,6 +16,10 @@ class Player:
     def hand(self, value):
         self._hand = value
 
+    def choose_card(self, cards):
+        """ Chooses a card from a list """
+        return self.card_choosing_strategy.choose_card(cards)
+
     def __repr__(self):
         return f"{__class__.__name__}(\"{self.name}\")"
 

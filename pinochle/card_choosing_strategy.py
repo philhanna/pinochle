@@ -1,4 +1,4 @@
-from random import random
+from random import choice
 
 
 class CardChoosingStrategy:
@@ -6,4 +6,4 @@ class CardChoosingStrategy:
 
     def choose_card(self, cards):
         """ Chooses a card """
-        return random.choice(cards)
+        return choice(cards)

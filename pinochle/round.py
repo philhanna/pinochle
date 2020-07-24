@@ -53,5 +53,8 @@ class Round:
         Also, if only the first player bid, he has the the option
         to cancel.
         """
-        bids = { player:0 for player in self.players }
+        bids = { player:None for player in self.players }
+        bidding_round = 1
+        it = self.player_iterator()
+        first_bidder = next(it)
         pass
