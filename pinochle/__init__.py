@@ -2,7 +2,7 @@ __all__ = [
     'set_seed',
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
     'CardChoosingStrategy',
-    'Player'
+    'Player', 'Team'
 ]
 
 from random import seed as SEED
@@ -13,6 +13,7 @@ from .deck import Deck
 from .hand import Hand
 from .card_choosing_strategy import CardChoosingStrategy
 from .player import Player
+from .team import Team
 
 
 def set_seed(x):
