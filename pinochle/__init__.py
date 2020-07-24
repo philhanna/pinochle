@@ -1,3 +1,5 @@
+# Pinochle rules: https://en.wikipedia.org/wiki/Pinochle
+
 __all__ = [
     'set_seed',
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',

@@ -11,6 +11,18 @@ class Round:
         self.players = players
         self.dealer = dealer
 
+    def player_iterator(self):
+        """ Creates an iterator for the players that follow the dealer """
+
+        players = self.players
+        dealer = self.dealer
+        d = players.index(dealer)
+        if d == -1:
+            errmsg = f"Dealer {self.dealer} is not one of the players"
+            raise ValueError(errmsg)
+        d = (d + 1) % 4
+        return cycle(self.players[d:] + self.players[0:d])
+
     def deal(self):
         """ Deals each player a hand """
 
@@ -27,14 +39,19 @@ class Round:
             player = next(it)
             player.hand.add(card)
 
-    def player_iterator(self):
-        """ Creates an iterator for the players that follow the dealer """
+    def do_bidding(self):
+        """ Runs the bidding for this round.
 
-        players = self.players
-        dealer = self.dealer
-        d = players.index(dealer)
-        if d == -1:
-            errmsg = f"Dealer {self.dealer} is not one of the players"
-            raise ValueError(errmsg)
-        d = (d + 1) % 4
-        return cycle(self.players[d:] + self.players[0:d])
+        Bidding starts with the player to the dealer's left.
+        Opening bid must be 250 or greater.
+        Subsequent bids must be either:
+        - Pass, or
+        - A multiple of 10 that is greater than the previous bid
+        The bidding ends when all but one player has passed.
+        If all four players pass on the first go around, the
+        round is cancelled.
+        Also, if only the first player bid, he has the the option
+        to cancel.
+        """
+        bids = { player:0 for player in self.players }
+        pass
