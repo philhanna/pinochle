@@ -19,10 +19,7 @@ class Hand:
 
     def organized(self):
         """ Returns a map of suits to cards in that suit, descending """
-        def cardkey(card):
-            return card.suit.name, card.rank.order()
-
-        cards = sorted(self.cards, key=cardkey, reverse=True)
+        cards = sorted(self.cards, key=lambda x: (x.suit.name, x.rank.order()), reverse=True)
         return {k:list(g) for k, g in groupby(cards, key=lambda card: card.suit.value)}
 
     def __str__(self):
