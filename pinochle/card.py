@@ -91,6 +91,7 @@ class CardParser:
                 return None
             if state == State.GOT_IT:
                 return Card(rank, suit)
+        return None
 
 
 class State(IntEnum):
