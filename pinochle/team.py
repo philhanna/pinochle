@@ -4,3 +4,7 @@ class Team:
         self.player1 = player1
         self.player2 = player2
         self.score = 0
+
+    @property
+    def players(self):
+        return [self.player1, self.player1]

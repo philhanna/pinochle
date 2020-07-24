@@ -6,6 +6,15 @@ class Player:
     def __init__(self, name):
         self.name = name
         self.card_choosing_strategy = CardChoosingStrategy()
+        self.hand = None
+
+    @property
+    def hand(self):
+        return self._hand
+
+    @hand.setter
+    def hand(self, value):
+        self._hand = value
 
     def __repr__(self):
         return f"{__class__.__name__}(\"{self.name}\")"
