@@ -26,7 +26,6 @@ class TestRound(TestCase):
         self.assertListEqual(expected, actual)
 
     def test_bad_dealer(self):
-        john, ellie, dad, mom = self.players
         dealer = Player("somebody else")
         with self.assertRaises(ValueError):
             Round(self.players, dealer).deal()
