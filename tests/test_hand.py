@@ -12,7 +12,4 @@ class TestHand(TestCase):
         for i, card in enumerate(deck.cards):
             if i % 4 == 0:
                 hand.add(card)
-        suitmap = hand.organized()
-        for k, v in suitmap.items():
-            line = k + ":" + " ".join([card.rank.value for card in v])
-            print(line)
+        print(hand)

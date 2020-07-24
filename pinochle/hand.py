@@ -23,7 +23,11 @@ class Hand:
             return card.suit.name, card.rank.order()
 
         cards = sorted(self.cards, key=cardkey, reverse=True)
-        mymap = {}
-        for k, g in groupby(cards, key=lambda card: card.suit.value):
-            mymap[k] = list(g)
-        return mymap
+        return {k:list(g) for k, g in groupby(cards, key=lambda card: card.suit.value)}
+
+    def __str__(self):
+        entries = []
+        for k, v in self.organized().items():
+            line = k + ":" + " ".join([card.rank.value for card in v])
+            entries.append(line)
+        return "\n".join(entries)
