@@ -21,3 +21,9 @@ class Player:
 
     def __str__(self):
         return self.name
+
+    def hash(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name

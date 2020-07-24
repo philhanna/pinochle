@@ -7,4 +7,7 @@ class Team:
 
     @property
     def players(self):
-        return [self.player1, self.player1]
+        return [self.player1, self.player2]
+
+    def __str__(self):
+        return f"{self.player1} and {self.player2}"

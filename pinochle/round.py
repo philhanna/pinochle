@@ -6,10 +6,9 @@ from pinochle import Player, Team, Deck, Hand
 class Round:
     """ One round of play """
 
-    def __init__(self, teams, dealer):
+    def __init__(self, players, dealer):
         """ Starts a round """
-        self.teams = teams
-        self.players = [[player for player in team.players] for team in teams]
+        self.players = players
         self.dealer = dealer
 
     def deal(self):
@@ -31,7 +30,9 @@ class Round:
     def player_iterator(self):
         """ Creates an iterator for the players that follow the dealer """
 
-        d = self.players.index(self.dealer)
+        players = self.players
+        dealer = self.dealer
+        d = players.index(dealer)
         if d == -1:
             errmsg = f"Dealer {self.dealer} is not one of the players"
             raise ValueError(errmsg)
