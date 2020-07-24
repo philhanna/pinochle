@@ -1,6 +1,6 @@
 from itertools import cycle
 
-from pinochle import Player, Team, Deck, Hand
+from pinochle import Player, Deck, Hand
 
 
 class Round:

@@ -1,7 +1,6 @@
 from unittest import TestCase
 
-
-from pinochle import Round, Player, Team
+from pinochle import Round, Player
 
 
 class TestRound(TestCase):
