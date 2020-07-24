@@ -26,6 +26,12 @@ class TestRound(TestCase):
         expected = [mom, john, ellie, dad, mom, john]
         self.assertListEqual(expected, actual)
 
+    def test_bad_dealer(self):
+        john, ellie, dad, mom = self.players
+        dealer = Player("somebody else")
+        with self.assertRaises(ValueError):
+            Round(self.players, dealer).deal()
+
     def test_deal(self):
         john, ellie, dad, mom = self.players
         dealer = john
