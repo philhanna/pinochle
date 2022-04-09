@@ -16,8 +16,8 @@ class Card:
         return CardParser.parse(s)
 
     def __str__(self):
-        rankname = self.rank.fullname()
-        suitname = self.suit.value.lower()
+        rankname = self.rank.fullname().title()
+        suitname = self.suit.value.lower().title()
         output = f"{rankname} of {suitname}"
         return output
 
