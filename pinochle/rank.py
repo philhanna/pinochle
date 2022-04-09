@@ -1,6 +1,8 @@
+import functools
 from enum import Enum
 
 
+@functools.total_ordering
 class Rank(Enum):
     NINE = "9"
     JACK = "J"
@@ -23,20 +25,8 @@ class Rank(Enum):
     def __gt__(self, other):
         return self.compare(other) > 0
 
-    def __lt__(self, other):
-        return self.compare(other) < 0
-
     def __eq__(self, other):
         return self.compare(other) == 0
-
-    def __ge__(self, other):
-        return self.compare(other) >= 0
-
-    def __le__(self, other):
-        return self.compare(other) <= 0
-
-    def __ne__(self, other):
-        return self.compare(other) != 0
 
     def __hash__(self):
         return hash(self.name)
