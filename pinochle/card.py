@@ -16,6 +16,7 @@ class Card:
         return CardParser.parse(s)
 
     def __str__(self):
+        """ Gets the english language representation of this card with title case words """
         rankname = self.rank.fullname().title()
         suitname = self.suit.value.lower().title()
         output = f"{rankname} of {suitname}"
