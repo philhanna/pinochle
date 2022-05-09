@@ -1,9 +1,8 @@
+from itertools import cycle
+
+
 class Bidding:
-    pass
-
-def do_bidding(self):
-    """ Runs the bidding for this round.
-
+    """
     Bidding starts with the player to the dealer's left.
     Opening bid must be 250 or greater.
     Subsequent bids must be either:
@@ -15,8 +14,14 @@ def do_bidding(self):
     Also, if only the first player bid, he has the the option
     to cancel.
     """
-    bids = {player: None for player in self.players}
-    bidding_round = 1
-    it = self.player_iterator()
-    first_bidder = next(it)
-    pass
+    def __init__(self, players):
+        self.players = players
+        self.bids = {player: None for player in players}
+
+    def start(self):
+        """
+        Starts a round of bidding
+        """
+        round = 0
+        for player in cycle(self.players):
+            pass
