@@ -5,6 +5,7 @@ __all__ = [
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
     'CardChoosingStrategy',
     'Player',
+    'Bidding',
     'Round',
     'PASS',
     'Game'
@@ -18,6 +19,7 @@ from .deck import Deck
 from .hand import Hand
 from .card_choosing_strategy import CardChoosingStrategy
 from .player import Player
+from .bidding import Bidding
 from .round import Round
 from .game import Game
 

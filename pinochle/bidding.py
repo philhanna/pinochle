@@ -16,12 +16,11 @@ class Bidding:
     """
     def __init__(self, players):
         self.players = players
-        self.bids = {player: None for player in players}
+        self.bids = {player.name: None for player in players}
 
     def start(self):
         """
         Starts a round of bidding
         """
-        round = 0
         for player in cycle(self.players):
             pass
