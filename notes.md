@@ -14,4 +14,8 @@ At some point, each of these need to be done:
 - Start a game
 - Update score
 
+### Design issues
 So how does the round of play proceed?  The server doesn't "push".
+When a player makes a move, the "current player" property needs to be updated.
+How is this shown to the players?  Some kind of console?  But what
+causes the player web pages to be updated?
