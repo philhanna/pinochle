@@ -18,8 +18,7 @@ class Player:
         self._hand = value
 
     def make_bid(self, bidding):
-        hand = self.hand
-        return self.bidding_strategy.make_bid(hand, bidding)
+        return self.bidding_strategy.make_bid(self, bidding)
 
     def choose_card(self, cards):
         """ Chooses a card from a list """
