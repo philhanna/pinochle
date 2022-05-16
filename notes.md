@@ -2,8 +2,8 @@
 
 ### Player
 At some point, each of these need to be done:
-- Pass the server the player name
-- Make a bid (or pass)
+- (Constructor) Pass the server the player name
+- Make a bid (or pass) until everyone else passes
 - Choose trump
 - Pass cards to partner
 - Make meld

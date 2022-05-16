@@ -16,4 +16,3 @@ class TestBidding(TestCase):
 
     def test_bids(self):
         bidding = Bidding(self.players)
-        print(bidding.bids)
