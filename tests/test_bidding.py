@@ -12,7 +12,6 @@ class TestBidding(TestCase):
             Player("Dad"),
             Player("Mom"),
         ]
-        pass
 
     def test_bids(self):
-        bidding = Bidding(self.players)
+        pass

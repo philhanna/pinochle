@@ -3,7 +3,6 @@
 __all__ = [
     'set_seed',
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
-    'BiddingStrategy',
     'CardChoosingStrategy',
     'Player',
     'Bidding',
@@ -19,7 +18,6 @@ from .card import Card
 from .deck import Deck
 from .hand import Hand
 from .bidding import Bidding
-from .bidding_strategy import BiddingStrategy
 from .card_choosing_strategy import CardChoosingStrategy
 from .player import Player
 from .round import Round

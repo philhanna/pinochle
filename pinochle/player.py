@@ -1,11 +1,10 @@
-from pinochle import CardChoosingStrategy, BiddingStrategy
+from pinochle import CardChoosingStrategy
 
 
 class Player:
     """ One of the four players in the game """
     def __init__(self, name):
         self.name = name
-        self.bidding_strategy = BiddingStrategy()
         self.card_choosing_strategy = CardChoosingStrategy()
         self.hand = None
 
@@ -16,9 +15,6 @@ class Player:
     @hand.setter
     def hand(self, value):
         self._hand = value
-
-    def make_bid(self, bidding):
-        return self.bidding_strategy.make_bid(self, bidding)
 
     def choose_card(self, cards):
         """ Chooses a card from a list """

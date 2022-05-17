@@ -22,5 +22,4 @@ class Bidding:
         """
         Starts a round of bidding
         """
-        for player in cycle(self.players):
-            pass
+        pass
