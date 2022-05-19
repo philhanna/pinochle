@@ -32,7 +32,10 @@ class Player:
         self._hand = value
 
     def choose_card(self, cards):
-        """ Chooses a card from a list """
+        """ Chooses a card from a list. This is
+        at the beginning of the game when a dealer
+        is being chosen.
+        """
         return self._card_choosing_strategy.choose_card(cards)
 
     def __repr__(self):
