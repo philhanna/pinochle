@@ -1,7 +1,7 @@
 from random import choice
 
 
-class CardChoosingStrategy:
+class DealerChoosingStrategy:
     """ Given a list of cards, chooses one """
 
     def choose_card(self, cards):

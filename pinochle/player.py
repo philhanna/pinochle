@@ -1,4 +1,4 @@
-from pinochle import CardChoosingStrategy, BiddingStrategy, Hand
+from pinochle import DealerChoosingStrategy, BiddingStrategy, Hand
 
 
 class Player:
@@ -7,7 +7,7 @@ class Player:
     def __init__(self, name):
         self._name : str = name
         self._partner : Player = None
-        self._card_choosing_strategy : CardChoosingStrategy = CardChoosingStrategy()
+        self._card_choosing_strategy : DealerChoosingStrategy = DealerChoosingStrategy()
         self._bidding_strategy: BiddingStrategy = BiddingStrategy()
         self._hand : Hand = None
 
