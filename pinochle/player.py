@@ -1,4 +1,4 @@
-from pinochle import CardChoosingStrategy, Hand
+from pinochle import CardChoosingStrategy, BiddingStrategy, Hand
 
 
 class Player:
@@ -8,6 +8,7 @@ class Player:
         self._name : str = name
         self._partner : Player = None
         self._card_choosing_strategy : CardChoosingStrategy = CardChoosingStrategy()
+        self._bidding_strategy: BiddingStrategy = BiddingStrategy()
         self._hand : Hand = None
 
     @property

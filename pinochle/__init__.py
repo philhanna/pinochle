@@ -4,6 +4,7 @@ __all__ = [
     'set_seed',
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
     'CardChoosingStrategy',
+    'BiddingStrategy',
     'Player',
     'PASS',
     'Bidding',
@@ -21,6 +22,7 @@ from .card import Card
 from .deck import Deck
 from .hand import Hand
 from .card_choosing_strategy import CardChoosingStrategy
+from .bidding_strategy import BiddingStrategy
 from .player import Player
 from .bidding import Bidding
 from .round import Round
