@@ -11,7 +11,7 @@ class Bidding:
     The bidding ends when all but one player has passed.
     If all four players pass on the first go around, the
     round is canceled.
-    Also, if only the first player bid, he has the the option
+    Also, if only the first player bid, he has the option
     to cancel.
     """
     def __init__(self, players):
