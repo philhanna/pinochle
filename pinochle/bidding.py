@@ -20,6 +20,7 @@ class Bidding:
     Also, if only the first player bid, he has the option
     to cancel.
     """
+
     def __init__(self, players: List[Player], dealer: Player):
         if dealer not in players:
             raise ValueError(f"{dealer} is not in the list of players")
@@ -27,7 +28,7 @@ class Bidding:
         self.dealer = dealer
         self.bids = {player.name: [] for player in players}
 
-    def all_pass(self)-> bool :
+    def all_pass(self) -> bool:
         pass_count = 0
         for player in self.players:
             player_bids = self.bids[player.name]
