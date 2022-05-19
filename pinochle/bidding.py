@@ -29,6 +29,8 @@ class Bidding:
         self.bids = {player.name: [] for player in players}
 
     def all_pass(self) -> bool:
+        """ A boolean function that returns True if all players
+        have PASS as their last bid """
         pass_count = 0
         for player in self.players:
             player_bids = self.bids[player.name]
