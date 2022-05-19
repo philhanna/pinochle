@@ -17,9 +17,9 @@ from .rank import Rank
 from .card import Card
 from .deck import Deck
 from .hand import Hand
-from .bidding import Bidding
 from .card_choosing_strategy import CardChoosingStrategy
 from .player import Player
+from .bidding import Bidding
 from .round import Round
 from .game import Game
 

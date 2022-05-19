@@ -1,5 +1,9 @@
 from itertools import cycle
 
+from typing import List
+
+from pinochle import Player
+
 
 class Bidding:
     """
@@ -14,8 +18,11 @@ class Bidding:
     Also, if only the first player bid, he has the option
     to cancel.
     """
-    def __init__(self, players):
+    def __init__(self, players: List[Player], dealer: Player):
+        if dealer not in players:
+            raise ValueError(f"{dealer} is not in the list of players")
         self.players = players
+        self.dealer = dealer
         self.bids = {player.name: None for player in players}
 
     def start(self):
