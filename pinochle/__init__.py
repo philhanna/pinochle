@@ -5,11 +5,14 @@ __all__ = [
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
     'CardChoosingStrategy',
     'Player',
+    'PASS',
     'Bidding',
     'Round',
-    'PASS',
     'Game'
 ]
+
+# Define a constant for a bid of PASS
+PASS = -1
 
 from random import seed as SEED
 from .suit import Suit
@@ -31,5 +34,3 @@ def set_seed(x):
 
 set_seed(None)
 
-# Define a constant for a bid of PASS
-PASS = -1

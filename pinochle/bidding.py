@@ -2,7 +2,7 @@ from itertools import cycle
 
 from typing import List
 
-from pinochle import Player
+from pinochle import Player, PASS
 
 
 class Bidding:
@@ -25,10 +25,12 @@ class Bidding:
             raise ValueError(f"{dealer} is not in the list of players")
         self.players = players
         self.dealer = dealer
-        self.bids = {player.name: None for player in players}
+        self.bids = {player.name: [] for player in players}
 
-    def start(self):
-        """
-        Starts a round of bidding
-        """
-        pass
+    def all_pass(self)-> bool :
+        pass_count = 0
+        for player in self.players:
+            player_bids = self.bids[player.name]
+            if player_bids and player_bids[-1] == PASS:
+                pass_count += 1
+        return pass_count == 4
