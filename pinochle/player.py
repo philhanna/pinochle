@@ -1,4 +1,6 @@
-from pinochle import DealerChoosingStrategy, BiddingStrategy, Hand
+from typing import Optional
+
+from pinochle import DealerChoosingStrategy, BiddingStrategy, Hand, Card
 
 
 class Player:
@@ -6,13 +8,13 @@ class Player:
 
     def __init__(self, name):
         self._name : str = name
-        self._partner : Player = None
+        self._partner : Optional[Player] = None
         self._card_choosing_strategy : DealerChoosingStrategy = DealerChoosingStrategy()
         self._bidding_strategy: BiddingStrategy = BiddingStrategy()
-        self._hand : Hand = None
+        self._hand : Optional[Hand] = None
 
     @property
-    def name(self):
+    def name(self) -> str:
         return self._name
 
     @property
@@ -31,21 +33,21 @@ class Player:
     def hand(self, value):
         self._hand = value
 
-    def choose_card(self, cards):
-        """ Chooses a card from a list. This is
-        at the beginning of the game when a dealer
-        is being chosen.
+    def choose_card(self, cards) -> Card :
+        """ Chooses a card from a list. This is at the beginning of the game
+        when a dealer is being chosen.
         """
-        return self._card_choosing_strategy.choose_card(cards)
+        card: Card = self._card_choosing_strategy.choose_card(cards)
+        return card
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{__class__.__name__}(\"{self._name}\")"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._name
 
-    def hash(self):
+    def hash(self) -> int:
         return hash(self._name)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.name == other.name
