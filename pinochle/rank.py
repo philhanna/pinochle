@@ -11,12 +11,12 @@ class Rank(Enum):
     TEN = "10"
     ACE = "A"
 
-    def order(self):
+    def order(self) -> int:
         for i, rank in enumerate(Rank):
             if rank.name == self.name:
                 return i
 
-    def fullname(self):
+    def fullname(self) -> str:
         return ["nine", "jack", "queen", "king", "ten", "ace"][self.order()]
 
     def compare(self, other):
