@@ -11,24 +11,24 @@ class Card:
         self.suit: Suit = suit
 
     @staticmethod
-    def parse(s):
-        """ Parses the input string for a card name """
+    def parse(s) -> "Card":
+        """ Parses the input string for a card object """
         return CardParser.parse(s)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return self.__str__()
 
-    def __str__(self):
+    def __str__(self) -> str:
         """ Gets the english language representation of this card with title case words """
         rankname: str = self.rank.fullname().title()
         suitname: str = self.suit.value.lower().title()
         output: str = f"{rankname} of {suitname}"
         return output
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.rank == other.rank and self.suit == other.suit
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.rank) ^ hash(self.suit)
 
 
@@ -36,7 +36,7 @@ class CardParser:
     """ Parses an input string for a card name """
 
     @staticmethod
-    def parse(s: str) -> Optional[Card] :
+    def parse(s: str) -> Optional[Card]:
         rank: Optional[Rank] = None
         state: int = 0
 
