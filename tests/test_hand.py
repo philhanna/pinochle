@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from pinochle import Hand, Deck, Suit
+from pinochle import Hand, Deck, Suit, CardParser
 
 
 class TestHand(TestCase):
@@ -27,3 +27,8 @@ class TestHand(TestCase):
         # All we can do here is check that at least one suit name
         # is mentioned in the string
         self.assertTrue(any([suit.value in actual for suit in Suit]))
+
+    def test_with_initial_cards(self):
+        cards = [CardParser.parse(cardname) for cardname in ["As", "10d", "QS", "JD"]]
+        hand = Hand(cards)
+        self.assertEqual(4, len(hand.cards))
