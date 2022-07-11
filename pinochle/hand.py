@@ -1,12 +1,18 @@
 from itertools import groupby
+from typing import Optional, List
+
+from pinochle import Card
 
 
 class Hand:
     """ The list of cards in a player's hand """
 
-    def __init__(self):
+    def __init__(self, cards: Optional[List[Card]] = None):
         """ We use a list rather than a set because there can be duplicates """
         self._cards = []
+        if cards:
+            for card in cards:
+                self._cards.append(card)
 
     @property
     def cards(self):
