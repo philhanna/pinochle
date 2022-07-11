@@ -1,3 +1,5 @@
+from typing import Optional, Dict
+
 from pinochle import Rank, Suit
 
 
@@ -5,8 +7,8 @@ class Card:
     """ A card in the pinochle deck """
 
     def __init__(self, rank: Rank, suit: Suit):
-        self.rank = rank
-        self.suit = suit
+        self.rank: Rank = rank
+        self.suit: Suit = suit
 
     @staticmethod
     def parse(s):
@@ -15,9 +17,9 @@ class Card:
 
     def __str__(self):
         """ Gets the english language representation of this card with title case words """
-        rankname = self.rank.fullname().title()
-        suitname = self.suit.value.lower().title()
-        output = f"{rankname} of {suitname}"
+        rankname: str = self.rank.fullname().title()
+        suitname: str = self.suit.value.lower().title()
+        output: str = f"{rankname} of {suitname}"
         return output
 
     def __eq__(self, other):
@@ -31,9 +33,9 @@ class CardParser:
     """ Parses an input string for a card name """
 
     @staticmethod
-    def parse(s):
-        rank = None
-        state = 0
+    def parse(s: str) -> Optional[Card] :
+        rank: Optional[Rank] = None
+        state: int = 0
 
         for ch in s.upper():
 
@@ -62,7 +64,7 @@ class CardParser:
                 return Card(rank, suitmap[ch])
 
 
-rankmap = {
+rankmap: Dict[str, Rank] = {
     "A": Rank.ACE,
     "K": Rank.KING,
     "Q": Rank.QUEEN,
@@ -70,7 +72,7 @@ rankmap = {
     "9": Rank.NINE
 }
 
-suitmap = {
+suitmap: Dict[str, Suit] = {
     'H': Suit.HEARTS,
     'C': Suit.CLUBS,
     'D': Suit.DIAMONDS,
