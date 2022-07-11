@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pinochle import DealerChoosingStrategy, BiddingStrategy, Hand, Card
 
@@ -33,7 +33,7 @@ class Player:
     def hand(self, value):
         self._hand = value
 
-    def choose_card(self, cards) -> Card :
+    def choose_card(self, cards: List[Card]) -> Card :
         """ Chooses a card from a list. This is at the beginning of the game
         when a dealer is being chosen.
         """

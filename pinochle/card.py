@@ -15,6 +15,9 @@ class Card:
         """ Parses the input string for a card name """
         return CardParser.parse(s)
 
+    def __repr__(self):
+        return self.__str__()
+
     def __str__(self):
         """ Gets the english language representation of this card with title case words """
         rankname: str = self.rank.fullname().title()

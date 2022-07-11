@@ -3,6 +3,7 @@
 __all__ = [
     'set_seed',
     'Suit', 'Rank', 'Card', 'Deck', 'Hand',
+    'CardParser',
     'DealerChoosingStrategy',
     'BiddingStrategy',
     'Player',
@@ -18,7 +19,7 @@ PASS = -1
 from random import seed as SEED
 from .suit import Suit
 from .rank import Rank
-from .card import Card
+from .card import Card, CardParser
 from .deck import Deck
 from .hand import Hand
 from .dealer_choosing_strategy import DealerChoosingStrategy
