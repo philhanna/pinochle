@@ -9,7 +9,7 @@ class Player:
     def __init__(self, name):
         self._name : str = name
         self._partner : Optional[Player] = None
-        self._card_choosing_strategy : DealerChoosingStrategy = DealerChoosingStrategy()
+        self._dealer_choosing_strategy : DealerChoosingStrategy = DealerChoosingStrategy()
         self._bidding_strategy: BiddingStrategy = BiddingStrategy()
         self._hand : Optional[Hand] = None
 
@@ -37,7 +37,7 @@ class Player:
         """ Chooses a card from a list. This is at the beginning of the game
         when a dealer is being chosen.
         """
-        card: Card = self._card_choosing_strategy.choose_card(cards)
+        card: Card = self._dealer_choosing_strategy.choose_card(cards)
         return card
 
     def __repr__(self) -> str:
