@@ -28,6 +28,14 @@ class Bidding:
         self.dealer: Player = dealer
         self.bids: Dict[str, List[int]] = {player.name: [] for player in players}
 
+    def player_to_dealers_left(self) -> Player:
+        k: int = self.players.index(self.dealer)
+        km1 = k - 1
+        if km1 < 0:
+            km1 += len(self.players)
+        player = self.players[km1]
+        return  player
+
     def all_pass(self) -> bool:
         """ A boolean function that returns True if all players
         have PASS as their last bid """

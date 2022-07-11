@@ -13,6 +13,13 @@ class TestBidding(TestCase):
             Player("Mom"),
         ]
 
+    def test_player_to_dealers_left(self):
+        dealer = Player("John")
+        bidding = Bidding(self.players, dealer)
+        expected = Player("Mom")
+        actual = bidding.player_to_dealers_left()
+        self.assertEqual(expected, actual)
+
     def test_pass_init(self):
         bidding = Bidding(self.players, self.players[0])
         self.assertFalse(bidding.all_pass())
