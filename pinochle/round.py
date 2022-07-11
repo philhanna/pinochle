@@ -1,4 +1,5 @@
 from itertools import cycle
+from typing import List
 
 from pinochle import Player, Deck, Hand
 
@@ -6,10 +7,10 @@ from pinochle import Player, Deck, Hand
 class Round:
     """ One round of play """
 
-    def __init__(self, players:list, dealer:Player):
+    def __init__(self, players: List[Player], dealer: Player):
         """ Starts a round """
-        self.players = players
-        self.dealer = dealer
+        self.players: List[Player] = players
+        self.dealer: Player = dealer
 
     def player_iterator(self):
         """ Creates an iterator for the players that follow the dealer """
