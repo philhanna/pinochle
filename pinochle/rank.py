@@ -17,7 +17,7 @@ class Rank(Enum):
                 return i
 
     def fullname(self) -> str:
-        return ["nine", "jack", "queen", "king", "ten", "ace"][self.order()]
+        return ["Nine", "Jack", "Queen", "King", "10", "Ace"][self.order()]
 
     def compare(self, other):
         return self.order() - other.order()

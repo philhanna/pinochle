@@ -7,5 +7,3 @@ class Suit(Enum):
     CLUBS = "Clubs"
     DIAMONDS = "Diamonds"
     SPADES = "Spades"
-
-
