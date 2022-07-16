@@ -26,6 +26,10 @@ class Player:
     def add_card_to_hand(self, card: Card) -> None:
         self._cards.append(card)
 
+    @property
+    def cards(self):
+        return self._cards
+
     def __repr__(self) -> str:
         return f"{__class__.__name__}(\"{self._name}\")"
 
