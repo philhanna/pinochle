@@ -1,7 +1,6 @@
 from typing import Optional, Dict
 
-from pinochle import Rank, Suit
-
+from pinochle import Suit, Rank
 
 class Card:
     """ A card in the pinochle deck """

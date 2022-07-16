@@ -1,17 +1,15 @@
 from typing import Optional, List
 
-from pinochle import DealerChoosingStrategy, BiddingStrategy, Hand, Card
+from pinochle import Card
 
 
 class Player:
     """ One of the four players in the game """
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         self._name : str = name
-        self._partner : Optional[Player] = None
-        self._dealer_choosing_strategy : DealerChoosingStrategy = DealerChoosingStrategy()
-        self._bidding_strategy: BiddingStrategy = BiddingStrategy()
-        self._hand : Optional[Hand] = None
+        self._partner : Optional["Player"] = None
+        self._cards : List[Card] = []
 
     @property
     def name(self) -> str:
@@ -22,23 +20,11 @@ class Player:
         return self._partner
 
     @partner.setter
-    def partner(self, value):
+    def partner(self, value: "Player"):
         self._partner = value
 
-    @property
-    def hand(self):
-        return self._hand
-
-    @hand.setter
-    def hand(self, value):
-        self._hand = value
-
-    def choose_card(self, cards: List[Card]) -> Card :
-        """ Chooses a card from a list. This is at the beginning of the game
-        when a dealer is being chosen.
-        """
-        card: Card = self._dealer_choosing_strategy.choose_card(cards)
-        return card
+    def add_card_to_hand(self, card: Card) -> None:
+        self._cards.append(card)
 
     def __repr__(self) -> str:
         return f"{__class__.__name__}(\"{self._name}\")"

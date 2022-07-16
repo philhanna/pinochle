@@ -1,5 +1,15 @@
 ## Client behavior
 
+### Administrator
+- Accepts the list of players and assigns partners
+- Start a game
+- Update score
+
+### Game
+- Starts with a list of players
+- Choose the first dealer, the one who has
+picked the high card.
+- 
 ### Player
 At some point, each of these need to be done:
 - (Constructor) Pass the server the player name
@@ -8,11 +18,6 @@ At some point, each of these need to be done:
 - Pass cards to partner
 - Make meld
 - Select card to play (repeat until done)
-
-### Administrator
-- Select partners for players
-- Start a game
-- Update score
 
 ### Design issues
 So how does the round of play proceed?  The server doesn't "push".

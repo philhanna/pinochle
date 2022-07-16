@@ -1,8 +1,8 @@
-import functools
 from enum import Enum
+from functools import total_ordering
 
 
-@functools.total_ordering
+@total_ordering
 class Rank(Enum):
     NINE = "9"
     JACK = "J"
