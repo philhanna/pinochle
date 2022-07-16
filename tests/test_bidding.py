@@ -14,6 +14,13 @@ class TestBidding(TestCase):
         ]
 
     def test_player_to_dealers_left(self):
+        dealer = Player("Dad")
+        bidding = Bidding(self.players, dealer)
+        expected = Player("Ellie")
+        actual = bidding.player_to_dealers_left()
+        self.assertEqual(expected, actual)
+
+    def test_player_to_dealers_left_special_case(self):
         dealer = Player("John")
         bidding = Bidding(self.players, dealer)
         expected = Player("Mom")
