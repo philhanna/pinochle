@@ -14,4 +14,3 @@ class TestPlayer(TestCase):
         player = Player("John")
         player.add_card_to_hand(CardParser.parse("QS"))
         player.add_card_to_hand(CardParser.parse("JD"))
-        print(player.cards)

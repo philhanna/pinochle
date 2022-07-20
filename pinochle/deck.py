@@ -16,3 +16,8 @@ class Deck:
 
     def shuffle(self):
         random.shuffle(self._cards)
+
+    def __repr__(self):
+        cardlist = [str(card) for card in self.cards]
+        value = ", ".join(cardlist)
+        return value
