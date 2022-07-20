@@ -8,7 +8,7 @@ __all__ = [
     "CardParser",
     "Player",
     'PASS',
-    "deck.py"
+    "Deck"
 ]
 
 # Define a constant for a bid of PASS
