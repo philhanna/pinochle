@@ -10,6 +10,6 @@ class Deck:
         self._cards: List = [Card(rank, suit) for rank in Rank for suit in Suit] * 2
         print(self._cards)
 
-   @property
+    @property
     def cards(self):
         return self._cards
