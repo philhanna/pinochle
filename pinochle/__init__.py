@@ -8,6 +8,7 @@ __all__ = [
     "CardParser",
     "Player",
     'PASS',
+    "deck.py"
 ]
 
 # Define a constant for a bid of PASS
@@ -18,6 +19,7 @@ from .suit import Suit
 from .rank import Rank
 from .card import Card, CardParser
 from .player import Player
+from .deck import Deck
 
 
 def set_seed(x):
