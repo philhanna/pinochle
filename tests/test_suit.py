@@ -6,21 +6,21 @@ from pinochle import Suit
 class TestSuit(TestCase):
 
     def test_order_hearts(self):
-        expected: int = 0
-        actual: int = Suit.HEARTS.order()
+        expected: str = "Hearts"
+        actual: str = str(Suit.HEARTS)
         self.assertEqual(expected, actual)
 
     def test_order_clubs(self):
-        expected: int = 1
-        actual: int = Suit.CLUBS.order()
+        expected: str = "Clubs"
+        actual: str = str(Suit.CLUBS)
         self.assertEqual(expected, actual)
 
     def test_order_diamonds(self):
-        expected: int = 2
-        actual: int = Suit.DIAMONDS.order()
+        expected: str = "Diamonds"
+        actual: str = str(Suit.DIAMONDS)
         self.assertEqual(expected, actual)
 
     def test_order_spades(self):
-        expected: int = 3
-        actual: int = Suit.SPADES.order()
+        expected: str = "Spades"
+        actual: str = str(Suit.SPADES)
         self.assertEqual(expected, actual)
