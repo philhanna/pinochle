@@ -13,6 +13,7 @@ class TestCard(TestCase):
         self.assertEqual("10 of Diamonds", card_name)
 
     def test_parser(self):
-        card_name = CardParser.parse("10 of Diamonds")
+        card: Card = CardParser.parse("10 of Diamonds")
+        self.assertEqual("10 of Diamonds", str(card))
 
 
