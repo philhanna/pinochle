@@ -1,3 +1,4 @@
+import re
 from typing import Optional, Dict
 
 from pinochle import Suit, Rank
@@ -37,38 +38,19 @@ class CardParser:
 
     @staticmethod
     def parse(s: str) -> Optional[Card]:
-        rank: Optional[Rank] = None
-        state: int = 0
-
-        for ch in s.upper():
-
-            # To begin with, we are looking for the start of a rank name
-            if state == 0:
-                if ch == '1':
-                    state = 1
-                elif ch not in "AKQJ9":
-                    return None
-                else:
-                    rank = rankmap[ch]
-                    state = 2
-
-            # After a "1", we are expecting a "0" to get a rank of TEN
-            elif state == 1:
-                if ch == '0':
-                    rank = Rank.TEN
-                    state = 2
-                else:
-                    return None
-
-            # After the rank is known, look for the first letter of a suit name
-            elif state == 2:
-                if ch not in "HCDS":
-                    return None
-                return Card(rank, suitmap[ch])
+        card = None
+        m = re.match(r'([A1KQJ9]).* OF ([HCDS]).*', s.upper())
+        if m:
+            rank_key = m.group(1)
+            suit_key = m.group(2)
+            rank, suit = rankmap.get(rank_key), suitmap.get(suit_key)
+            card = Card(rank, suit)
+        return card
 
 
 rankmap: Dict[str, Rank] = {
     "A": Rank.ACE,
+    "1": Rank.TEN,
     "K": Rank.KING,
     "Q": Rank.QUEEN,
     "J": Rank.JACK,
