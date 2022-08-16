@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from pinochle import Player, CardParser
+from pinochle import Player, CardParser, Card, Rank, Suit
 
 
 class TestPlayer(TestCase):
@@ -12,5 +12,8 @@ class TestPlayer(TestCase):
 
     def test_add_card_to_hand(self):
         player = Player("John")
-        player.add_card_to_hand(CardParser.parse("QS"))
-        player.add_card_to_hand(CardParser.parse("JD"))
+        player.add_card_to_hand(CardParser.parse("Queen of Spades"))
+        player.add_card_to_hand(CardParser.parse("Jack of Diamonds"))
+        actual: list[Card] = player.cards
+        expected: list[Card] = [Card(Rank.QUEEN, Suit.SPADES), Card(Rank.JACK, Suit.DIAMONDS)]
+        self.assertEqual(expected, actual)
