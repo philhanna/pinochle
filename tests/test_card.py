@@ -15,3 +15,4 @@ class TestCard(TestCase):
     def test_parser(self):
         card_name = CardParser.parse("10 of Diamonds")
 
+

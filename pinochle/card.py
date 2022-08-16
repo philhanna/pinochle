@@ -2,6 +2,7 @@ from typing import Optional, Dict
 
 from pinochle import Suit, Rank
 
+
 class Card:
     """ A card in the pinochle deck """
 
@@ -19,8 +20,8 @@ class Card:
 
     def __str__(self) -> str:
         """ Gets the english language representation of this card with title case words """
-        rankname: str = self.rank.fullname().title()
-        suitname: str = self.suit.value.lower().title()
+        rankname: str = str(self.rank)
+        suitname: str = str(self.suit)
         output: str = f"{rankname} of {suitname}"
         return output
 

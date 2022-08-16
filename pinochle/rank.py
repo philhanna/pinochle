@@ -16,17 +16,17 @@ class Rank(Enum):
             if rank.name == self.name:
                 return i
 
-    def fullname(self) -> str:
+    def __str__(self) -> str:
         return ["Nine", "Jack", "Queen", "King", "10", "Ace"][self.order()]
 
-    def compare(self, other):
+    def compare(self, other) -> int:
         return self.order() - other.order()
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> bool:
         return self.compare(other) > 0
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.compare(other) == 0
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)

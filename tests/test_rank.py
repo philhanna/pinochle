@@ -8,8 +8,8 @@ class TestRank(TestCase):
     def test_name(self):
         self.assertEqual("Q", Rank.QUEEN.value)
 
-    def test_fullname(self):
-        self.assertEqual("Ace", Rank.ACE.fullname())
+    def test_str(self):
+        self.assertEqual("Ace", str(Rank.ACE))
 
     def test_number_of_members(self):
         self.assertEqual(6, len(list(Rank)))
