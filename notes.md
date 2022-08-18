@@ -7,9 +7,8 @@
 
 ### Game
 - Starts with a list of players
-- Choose the first dealer, the one who has
-picked the high card.
-- 
+- Choose the first dealer, the one who has picked the high card.
+
 ### Player
 At some point, each of these need to be done:
 - (Constructor) Pass the server the player name
