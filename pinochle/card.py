@@ -1,5 +1,5 @@
 import re
-from typing import Optional, Dict
+from typing import Dict
 
 from pinochle import Suit, Rank
 
@@ -37,7 +37,7 @@ class CardParser:
     """ Parses an input string for a card name """
 
     @staticmethod
-    def parse(s: str) -> Optional[Card]:
+    def parse(s: str) -> Card | None:
         card = None
         m = re.match(r'([A1KQJ9]).* OF ([HCDS]).*', s.upper())
         if m:
