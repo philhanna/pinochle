@@ -17,6 +17,9 @@ class TestCard(TestCase):
         self.assertEqual("10 of Diamonds", str(card))
 
     def test_parser_from_card_class(self):
-        card: Card = CardParser.parse("9 of clubs")
+        card: Card = Card.parse("9 of clubs")
         self.assertEqual("Nine of Clubs", str(card))
 
+    def test_repr(self):
+        card: Card = Card.parse("9 of clubs")
+        self.assertEqual("Nine of Clubs", repr(card))
