@@ -1,4 +1,9 @@
-class Game:
+from abc import ABC
+
+from pinochle import Player
+
+
+class Model(ABC):
     """The server side (model) of the application.
 
     Game has a list of four players, arranged in partner order.
@@ -23,8 +28,6 @@ class Game:
         - Updates the score
         - Exits if a partner team has won 2000 points or more
         - Otherwise, rotates dealer to the player on the current dealer's left
-
-
     """
     def __init__(self):
-        pass
+        self.players: list[Player] = []

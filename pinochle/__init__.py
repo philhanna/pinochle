@@ -2,8 +2,8 @@ from random import seed as SEED
 from .suit import Suit
 from .rank import Rank
 from .card import Card, CardParser
-from .player import Player
 from .deck import Deck
+from .player import Player
 
 # Define a constant for a bid of PASS
 PASS = -1
@@ -22,7 +22,7 @@ __all__ = [
     "Rank",
     "Card",
     "CardParser",
+    "Deck",
     "Player",
     'PASS',
-    "Deck"
 ]

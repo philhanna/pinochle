@@ -1,4 +1,4 @@
-class Administrator:
+class Controller:
     """ The controller of the game.
     Uses sockets to add players, start games, keep score, etc.
     """
