@@ -29,5 +29,5 @@ class Model(ABC):
         - Exits if a partner team has won 2000 points or more
         - Otherwise, rotates dealer to the player on the current dealer's left
     """
-    def __init__(self):
-        self.players: list[Player] = []
+    def __init__(self, players: list[Player]):
+        self.players: list[Player] = players
