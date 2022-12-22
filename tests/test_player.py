@@ -32,7 +32,7 @@ def test_partner(player):
 
 
 def test_repr(player):
-    expected = "Player(\"John Doe\")"
+    expected = 'Player("John Doe")'
     actual = repr(player)
     assert actual == expected
 
