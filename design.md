@@ -24,9 +24,10 @@ ul {
     - [Player](#player)
     - [Hand](#hand)
 - [Interactions](#interactions)
-  - [Setting up teams and players](#setting-up-teams-and-players)
-  - [Choosing the detaler](#choosing-the-dealer)
-  - [Deal](#deal)
+  - [1. Setting up teams and players](#setting-up-teams-and-players)
+  - [2. Choosing the detaler](#choosing-the-dealer)
+  - [3. Hand](#hand-interaction)
+  - [4. Bidding](#bidding)
 
 <a id="overview"></a>
 ## Overview
@@ -140,12 +141,32 @@ four cards, the player holding that card is the dealer.  Otherwise, the
 players return their cards to the deck and choose new cards.  Repeat
 until a dealer is selected.
 
-<a id="deal"></a>
-### 3. Deal
-The dealer shuffles as many times as they desire.  The player to the
-dealer's right has the option to cut the cards.  Then the dealer
-deals three cards at a time to each player, starting with the player
-on their left and proceeding clockwise until the deck is empty.
+<a id="hand-interaction"></a>
+### 3. Hand
+The dealer shuffles as many times as they desire (but at least once).
+The player to the dealer's right has the option to cut the cards.  Then
+the dealer deals three cards at a time to each player, starting with the
+player on their left and proceeding clockwise until the deck is empty.
+
+<a id="bidding"></a>
+### 4. Bidding
+The player to the dealer makes the first bid, which must be either pass
+or a multiple of 10 greater than or equal to 250. Each player in turn
+either passes or makes a bid of a multiple of 10 greater than the previous
+bid.  A player that has passed no longer participates in this round of
+bidding.  When there is no more than one player who has not passes,
+that player becomes the contract winner.
+
+- If no player has bid, the hand is over and another one is started,
+with the player to the dealer's left becoming the dealer (go back to
+step 3)
+
+- If only one player has made an opening bid and everyone else has passed,
+the bidding player has the option to play the hand or throw it in.
+If the hand is thrown in, another one is started, with the player at
+the dealer's left becoming the dealer (go back to step 3).
+
+
 
 [Back to top]
 
