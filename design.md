@@ -23,16 +23,20 @@ ul {
     - [Team](#team)
     - [Player](#player)
     - [Hand](#hand)
-- [Interactions](#interactions)
-  - [1. Setting up teams and players](#setting-up-teams-and-players)
-  - [2. Choosing the detaler](#choosing-the-dealer)
-  - [3. Hand](#hand-interaction)
-  - [4. Bidding](#bidding)
+- [Phases of the game](#phases)
+  - [1. Setting up teams and players](#1-setting-up-teams-and-players)
+  - [2. Choosing the detaler](#2-choosing-the-dealer)
+  - [3. Hand](#3-hand)
+  - [4. Bidding](#4-bidding)
+  - [5. Setting up contract](#5-set-up-contract)
+  - [6. Melding](#6-melding)
 
 <a id="overview"></a>
 ## Overview
 This is a design for a web-based pinochle game for four players.
 Each player can be either a human or a computer.
+
+See [pinochle-game-rules](https://playingcarddecks.com/blogs/how-to-play/pinochle-game-rules)
 
 [Back to top]
 <hr/>
@@ -125,30 +129,30 @@ Hand is one round of play
 [Back to top]
 <hr/>
 
-<a id="interactions"></a>
-## Interactions
+<a id="phases"></a>
+## Phases of the game
 
-<a id="setting-up-teams-and-players"></a>
+<a id="1-setting-up-teams-and-players"></a>
 ### 1. Setting up teams and players
 There needs to be two teams of two players each, any combination of
 human or computer players.  The players need to be registered and
 assigned to teams.
 
-<a id="choosing-the-dealer"></a>
+<a id="2-choosing-the-dealer"></a>
 ### 2. Choosing the dealer
 The players each choose a card. If there is a highest rank among the
 four cards, the player holding that card is the dealer.  Otherwise, the
 players return their cards to the deck and choose new cards.  Repeat
 until a dealer is selected.
 
-<a id="hand-interaction"></a>
+<a id="3-hand"></a>
 ### 3. Hand
 The dealer shuffles as many times as they desire (but at least once).
 The player to the dealer's right has the option to cut the cards.  Then
 the dealer deals three cards at a time to each player, starting with the
 player on their left and proceeding clockwise until the deck is empty.
 
-<a id="bidding"></a>
+<a id="4-bidding"></a>
 ### 4. Bidding
 The player to the dealer makes the first bid, which must be either pass
 or a multiple of 10 greater than or equal to 250. Each player in turn
@@ -165,6 +169,15 @@ step 3)
 the bidding player has the option to play the hand or throw it in.
 If the hand is thrown in, another one is started, with the player at
 the dealer's left becoming the dealer (go back to step 3).
+
+<a id="5-set-up-contract"></a>
+### 5. Set up contract
+The player who won the bid announces the trump suit.
+Their partner then passes them four cards
+and receives four cards from the bid winner.
+
+<a id="6-melding"></a>
+### 6. Melding
 
 
 
