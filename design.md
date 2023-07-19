@@ -234,6 +234,39 @@ total score.
 - If they have no cards of that suit, they must trump if they are able.
 - Otherwise, they can play any other card.
 
+Whoever played the highest card of the four wins the trick and collects
+all four cards.  That person plays the first card of the next trick.
+
+Play continues until the last card from each hand has been played.
+
+<hr/>
+
+<a id="8-score-the-round"></a>
+
+### 8. Score the round
+Each team counts cards from all the tricks they took.  They are scored as follows:
+- Aces and Tens count as 10 points each
+- Kings and Queens count as 5 points each
+- Last trick counts as 10 points.
+
+If the team that won the bid has greater than or equal to the points they bid
+(including their meld), they have won the bid.
+
+If not, the team that won the bid loses the value of their meld and the value
+of their contract.  This is referred to as "going set".
+
+Regardless, the team that did not win the bid keeps their meld, unless they
+took no tricks at all.
+
+The scoring value for each team this round is added to their cumulative
+score.  If either team meets or exceeds 2000 points, they are the winner and the
+game is over.  If both teams meet or exceed 2000 points, the team that won the bid
+is the winner and the game is over.
+
+If neither team met or exceeded a score of 2000, the game continues
+with the player to the dealer's left becoming the next dealer.
+(Go back to step 3).
+
 [Back to top]
 
 
