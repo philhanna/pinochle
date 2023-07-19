@@ -178,8 +178,32 @@ and receives four cards from the bid winner.
 
 <a id="6-melding"></a>
 ### 6. Melding
+Each player lays down their meld.  Meld consists of any of the following:
 
+| Name | Contents | Scoring value |
+| ---- | -------- | ------------- |
+| Run | A, 10, K, Q, J of trump | 150 |
+| 100 Aces | An ace from each suit | 100 |
+| 80 Kings | A king from each suit | 80 |
+| 60 Queens | A queen from each suit | 60 |
+| 40 Jacks | A jack from each suit | 40 |
+| Royal marriage | K and Q of trump | 40 |
+| Marriage | K and Q of non-trump suit | 20 |
+| Pinochle | Q♤ and J♦ | 40 |
+| Trump nine | A 9 of trump | 10 |
+| Double run | Two A, 10, K, Q, J of trump | 1500 |
+| 1000 Aces | All 8 aces in the deck | 1000 |
+| 800 Kings | All 8 kings in the deck | 800 |
+| 600 Queens | All 8 queens in the deck | 600 |
+| 400 Jacks | All 8 jacks in the deck | 400 |
+| Double pinochle | Two Q♤ and two J♦ | 300 |
 
+Cards can be shared between any other units of meld in the hand.
+For example, the cards K♤,  Q♤ and J♦ counts as both a marriage
+and a pinochle.
+
+The total meld of each team is provisionally added to their
+total score.
 
 [Back to top]
 
