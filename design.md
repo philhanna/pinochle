@@ -24,12 +24,13 @@ ul {
     - [Player](#player)
     - [Hand](#hand)
 - [Phases of the game](#phases)
-  - [1. Setting up teams and players](#1-setting-up-teams-and-players)
-  - [2. Choosing the detaler](#2-choosing-the-dealer)
-  - [3. Hand](#3-hand)
-  - [4. Bidding](#4-bidding)
-  - [5. Setting up contract](#5-set-up-contract)
-  - [6. Melding](#6-melding)
+  1. [Setting up teams and players](#1-setting-up-teams-and-players)
+  2. [Choosing the detaler](#2-choosing-the-dealer)
+  3. [Hand](#3-hand)
+  4. [Bidding](#4-bidding)
+  5. [Setting up contract](#5-set-up-contract)
+  6. [Melding](#6-melding)
+  7. [Play the hand](#7-play-the-hand)
 
 <a id="overview"></a>
 ## Overview
@@ -61,8 +62,11 @@ and include:
 - Card - A combination of Rank and Suit. The library contains SVG images for each card.
 - PinochleDeck - A collection of Cards for a 48-card Pinochle deck.
 
+<hr/>
+
 ### Game
 Game is a server that coordinates the actions of the players and the games.
+The first team to reach 2000 points wins the game.
 
 #### Attributes
 - Array of player IDs for positions (0, 1, 2, 3)
@@ -138,6 +142,8 @@ There needs to be two teams of two players each, any combination of
 human or computer players.  The players need to be registered and
 assigned to teams.
 
+[Back to top]
+
 <a id="2-choosing-the-dealer"></a>
 ### 2. Choosing the dealer
 The players each choose a card. If there is a highest rank among the
@@ -145,12 +151,16 @@ four cards, the player holding that card is the dealer.  Otherwise, the
 players return their cards to the deck and choose new cards.  Repeat
 until a dealer is selected.
 
+[Back to top]
+
 <a id="3-hand"></a>
 ### 3. Hand
 The dealer shuffles as many times as they desire (but at least once).
 The player to the dealer's right has the option to cut the cards.  Then
 the dealer deals three cards at a time to each player, starting with the
 player on their left and proceeding clockwise until the deck is empty.
+
+[Back to top]
 
 <a id="4-bidding"></a>
 ### 4. Bidding
@@ -170,11 +180,15 @@ the bidding player has the option to play the hand or throw it in.
 If the hand is thrown in, another one is started, with the player at
 the dealer's left becoming the dealer (go back to step 3).
 
+[Back to top]
+
 <a id="5-set-up-contract"></a>
 ### 5. Set up contract
 The player who won the bid announces the trump suit.
 Their partner then passes them four cards
 and receives four cards from the bid winner.
+
+[Back to top]
 
 <a id="6-melding"></a>
 ### 6. Melding
@@ -206,5 +220,21 @@ The total meld of each team is provisionally added to their
 total score.
 
 [Back to top]
+
+<a id="7-play-the-hand"></a>
+### 7. Play the hand
+
+- Starting with the bid winner, each player lays down a card.
+- Going clockwise, each player lays down a card, playing a higher card
+  if they are able. A higher card is defined as a card of the same suit
+  as the first card played by the bid winner that has a higher rank than
+  any other of that suit played, or a trump card of a higher rank than
+  any other trump card.
+- If the player can follow suit, they must do so.
+- If they have no cards of that suit, they must trump if they are able.
+- Otherwise, they can play any other card.
+
+[Back to top]
+
 
 [Back to top]: #top
