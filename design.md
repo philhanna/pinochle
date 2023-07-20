@@ -30,7 +30,8 @@ ul {
   4. [Bidding](#4-bidding)
   5. [Setting up the contract](#5-set-up-contract)
   6. [Melding](#6-melding)
-  7. [Play the hand](#7-play-the-hand)
+  7. [Playing the hand](#7-playing-the-hand)
+  8. [Scoring the round](#8-scoring-the-round)
 
 <a id="overview"></a>
 ## Overview
@@ -221,8 +222,8 @@ total score.
 
 [Back to top]
 
-<a id="7-play-the-hand"></a>
-### 7. Play the hand
+<a id="7-playing-the-hand"></a>
+### 7. Playing the hand
 
 - Starting with the bid winner, each player lays down a card.
 - Going clockwise, each player lays down a card, playing a higher card
@@ -239,11 +240,11 @@ all four cards.  That person plays the first card of the next trick.
 
 Play continues until the last card from each hand has been played.
 
-<hr/>
+[Back to top]
 
-<a id="8-score-the-round"></a>
+<a id="8-scoring-the-round"></a>
 
-### 8. Score the round
+### 8. Scoring the round
 Each team counts cards from all the tricks they took.  They are scored as follows:
 - Aces and Tens count as 10 points each
 - Kings and Queens count as 5 points each
@@ -269,5 +270,6 @@ with the player to the dealer's left becoming the next dealer.
 
 [Back to top]
 
+<hr/>
 
 [Back to top]: #top
