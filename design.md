@@ -106,6 +106,7 @@ There are exactly four players, two pairs of partners.
 #### Attributes
 - Player ID
 - Player name
+- Player type (human or computer)
 - Position (0, 1, 2, 3) = North, East, South, West
 - Team ID
 - Host name
