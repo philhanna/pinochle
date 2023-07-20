@@ -28,7 +28,7 @@ ul {
   2. [Choosing the detaler](#2-choosing-the-dealer)
   3. [Hand](#3-hand)
   4. [Bidding](#4-bidding)
-  5. [Setting up contract](#5-set-up-contract)
+  5. [Setting up the contract](#5-set-up-contract)
   6. [Melding](#6-melding)
   7. [Play the hand](#7-play-the-hand)
 
@@ -183,7 +183,7 @@ the dealer's left becoming the dealer (go back to step 3).
 [Back to top]
 
 <a id="5-set-up-contract"></a>
-### 5. Set up contract
+### 5. Setting up the contract
 The player who won the bid announces the trump suit.
 Their partner then passes them four cards
 and receives four cards from the bid winner.
