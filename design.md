@@ -144,6 +144,16 @@ There needs to be two teams of two players each, any combination of
 human or computer players.  The players need to be registered and
 assigned to teams.
 
+- **Admin** starts **MainServer**
+- **MainServer** listens for connections from players and accepts them as pending players.
+- **Admin** adds computer player(s) as pending players.
+- **Admin** assigns teams.
+- **Admin** assigns players to teams
+- **Admin** starts each **PlayerServer**
+- **Admin** tells **MainServer** to shuffle the deck
+- **Admin** starts the game by sending each **PlayerServer** a message saying the game
+has started.
+
 [Back to top]
 
 <a id="2-choosing-the-dealer"></a>
@@ -152,6 +162,14 @@ The players each choose a card. If there is a highest rank among the
 four cards, the player holding that card is the dealer.  Otherwise, the
 players return their cards to the deck and choose new cards.  Repeat
 until a dealer is selected.
+
+- Each **Player** issues a GET request to **MainServer** to get a random card from the deck,
+- **MainServer** keeps track of which card is chosen by each **Player**
+- After all four players have selected a card, **MainServer** compare them to see
+which is the greatest.  If there is a highest rank, **MainServer** sends a notification
+to each **Player** announcing the winning player.  Otherwise, it sends a notification
+asking each **Player** to select another card.
+- This continues until a dealer has been selected.
 
 [Back to top]
 
