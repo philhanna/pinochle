@@ -58,10 +58,12 @@ The classes used include `Cards`, `Game`, `Team`, `Player`, `Hand`.
 The cards and associated classes come from the [cards library](https://github.com/philhanna/cards)
 and include:
 
-- Suit - SPADES, HEARTS, DIAMONDS, and CLUBS.
-- Rank - 2 through Ace, with ordering functions to handle regular and pinochle decks.
-- Card - A combination of Rank and Suit. The library contains SVG images for each card.
-- PinochleDeck - A collection of Cards for a 48-card Pinochle deck.
+- **Suit** - Enumeration of SPADES, HEARTS, DIAMONDS, and CLUBS.
+- **Rank** - Enumeration of 2 through Ace,
+with ordering functions to handle regular and pinochle decks.
+- **Card** - A combination of **Rank** and **Suit**. The library contains
+SVG images for each card.
+- **PinochleDeck** - A collection of **Card**s for a 48-card Pinochle deck.
 
 <hr/>
 
@@ -144,14 +146,14 @@ There needs to be two teams of two players each, any combination of
 human or computer players.  The players need to be registered and
 assigned to teams.
 
-- **Admin** starts **MainServer**
-- **MainServer** listens for connections from players and accepts them as pending players.
+- **Admin** starts the **Game** server
+- **Game** listens for connections from players and accepts them as pending players.
 - **Admin** adds computer player(s) as pending players.
 - **Admin** assigns teams.
 - **Admin** assigns players to teams
-- **Admin** starts each **PlayerServer**
-- **Admin** tells **MainServer** to shuffle the deck
-- **Admin** starts the game by sending each **PlayerServer** a message saying the game
+- **Admin** starts each **Player** server
+- **Admin** tells **Game** to shuffle the deck
+- **Admin** starts the game by sending each **Player** a message saying the game
 has started.
 
 [Back to top]
@@ -163,10 +165,10 @@ four cards, the player holding that card is the dealer.  Otherwise, the
 players return their cards to the deck and choose new cards.  Repeat
 until a dealer is selected.
 
-- Each **Player** issues a GET request to **MainServer** to get a random card from the deck,
-- **MainServer** keeps track of which card is chosen by each **Player**
-- After all four players have selected a card, **MainServer** compare them to see
-which is the greatest.  If there is a highest rank, **MainServer** sends a notification
+- Each **Player** issues a GET request to **Game** to get a random card from the deck.
+- **Game** keeps track of which card is chosen by each **Player**
+- After all four players have selected a card, **Game** compare them to see
+which is the greatest.  If there is a highest rank, **Game** sends a notification
 to each **Player** announcing the winning player.  Otherwise, it sends a notification
 asking each **Player** to select another card.
 - This continues until a dealer has been selected.
@@ -175,16 +177,17 @@ asking each **Player** to select another card.
 
 <a id="3-hand"></a>
 ### 3. Hand
-The dealer shuffles as many times as they desire (but at least once).
-The player to the dealer's right has the option to cut the cards.  Then
-the dealer deals three cards at a time to each player, starting with the
+- A **Player** is selected as the **Dealer** in step 2.
+- **Dealer** shuffles as many times as they desire (but at least once).
+- **Player** to the dealer's right has the option to cut the cards.
+- **Dealer** deals three cards at a time to each player, starting with the
 player on their left and proceeding clockwise until the deck is empty.
 
 [Back to top]
 
 <a id="4-bidding"></a>
 ### 4. Bidding
-The player to the dealer makes the first bid, which must be either pass
+The player to the dealer's left makes the first bid, which must be either pass
 or a multiple of 10 greater than or equal to 250. Each player in turn
 either passes or makes a bid of a multiple of 10 greater than the previous
 bid.  A player that has passed no longer participates in this round of
@@ -199,6 +202,8 @@ step 3)
 the bidding player has the option to play the hand or throw it in.
 If the hand is thrown in, another one is started, with the player at
 the dealer's left becoming the dealer (go back to step 3).
+
+- **Game** 
 
 [Back to top]
 
