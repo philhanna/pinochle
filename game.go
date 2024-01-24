@@ -21,7 +21,25 @@ func HighestRank(cards []Card) *Card {
 	case 1: // Only one card
 		return &cards[0]
 	case 2: // Only two cards
-	// TODO write me
+		card1 := cards[0]
+		card2 := cards[1]
+		switch {
+		case card1.Rank.Less(card2.Rank):
+			return &card2
+		case card2.Rank.Less(card1.Rank):
+			return &card1
+		default:
+			return nil
+		}
+	default: // More than 2 cards
+		deck := Deck{cards}
+		deck.Sort()
+		n := deck.Len()
+		lastCard := deck.cards[n-1]
+		nextToLastCard := deck.cards[n-2]
+		if lastCard.Rank == nextToLastCard.Rank {
+			return nil // Tie
+		}
+		return &lastCard
 	}
-	return nil
 }

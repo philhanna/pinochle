@@ -48,8 +48,6 @@ func (d *Deck) Sort() {
 	sort.Slice(d.cards, func(i, j int) bool {
 		iCard := d.cards[i]
 		jCard := d.cards[j]
-		iRankIndex := slices.Index(Ranks, iCard.Rank)
-		jRankIndex := slices.Index(Ranks, jCard.Rank)
-		return iRankIndex < jRankIndex
+		return iCard.Rank.Less(jCard.Rank)
 	})
 }
