@@ -22,7 +22,7 @@ ul {
     - [Game](#game)
     - [Team](#team)
     - [Player](#player)
-    - [Hand](#hand)
+    - [Round](#round)
 - [Phases of the game](#phases)
   1. [Setting up teams and players](#1-setting-up-teams-and-players)
   2. [Choosing the detaler](#2-choosing-the-dealer)
@@ -120,8 +120,8 @@ There are exactly four players, two pairs of partners.
 
 <a id="hand"></a>
 
-### Hand
-Hand is one round of play
+### Round
+Round is one round of play
 
 #### Attributes
 - Bid winner
