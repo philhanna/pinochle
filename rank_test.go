@@ -12,10 +12,12 @@ func TestRank_String(t *testing.T) {
 		r    Rank
 		want string
 	}{
-		{"numbered card", FIVE, "5"},
+		{"numbered card", NINE, "9"},
 		{"Jack", JACK, "J"},
 		{"Queen", QUEEN, "Q"},
 		{"King", KING, "K"},
+		{"Ten", TEN, "10"},
+		{"Ace", ACE, "A"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

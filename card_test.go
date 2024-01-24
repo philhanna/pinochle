@@ -13,10 +13,7 @@ func TestCard_GetSVG(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"Three of clubs", NewCard(THREE, CLUBS), `sodipodi:docname="clubs_3.svg"`, false},
 		{"Ace of spades", NewCard(ACE, SPADES), `sodipodi:docname="spades_ace_simple.svg"`, false},
-		{"2 of diamonds", NewCard(TWO, DIAMONDS), `sodipodi:docname="diamonds_2.svg`, false},
-		{"4 of hearts", NewCard(FOUR, HEARTS), `sodipodi:docname="hearts_4.svg`, false},
 		{"Jack of spades", NewCard(JACK, SPADES), `sodipodi:docname="spades_jack.svg"`, false},
 		{"Queen of spades", NewCard(QUEEN, SPADES), `sodipodi:docname="spades_queen.svg"`, false},
 		{"King of hearts", NewCard(KING, HEARTS), `sodipodi:docname="hearts_king.svg"`, false},
@@ -42,7 +39,8 @@ func TestCard_String(t *testing.T) {
 		card Card
 		want string
 	}{
-		{"Three of clubs", NewCard(THREE, CLUBS), "3" + string('\u2663')},
+		{"Nine of clubs", NewCard(NINE, CLUBS), "9" + string('\u2663')},
+		{"Ten of diamonds", NewCard(TEN, DIAMONDS), "9" + string('\u2662')},
 		{"Ace of spaces", NewCard(ACE, SPADES), "A" + string('\u2660')},
 	}
 	for _, tt := range tests {

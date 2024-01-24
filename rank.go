@@ -6,22 +6,15 @@ import "fmt"
 // Type definitions
 // -----------------------------------------------------------------------
 
-// A rank is one of the 13 levels of cards in a deck.
+// A rank is one of the six levels of cards in a pinochle deck.
 type Rank int
 
 const (
-	TWO Rank = iota + 2
-	THREE
-	FOUR
-	FIVE
-	SIX
-	SEVEN
-	EIGHT
-	NINE
-	TEN
+	NINE Rank = iota + 9
 	JACK
 	QUEEN
 	KING
+	TEN
 	ACE
 )
 
@@ -40,6 +33,8 @@ func (r Rank) String() string {
 		return "Q"
 	case KING:
 		return "K"
+	case TEN:
+		return "10"
 	case ACE:
 		return "A"
 	}
@@ -50,20 +45,6 @@ func (r Rank) String() string {
 func (r Rank) Offset() int {
 	offset := 0
 	switch r {
-	case TWO:
-		offset = 2
-	case THREE:
-		offset = 3
-	case FOUR:
-		offset = 4
-	case FIVE:
-		offset = 5
-	case SIX:
-		offset = 6
-	case SEVEN:
-		offset = 7
-	case EIGHT:
-		offset = 8
 	case NINE:
 		offset = 9
 	case TEN:
