@@ -36,21 +36,6 @@ func NewCard(rank Rank, suit Suit) Card {
 // Methods
 // ---------------------------------------------------------------------
 
-// Returns a representation of the card as a string
-func (c Card) String() string {
-	s := c.Rank.String() + c.Suit.String()
-	return s
-}
-
-// Returns a representation of the card as a Unicode string
-func (c Card) Unicode() string {
-	suitOffset := c.Suit.Offset()
-	rankOffset := c.Rank.Offset()
-	cardOffset := suitOffset + rankOffset
-	s := fmt.Sprintf("%c", cardOffset)
-	return s
-}
-
 // Returns the SVG image of this card
 func (c Card) GetSVG() (string, error) {
 	var rankName, suitName string
@@ -95,4 +80,19 @@ func (c Card) GetSVG() (string, error) {
 
 	// Return contents as a string
 	return string(contents), nil
+}
+
+// Returns a representation of the card as a string
+func (c Card) String() string {
+	s := c.Rank.String() + c.Suit.String()
+	return s
+}
+
+// Returns a representation of the card as a Unicode string
+func (c Card) Unicode() string {
+	suitOffset := c.Suit.Offset()
+	rankOffset := c.Rank.Offset()
+	cardOffset := suitOffset + rankOffset
+	s := fmt.Sprintf("%c", cardOffset)
+	return s
 }
