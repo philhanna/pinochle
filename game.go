@@ -8,8 +8,8 @@ package pinochle
 // games.
 type Game struct {
 	Players [4]*Player
-	NSTeam *Team
-	EWTeam *Team
+	NSTeam  *Team
+	EWTeam  *Team
 }
 
 // HighestRank returns a pointer to the card with the highest rank.  If
