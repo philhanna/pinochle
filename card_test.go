@@ -40,7 +40,7 @@ func TestCard_String(t *testing.T) {
 		want string
 	}{
 		{"Nine of clubs", NewCard(NINE, CLUBS), "9" + string('\u2663')},
-		{"Ten of diamonds", NewCard(TEN, DIAMONDS), "9" + string('\u2662')},
+		{"Ten of diamonds", NewCard(TEN, DIAMONDS), "10" + string('\u2662')},
 		{"Ace of spaces", NewCard(ACE, SPADES), "A" + string('\u2660')},
 	}
 	for _, tt := range tests {
