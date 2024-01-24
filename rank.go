@@ -18,11 +18,14 @@ const (
 	ACE
 )
 
+// Ranks is a slice of the six ranks in ascending order of precedence
+var Ranks = []Rank{NINE, JACK, QUEEN, KING, TEN, ACE}
+
 // -----------------------------------------------------------------------
 // Methods
 // -----------------------------------------------------------------------
 
-// Returns a representation of the type as a string
+// Returns a representation of a Rank as a string
 func (r Rank) String() string {
 	switch r {
 	default:
