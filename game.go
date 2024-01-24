@@ -1,7 +1,5 @@
 package pinochle
 
-import "github.com/philhanna/cards"
-
 // ---------------------------------------------------------------------
 // Type Definitions
 // ---------------------------------------------------------------------
@@ -16,7 +14,7 @@ type Game struct {
 
 // HighestRank returns a pointer to the card with the highest rank.  If
 // there is a tie, returns nil.
-func HighestRank(cards []cards.Card) *cards.Card {
+func HighestRank(cards []Card) *Card {
 	switch len(cards) {
 	case 0: // Empty hand
 		return nil

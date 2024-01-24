@@ -3,32 +3,31 @@ package pinochle
 import (
 	"testing"
 
-	"github.com/philhanna/cards"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestHighestRank(t *testing.T) {
 	var (
-		TEN_OF_DIAMONDS = cards.NewCard(cards.TEN, cards.DIAMONDS)
-		TEN_OF_HEARTS   = cards.NewCard(cards.TEN, cards.HEARTS)
-		KING_OF_SPADES  = cards.NewCard(cards.KING, cards.SPADES)
-		JACK_OF_SPADES  = cards.NewCard(cards.JACK, cards.SPADES)
-		NINE_OF_HEARTS  = cards.NewCard(cards.NINE, cards.HEARTS)
-		NINE_OF_CLUBS   = cards.NewCard(cards.NINE, cards.CLUBS)
+		TEN_OF_DIAMONDS = NewCard(TEN, DIAMONDS)
+		TEN_OF_HEARTS   = NewCard(TEN, HEARTS)
+		KING_OF_SPADES  = NewCard(KING, SPADES)
+		JACK_OF_SPADES  = NewCard(JACK, SPADES)
+		NINE_OF_HEARTS  = NewCard(NINE, HEARTS)
+		NINE_OF_CLUBS   = NewCard(NINE, CLUBS)
 	)
 
 	tests := []struct {
 		name  string
-		cards []cards.Card
-		want  *cards.Card
+		cards []Card
+		want  *Card
 	}{
 		{
 			name:  "Empty",
-			cards: []cards.Card{},
+			cards: []Card{},
 		},
 		{
 			name: "Happy path - clear winner",
-			cards: []cards.Card{
+			cards: []Card{
 				KING_OF_SPADES,
 				JACK_OF_SPADES,
 				NINE_OF_HEARTS,
@@ -38,7 +37,7 @@ func TestHighestRank(t *testing.T) {
 		},
 		{
 			name: "Tie - two tens",
-			cards: []cards.Card{
+			cards: []Card{
 				KING_OF_SPADES,
 				TEN_OF_HEARTS,
 				NINE_OF_HEARTS,
@@ -48,7 +47,7 @@ func TestHighestRank(t *testing.T) {
 		},
 		{
 			name: "Tie but in lower cards",
-			cards: []cards.Card{
+			cards: []Card{
 				KING_OF_SPADES,
 				NINE_OF_HEARTS,
 				NINE_OF_CLUBS,
@@ -58,12 +57,12 @@ func TestHighestRank(t *testing.T) {
 		},
 		{
 			name:  "Only one card",
-			cards: []cards.Card{TEN_OF_DIAMONDS},
+			cards: []Card{TEN_OF_DIAMONDS},
 			want:  &TEN_OF_DIAMONDS,
 		},
 		{
 			name: "Only two cards",
-			cards: []cards.Card{
+			cards: []Card{
 				NINE_OF_HEARTS,
 				TEN_OF_DIAMONDS,
 			},
