@@ -1,6 +1,9 @@
 package pinochle
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // -----------------------------------------------------------------------
 // Type definitions
@@ -25,22 +28,9 @@ var Ranks = []Rank{NINE, JACK, QUEEN, KING, TEN, ACE}
 // Methods
 // -----------------------------------------------------------------------
 
-// Returns a representation of a Rank as a string
-func (r Rank) String() string {
-	switch r {
-	default:
-		return fmt.Sprint(int(r))
-	case JACK:
-		return "J"
-	case QUEEN:
-		return "Q"
-	case KING:
-		return "K"
-	case TEN:
-		return "10"
-	case ACE:
-		return "A"
-	}
+// Less returns true if this rank is less than that of the other
+func (r Rank) Less(other Rank) bool {
+	return slices.Index(Ranks, r) < slices.Index(Ranks, other)
 }
 
 // Returns the offset in the Unicode system to the beginning of cards
@@ -62,4 +52,22 @@ func (r Rank) Offset() int {
 		offset = 1
 	}
 	return offset
+}
+
+// Returns a representation of a Rank as a string
+func (r Rank) String() string {
+	switch r {
+	default:
+		return fmt.Sprint(int(r))
+	case JACK:
+		return "J"
+	case QUEEN:
+		return "Q"
+	case KING:
+		return "K"
+	case TEN:
+		return "10"
+	case ACE:
+		return "A"
+	}
 }

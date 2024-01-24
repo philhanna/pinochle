@@ -27,3 +27,20 @@ func TestRank_String(t *testing.T) {
 		})
 	}
 }
+
+func TestRank_Less(t *testing.T) {
+	tests := []struct {
+		name  string
+		r     Rank
+		other Rank
+		want  bool
+	}{
+		{"Same rank", NINE, NINE, false},
+		{"Q < 10", QUEEN, TEN, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.r.Less(tt.other))
+		})
+	}
+}
