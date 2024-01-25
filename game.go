@@ -20,9 +20,9 @@ type Game struct {
 // Functions
 // ---------------------------------------------------------------------
 
-// HighestRank returns a pointer to the card with the highest rank.  If there is a
-// tie, returns nil.
-func HighestRank(cards []Card) *Card {
+// CardWithHighestRank returns a pointer to the card with the highest
+// rank.  If there is a tie, returns nil.
+func CardWithHighestRank(cards []Card) *Card {
 	switch len(cards) {
 	case 0: // Empty hand
 		return nil
@@ -63,7 +63,7 @@ func HighestRank(cards []Card) *Card {
 //
 // In subsequent rounds, the dealer is the player on the previous
 // dealer's left.
-func (g *Game) ChooseDealer() *Player {	
+func (g *Game) ChooseDealer() *Player {
 	for {
 		cardChoice := make(map[*Player]Card)
 		deck := NewDeck()
@@ -76,7 +76,7 @@ func (g *Game) ChooseDealer() *Player {
 		for _, card := range cardChoice {
 			cards = append(cards, card)
 		}
-		highCard := HighestRank(cards)
+		highCard := CardWithHighestRank(cards)
 		if highCard != nil {
 			for player, card := range cardChoice {
 				if card == *highCard {

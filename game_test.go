@@ -17,9 +17,9 @@ func TestHighestRank(t *testing.T) {
 	)
 
 	tests := []struct {
-		name    string
-		cards   []Card
-		want    *Card
+		name  string
+		cards []Card
+		want  *Card
 	}{
 		{
 			name:  "Empty",
@@ -86,7 +86,7 @@ func TestHighestRank(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			want := tt.want
-			have := HighestRank(tt.cards)
+			have := CardWithHighestRank(tt.cards)
 			assert.Equal(t, want, have)
 		})
 	}
