@@ -26,7 +26,7 @@ ul {
 - [Phases of the game](#phases)
   1. [Setting up teams and players](#1-setting-up-teams-and-players)
   2. [Choosing the detaler](#2-choosing-the-dealer)
-  3. [Hand](#3-hand)
+  3. [Round](#3-round)
   4. [Bidding](#4-bidding)
   5. [Setting up the contract](#5-set-up-contract)
   6. [Melding](#6-melding)
@@ -175,8 +175,8 @@ asking each **Player** to select another card.
 
 [Back to top]
 
-<a id="3-hand"></a>
-### 3. Hand
+<a id="3-round"></a>
+### 3. Round
 - A **Player** is selected as the **Dealer** in step 2.
 - **Dealer** shuffles as many times as they desire (but at least once).
 - **Player** to the dealer's right has the option to cut the cards.
