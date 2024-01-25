@@ -1,5 +1,9 @@
 package pinochle
 
+import (
+	"log"
+)
+
 // ---------------------------------------------------------------------
 // Type Definitions
 // ---------------------------------------------------------------------
@@ -8,12 +12,16 @@ package pinochle
 // games.
 type Game struct {
 	Players [4]*Player
-	NSTeam  *Team
-	EWTeam  *Team
+	NSTeam  Team
+	EWTeam  Team
 }
 
-// HighestRank returns a pointer to the card with the highest rank.  If
-// there is a tie, returns nil.
+// ---------------------------------------------------------------------
+// Functions
+// ---------------------------------------------------------------------
+
+// HighestRank returns a pointer to the card with the highest rank.  If there is a
+// tie, returns nil.
 func HighestRank(cards []Card) *Card {
 	switch len(cards) {
 	case 0: // Empty hand
@@ -41,5 +49,41 @@ func HighestRank(cards []Card) *Card {
 			return nil // Tie
 		}
 		return &lastCard
+	}
+}
+
+// ---------------------------------------------------------------------
+// Methods
+// ---------------------------------------------------------------------
+
+// ChooseDealer chooses the dealer for the first round. This requires
+// interaction with each player, who chooses a card from the deck. The
+// highest card drawn determintes the dealer. In case of a tie, the
+// players choose again at random.
+//
+// In subsequent rounds, the dealer is the player on the previous
+// dealer's left.
+func (g *Game) ChooseDealer() *Player {	
+	for {
+		cardChoice := make(map[*Player]Card)
+		deck := NewDeck()
+		for _, player := range g.Players {
+			card := player.DrawCard(deck)
+			cardChoice[player] = card
+			deck.Remove(card)
+		}
+		cards := make([]Card, 0)
+		for _, card := range cardChoice {
+			cards = append(cards, card)
+		}
+		highCard := HighestRank(cards)
+		if highCard != nil {
+			for player, card := range cardChoice {
+				if card == *highCard {
+					return player
+				}
+			}
+			log.Fatal("no highest card found")
+		}
 	}
 }
