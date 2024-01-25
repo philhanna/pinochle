@@ -1,9 +1,5 @@
 package pinochle
 
-import (
-	"log"
-)
-
 // ---------------------------------------------------------------------
 // Type Definitions
 // ---------------------------------------------------------------------
@@ -64,7 +60,8 @@ func CardWithHighestRank(cards []Card) *Card {
 // In subsequent rounds, the dealer is the player on the previous
 // dealer's left.
 func (g *Game) ChooseDealer() *Player {
-
+	
+	var dealer *Player
 	for {
 		cardChoice := make(map[*Player]Card)
 		deck := NewDeck()
@@ -81,11 +78,11 @@ func (g *Game) ChooseDealer() *Player {
 		if highCard != nil {
 			for player, card := range cardChoice {
 				if card == *highCard {
-					return player
+					dealer = player
 				}
 			}
-			log.Println("no highest card found")
-			return nil
+			break
 		}
 	}
+	return dealer
 }
