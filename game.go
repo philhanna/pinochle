@@ -60,7 +60,7 @@ func CardWithHighestRank(cards []Card) *Card {
 // In subsequent rounds, the dealer is the player on the previous
 // dealer's left.
 func (g *Game) ChooseDealer() *Player {
-	
+
 	var dealer *Player
 	for {
 		cardChoice := make(map[*Player]Card)
