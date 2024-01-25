@@ -18,6 +18,7 @@ func TestCard_GetSVG(t *testing.T) {
 		{"Jack of spades", NewCard(JACK, SPADES), `sodipodi:docname="spades_jack.svg"`, false},
 		{"Queen of spades", NewCard(QUEEN, SPADES), `sodipodi:docname="spades_queen.svg"`, false},
 		{"King of hearts", NewCard(KING, HEARTS), `sodipodi:docname="hearts_king.svg"`, false},
+		{"Ten of diamonds", NewCard(TEN, DIAMONDS), `sodipodi:docname="diamonds_10.svg"`, false},
 		{"bogus", Card{}, "", true},
 	}
 	for _, tt := range tests {
