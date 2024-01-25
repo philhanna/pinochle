@@ -15,6 +15,20 @@ type Deck struct {
 	cards []Card
 }
 
+// NewDeck creates a new 48-card pinochle deck
+func NewDeck() Deck {
+	cards := make([]Card, 0)
+	for i := 0; i < 2; i++ {
+		for _, rank := range Ranks {
+			for _, suit:= range Suits {
+				card := NewCard(rank, suit)
+				cards = append(cards, card)
+			}
+		}
+	}
+	return Deck{cards}
+}
+
 // -----------------------------------------------------------------------
 // Methods
 // -----------------------------------------------------------------------
