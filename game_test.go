@@ -1,6 +1,7 @@
 package pinochle
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -88,6 +89,32 @@ func TestHighestRank(t *testing.T) {
 			want := tt.want
 			have := CardWithHighestRank(tt.cards)
 			assert.Equal(t, want, have)
+		})
+	}
+}
+
+func TestGame_ChooseDealer(t *testing.T) {
+	tests := []struct {
+		name string
+		game Game
+	}{
+		{
+			name: "Happy path",
+			game: Game{
+				Players: [4]*Player{
+					{Name: "Larry"},
+					{Name: "Curly"},
+					{Name: "Moe"},
+					{Name: "Shemp"},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			player := tt.game.ChooseDealer()
+			fmt.Printf("Dealer is %q\n", player.Name)
+			assert.NotNil(t, player)
 		})
 	}
 }
