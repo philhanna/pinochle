@@ -24,7 +24,7 @@ func TestNewRound(t *testing.T) {
 				},
 			},
 			dealer: &Player{Name: "Gollum"},
-			live: true,
+			live:   true,
 		},
 		{
 			name: "Force reshuffle",
@@ -37,7 +37,7 @@ func TestNewRound(t *testing.T) {
 				},
 			},
 			dealer: &Player{Name: "Gollum"},
-			live: false,
+			live:   false,
 		},
 	}
 	for _, tt := range tests {
