@@ -19,9 +19,10 @@ func (h *Hand) Sort() {
 			return true
 		case iCard.Suit > jCard.Suit:
 			return false
-		case iCard.Rank < jCard.Rank:
-			return true
+		// Ranks should be in descending order
 		case iCard.Rank > jCard.Rank:
+			return true
+		case iCard.Rank < jCard.Rank:
 			return false
 		default:
 			return false
