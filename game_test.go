@@ -68,6 +68,22 @@ func TestHighestRank(t *testing.T) {
 			},
 			want: &TEN_OF_DIAMONDS,
 		},
+		{
+			name: "Only two cards, first is higher",
+			cards: []Card{
+				JACK_OF_SPADES,
+				NINE_OF_HEARTS,
+			},
+			want: &JACK_OF_SPADES,
+		},
+		{
+			name: "Only two cards but tie",
+			cards: []Card{
+				NINE_OF_HEARTS,
+				NINE_OF_CLUBS,
+			},
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
