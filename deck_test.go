@@ -99,7 +99,7 @@ func TestDeck_Remove(t *testing.T) {
 
 func TestDeck_Sort(t *testing.T) {
 	var (
-		TEN_OF_SPADES  = NewCard(TEN, SPADES)
+		TEN_OF_SPADES = NewCard(TEN, SPADES)
 		JACK_OF_CLUBS = NewCard(JACK, CLUBS)
 		ACE_OF_HEARTS = NewCard(ACE, HEARTS)
 	)

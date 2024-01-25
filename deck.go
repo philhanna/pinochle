@@ -20,7 +20,7 @@ func NewDeck() Deck {
 	cards := make([]Card, 0)
 	for i := 0; i < 2; i++ {
 		for _, rank := range Ranks {
-			for _, suit:= range Suits {
+			for _, suit := range Suits {
 				card := NewCard(rank, suit)
 				cards = append(cards, card)
 			}
