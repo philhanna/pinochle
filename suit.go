@@ -37,6 +37,13 @@ var Characters = map[Suit]string{
 	CLUBS:    "C",
 }
 
+var suitNameMap = map[Suit]string{
+	SPADES:   "spades",
+	HEARTS:   "hearts",
+	DIAMONDS: "diamonds",
+	CLUBS:    "clubs",
+}
+
 // Returns the Unicode glyph that represents this suit, i. e. ♠, ♡, ♢, ♣
 func (suit Suit) Glyph() string {
 	return Glyphs[suit]

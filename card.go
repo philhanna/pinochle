@@ -38,35 +38,9 @@ func NewCard(rank Rank, suit Suit) Card {
 
 // Returns the SVG image of this card
 func (c Card) GetSVG() (string, error) {
-	var rankName, suitName string
 
-	// Get the rank name
-	switch c.Rank {
-	case NINE:
-		rankName = "9"
-	case JACK:
-		rankName = "jack"
-	case QUEEN:
-		rankName = "queen"
-	case KING:
-		rankName = "king"
-	case TEN:
-		rankName = "10"
-	case ACE:
-		rankName = "ace"
-	}
-
-	// Get the suit name
-	switch c.Suit {
-	case SPADES:
-		suitName = "spades"
-	case HEARTS:
-		suitName = "hearts"
-	case DIAMONDS:
-		suitName = "diamonds"
-	case CLUBS:
-		suitName = "clubs"
-	}
+	var rankName = rankNameMap[c.Rank]
+	var suitName = suitNameMap[c.Suit]
 
 	// Create the file name
 	baseName := suitName + "_" + rankName + ".svg"

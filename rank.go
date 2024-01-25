@@ -38,7 +38,7 @@ var shortNameMap = map[Rank]string{
 	ACE:   "A",
 }
 
-var fullNameMap = map[Rank]string{
+var rankNameMap = map[Rank]string{
 	NINE:  "9",
 	JACK:  "jack",
 	QUEEN: "queen",

@@ -63,7 +63,7 @@ func TestCard_Unicode(t *testing.T) {
 		{
 			name: "Jack of hearts",
 			card: NewCard(JACK, HEARTS),
-			want: fmt.Sprintf("%c", 0x1f0bb      ),
+			want: fmt.Sprintf("%c", 0x1f0bb),
 		},
 	}
 	for _, tt := range tests {
