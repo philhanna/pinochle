@@ -8,10 +8,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func printDeck(label string, cards []Card) {
+func printDeck(label string, cards []Card, denom... int) {
 	fmt.Printf("%s:\n", label)
+	if len(denom) == 0 {
+		denom = []int{4}
+	}
 	buffer := make([]string, 0)
-	n := len(cards) / 4
+	n := len(cards) / denom[0]
 	for _, card := range cards {
 		buffer = append(buffer, card.Unicode())
 		if len(buffer) == n {
