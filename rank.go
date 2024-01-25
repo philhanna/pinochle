@@ -1,7 +1,6 @@
 package pinochle
 
 import (
-	"fmt"
 	"slices"
 )
 
@@ -21,6 +20,33 @@ const (
 	ACE
 )
 
+var offsetMap = map[Rank]int{
+	NINE:  9,
+	JACK:  11,
+	QUEEN: 13,
+	KING:  14,
+	TEN:   10,
+	ACE:   1,
+}
+
+var shortNameMap = map[Rank]string{
+	NINE:  "9",
+	JACK:  "J",
+	QUEEN: "Q",
+	KING:  "K",
+	TEN:   "10",
+	ACE:   "A",
+}
+
+var fullNameMap = map[Rank]string{
+	NINE:  "9",
+	JACK:  "jack",
+	QUEEN: "queen",
+	KING:  "king",
+	TEN:   "10",
+	ACE:   "ace",
+}
+
 // Ranks is a slice of the six ranks in ascending order of precedence
 var Ranks = []Rank{NINE, JACK, QUEEN, KING, TEN, ACE}
 
@@ -36,38 +62,10 @@ func (r Rank) Less(other Rank) bool {
 // Returns the offset in the Unicode system to the beginning of cards
 // for this rank
 func (r Rank) Offset() int {
-	offset := 0
-	switch r {
-	case NINE:
-		offset = 9
-	case TEN:
-		offset = 10
-	case JACK:
-		offset = 11
-	case QUEEN:
-		offset = 13
-	case KING:
-		offset = 14
-	case ACE:
-		offset = 1
-	}
-	return offset
+	return offsetMap[r]
 }
 
 // Returns a representation of a Rank as a string
 func (r Rank) String() string {
-	switch r {
-	default:
-		return fmt.Sprint(int(r))
-	case JACK:
-		return "J"
-	case QUEEN:
-		return "Q"
-	case KING:
-		return "K"
-	case TEN:
-		return "10"
-	case ACE:
-		return "A"
-	}
+	return shortNameMap[r]
 }
