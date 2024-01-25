@@ -1,7 +1,9 @@
 package pinochle
 
+import "math/rand"
+
 // ---------------------------------------------------------------------
-// Type Definitions
+// Type definitions
 // ---------------------------------------------------------------------
 
 // Player is one of the four participants in the game.
@@ -22,4 +24,15 @@ type HumanPlayer struct {
 // ComputerPlayer is a Player that supplies default responses
 type ComputerPlayer struct {
 	Player
+}
+
+// ---------------------------------------------------------------------
+// Methods
+// ---------------------------------------------------------------------
+
+// DrawCard returns a card drawn at random
+func (p *Player) DrawCard(deck Deck) Card {
+	n := deck.Len()
+	rnd := rand.Intn(n)
+	return deck.cards[rnd]
 }
