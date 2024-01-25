@@ -38,6 +38,11 @@ func (p *Player) DrawCard(deck Deck) Card {
 	return deck.cards[rnd]
 }
 
+// WantToCut returns true if the player wishes to cut
+func (p *Player) WantToCut() bool {
+	return rand.Float64() > 0.5
+}
+
 // WantToReshuffle returns true if the player wishes to shuffle again
 func (p *Player) WantToReshuffle() bool {
 	return rand.Float64() > 0.5
