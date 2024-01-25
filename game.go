@@ -64,6 +64,7 @@ func CardWithHighestRank(cards []Card) *Card {
 // In subsequent rounds, the dealer is the player on the previous
 // dealer's left.
 func (g *Game) ChooseDealer() *Player {
+
 	for {
 		cardChoice := make(map[*Player]Card)
 		deck := NewDeck()
@@ -83,7 +84,8 @@ func (g *Game) ChooseDealer() *Player {
 					return player
 				}
 			}
-			log.Fatal("no highest card found")
+			log.Println("no highest card found")
+			return nil
 		}
 	}
 }
