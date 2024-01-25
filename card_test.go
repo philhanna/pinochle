@@ -1,6 +1,7 @@
 package pinochle
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -48,6 +49,25 @@ func TestCard_String(t *testing.T) {
 			want := tt.want
 			have := tt.card.String()
 			assert.Equal(t, want, have)
+		})
+	}
+}
+
+func TestCard_Unicode(t *testing.T) {
+	tests := []struct {
+		name string
+		card Card
+		want string
+	}{
+		{
+			name: "Jack of hearts",
+			card: NewCard(JACK, HEARTS),
+			want: fmt.Sprintf("%c", 0x1f0bb      ),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.card.Unicode())
 		})
 	}
 }
