@@ -17,9 +17,9 @@ func TestHighestRank(t *testing.T) {
 	)
 
 	tests := []struct {
-		name  string
-		cards []Card
-		want  *Card
+		name    string
+		cards   []Card
+		want    *Card
 	}{
 		{
 			name:  "Empty",
@@ -43,7 +43,6 @@ func TestHighestRank(t *testing.T) {
 				NINE_OF_HEARTS,
 				TEN_OF_DIAMONDS,
 			},
-			want: nil,
 		},
 		{
 			name: "Tie but in lower cards",
@@ -82,7 +81,6 @@ func TestHighestRank(t *testing.T) {
 				NINE_OF_HEARTS,
 				NINE_OF_CLUBS,
 			},
-			want: nil,
 		},
 	}
 	for _, tt := range tests {
