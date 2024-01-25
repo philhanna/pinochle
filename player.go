@@ -27,6 +27,13 @@ type ComputerPlayer struct {
 	Player
 }
 
+var (
+	DEFAULT_COIN_FLIP = func() bool {
+		return rand.Float64() > 0.5
+	}
+	COIN_FLIP = DEFAULT_COIN_FLIP
+)
+
 // ---------------------------------------------------------------------
 // Methods
 // ---------------------------------------------------------------------
@@ -40,10 +47,10 @@ func (p *Player) DrawCard(deck Deck) Card {
 
 // WantToCut returns true if the player wishes to cut
 func (p *Player) WantToCut() bool {
-	return rand.Float64() > 0.5
+	return COIN_FLIP()
 }
 
 // WantToReshuffle returns true if the player wishes to shuffle again
 func (p *Player) WantToReshuffle() bool {
-	return rand.Float64() > 0.5
+	return COIN_FLIP()
 }
