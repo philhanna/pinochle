@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func printDeck(label string, cards []Card, denom... int) {
+func printDeck(label string, cards []Card, denom ...int) {
 	fmt.Printf("%s:\n", label)
 	if len(denom) == 0 {
 		denom = []int{4}
