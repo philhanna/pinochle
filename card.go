@@ -42,14 +42,16 @@ func (c Card) GetSVG() (string, error) {
 
 	// Get the rank name
 	switch c.Rank {
-	case NINE, TEN:
-		rankName = fmt.Sprintf("%d", c.Rank)
+	case NINE:
+		rankName = "9"
 	case JACK:
 		rankName = "jack"
 	case QUEEN:
 		rankName = "queen"
 	case KING:
 		rankName = "king"
+	case TEN:
+		rankName = "10"
 	case ACE:
 		rankName = "ace"
 	}
