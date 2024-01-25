@@ -7,6 +7,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	LARRY = &Player{Name: "Larry"}
+	CURLY = &Player{Name: "Curly"}
+	MOE   = &Player{Name: "Moe"}
+	SHEMP = &Player{Name: "Shemp"}
+)
+
+func getTestGame() *Game {
+	game := Game{
+		Players: [4]*Player{LARRY, CURLY, MOE, SHEMP},
+		NSTeam:  Team{Players: [2]*Player{LARRY, MOE}},
+		EWTeam:  Team{Players: [2]*Player{CURLY, SHEMP}},
+	}
+	return &game
+}
+
 func TestHighestRank(t *testing.T) {
 	var (
 		TEN_OF_DIAMONDS = NewCard(TEN, DIAMONDS)
@@ -100,14 +116,7 @@ func TestGame_ChooseDealer(t *testing.T) {
 	}{
 		{
 			name: "Happy path",
-			game: Game{
-				Players: [4]*Player{
-					{Name: "Larry"},
-					{Name: "Curly"},
-					{Name: "Moe"},
-					{Name: "Shemp"},
-				},
-			},
+			game: *getTestGame(),
 		},
 	}
 	for _, tt := range tests {
@@ -115,6 +124,46 @@ func TestGame_ChooseDealer(t *testing.T) {
 			player := tt.game.ChooseDealer()
 			fmt.Printf("Dealer is %q\n", player.Name)
 			assert.NotNil(t, player)
+		})
+	}
+}
+
+func TestGame_PlayerOnLeft(t *testing.T) {
+	tests := []struct {
+		name   string
+		game   *Game
+		player *Player
+		want   *Player
+	}{
+		{name: "1st player", game: getTestGame(), player: LARRY, want: CURLY},
+		{name: "2nd player", game: getTestGame(), player: CURLY, want: MOE},
+		{name: "3rd player", game: getTestGame(), player: MOE, want: SHEMP},
+		{name: "4th player", game: getTestGame(), player: SHEMP, want: LARRY},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			other := tt.game.PlayerOnLeft(tt.player)
+			assert.Equal(t, tt.want, other)
+		})
+	}
+}
+
+func TestGame_PlayerOnRight(t *testing.T) {
+	tests := []struct {
+		name   string
+		game   *Game
+		player *Player
+		want   *Player
+	}{
+		{name: "1st player", game: getTestGame(), player: LARRY, want: SHEMP},
+		{name: "2nd player", game: getTestGame(), player: CURLY, want: LARRY},
+		{name: "3rd player", game: getTestGame(), player: MOE, want: CURLY},
+		{name: "4th player", game: getTestGame(), player: SHEMP, want: MOE},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			other := tt.game.PlayerOnRight(tt.player)
+			assert.Equal(t, tt.want, other)
 		})
 	}
 }

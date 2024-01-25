@@ -86,3 +86,33 @@ func (g *Game) ChooseDealer() *Player {
 	}
 	return dealer
 }
+
+// PlayerOnLeft returns the player to the left of the specified player
+func (g *Game) PlayerOnLeft(p *Player) *Player {
+	var other *Player
+	for i := 0; i < len(g.Players); i++ {
+		if g.Players[i] == p {
+			j := i + 1
+			if j >= len(g.Players) {
+				j -= len(g.Players)
+			}
+			other = g.Players[j]
+		}
+	}
+	return other
+}
+
+// PlayerOnRight returns the player to the right of the specified player
+func (g *Game) PlayerOnRight(p *Player) *Player {
+	var other *Player
+	for i := 0; i < len(g.Players); i++ {
+		if g.Players[i] == p {
+			j := i - 1
+			if j < 0 {
+				j += len(g.Players)
+			}
+			other = g.Players[j]
+		}
+	}
+	return other
+}

@@ -12,6 +12,7 @@ type Player struct {
 	Name     string
 	Position uint8
 	TeamID   string
+	Hand     Hand
 }
 
 // HumanPlayer is a Player that supplies responses over the network
@@ -35,4 +36,9 @@ func (p *Player) DrawCard(deck Deck) Card {
 	n := deck.Len()
 	rnd := rand.Intn(n)
 	return deck.cards[rnd]
+}
+
+// WantToReshuffle returns true if the player wishes to shuffle again
+func (p *Player) WantToReshuffle() bool {
+	return rand.Float64() > 0.5
 }
