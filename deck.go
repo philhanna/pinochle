@@ -37,6 +37,15 @@ func NewDeck() Deck {
 // Methods
 // -----------------------------------------------------------------------
 
+// Cut separates the deck at a random index and reorders the two parts
+func (d *Deck) Cut() {
+	ix := rand.Intn(d.Len())
+	top := d.cards[:ix]
+	bottom := d.cards[ix:]
+	cutCards := append(bottom, top...)
+	d.cards = cutCards
+}
+
 // Len returns the number of cards in the deck
 func (d *Deck) Len() int {
 	return len(d.cards)

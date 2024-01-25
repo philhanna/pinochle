@@ -35,7 +35,9 @@ func NewRound(g *Game, dealer *Player) *Round {
 
 	// Dealer offers player on right chance to cut
 	other := g.PlayerOnRight(dealer)
-	_ = other // TODO finish me
+	if other.WantToCut() {
+		deck.Cut()
+	}
 
 	// Return a pointer to the round
 	return r
