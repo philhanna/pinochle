@@ -15,6 +15,10 @@ type Deck struct {
 	cards []Card
 }
 
+// ---------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------
+
 // NewDeck creates a new 48-card pinochle deck
 func NewDeck() Deck {
 	cards := make([]Card, 0)
