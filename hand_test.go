@@ -13,6 +13,9 @@ func TestHand_Sort(t *testing.T) {
 				deck := NewDeck()
 				deck.Shuffle()
 				hand := deck.cards[:12]
+				// Ensure there is at least one duplicate card
+				// (for 100% unit test coverage)
+				hand[0] = hand[1]
 				return hand
 			}(),
 		},
