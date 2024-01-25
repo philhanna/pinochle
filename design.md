@@ -45,7 +45,7 @@ See [pinochle-game-rules](https://playingcarddecks.com/blogs/how-to-play/pinochl
 
 <a id="classes"></a>
 ## Classes
-The classes used include `Cards`, `Game`, `Team`, `Player`, `Hand`.
+The classes used include `Cards`, `Game`, `Team`, `Player`, `Round`.
 
 [Back to top]
 <hr/>
@@ -59,11 +59,11 @@ The cards and associated classes come from the [cards library](https://github.co
 and include:
 
 - **Suit** - Enumeration of SPADES, HEARTS, DIAMONDS, and CLUBS.
-- **Rank** - Enumeration of 2 through Ace,
-with ordering functions to handle regular and pinochle decks.
+- **Rank** - Enumeration of 9 through Ace,
+with ordering functions to handle pinochle decks.
 - **Card** - A combination of **Rank** and **Suit**. The library contains
 SVG images for each card.
-- **PinochleDeck** - A collection of **Card**s for a 48-card Pinochle deck.
+- **Deck** - A collection of **Card**s for a 48-card Pinochle deck.
 
 <hr/>
 
