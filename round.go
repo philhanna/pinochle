@@ -47,7 +47,7 @@ func NewRound(g *Game, dealer *Player) *Round {
 	other = g.PlayerOnLeft(thisPlayer)
 	for i, card := range deck.cards {
 		other.Hand = append(other.Hand, card)
-		if i % 4 == 3 {
+		if i%4 == 3 {
 			other = g.PlayerOnLeft(other)
 		}
 	}
