@@ -7,6 +7,12 @@ import (
 )
 
 func TestNewRound(t *testing.T) {
+	var (
+		frodo = &Player{Name: "Frodo"}
+		sam = &Player{Name: "Sam"}
+		gollum = &Player{Name: "Gollum"}
+		gandalf = &Player{Name: "Gandalf"}
+	)
 	tests := []struct {
 		name   string
 		game   *Game
@@ -16,27 +22,17 @@ func TestNewRound(t *testing.T) {
 		{
 			name: "Happy path",
 			game: &Game{
-				Players: [4]*Player{
-					{Name: "Frodo"},
-					{Name: "Sam"},
-					{Name: "Gollum"},
-					{Name: "Gandalf"},
-				},
+				Players: [4]*Player{frodo, sam, gollum, gandalf},
 			},
-			dealer: &Player{Name: "Gollum"},
+			dealer: gollum,
 			live:   true,
 		},
 		{
 			name: "Force reshuffle",
 			game: &Game{
-				Players: [4]*Player{
-					{Name: "Frodo"},
-					{Name: "Sam"},
-					{Name: "Gollum"},
-					{Name: "Gandalf"},
-				},
+				Players: [4]*Player{frodo, sam, gollum, gandalf},
 			},
-			dealer: &Player{Name: "Gollum"},
+			dealer: gollum,
 			live:   false,
 		},
 	}
@@ -52,6 +48,9 @@ func TestNewRound(t *testing.T) {
 			round := NewRound(tt.game, tt.dealer)
 			assert.NotNil(t, round)
 			assert.Equal(t, tt.dealer, round.dealer)
+			for _, player := range tt.game.Players {
+				printDeck(player.Name, player.Hand, 1)
+			}
 		})
 	}
 }

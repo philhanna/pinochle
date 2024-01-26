@@ -39,6 +39,19 @@ func NewRound(g *Game, dealer *Player) *Round {
 		deck.Cut()
 	}
 
+	// Deal the cards, three at a time
+	for _, player := range g.Players {
+		player.Hand = []Card{}
+	}
+	thisPlayer := dealer
+	other = g.PlayerOnLeft(thisPlayer)
+	for i, card := range deck.cards {
+		other.Hand = append(other.Hand, card)
+		if i % 4 == 3 {
+			other = g.PlayerOnLeft(other)
+		}
+	}
+
 	// Return a pointer to the round
 	return r
 }
