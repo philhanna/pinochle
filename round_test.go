@@ -8,9 +8,9 @@ import (
 
 func TestNewRound(t *testing.T) {
 	var (
-		frodo = &Player{Name: "Frodo"}
-		sam = &Player{Name: "Sam"}
-		gollum = &Player{Name: "Gollum"}
+		frodo   = &Player{Name: "Frodo"}
+		sam     = &Player{Name: "Sam"}
+		gollum  = &Player{Name: "Gollum"}
 		gandalf = &Player{Name: "Gandalf"}
 	)
 	tests := []struct {
@@ -49,6 +49,7 @@ func TestNewRound(t *testing.T) {
 			assert.NotNil(t, round)
 			assert.Equal(t, tt.dealer, round.dealer)
 			for _, player := range tt.game.Players {
+				player.Hand.Sort()
 				printDeck(player.Name, player.Hand, 1)
 			}
 		})
