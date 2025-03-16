@@ -23,7 +23,7 @@ def test_greater_than(rank1, rank2, expected):
     (Rank.ACE, "A"),
 ])
 def test_short_name(rank, expected):
-    actual = rank.short_name()
+    actual = rank.short_name
     assert actual == expected
 
 
@@ -36,5 +36,5 @@ def test_short_name(rank, expected):
     (Rank.ACE, "ace"),
 ])
 def test_rank_name(rank, expected):
-    actual = rank.rank_name()
+    actual = rank.rank_name
     assert actual == expected

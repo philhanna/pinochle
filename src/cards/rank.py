@@ -2,32 +2,22 @@ from enum import Enum
 
 
 class Rank(Enum):
-    NINE = 1,
-    JACK = 2,
-    QUEEN = 3,
-    KING = 4,
-    TEN = 5,
-    ACE = 6,
-    
+    NINE = (1, "9", "9")
+    JACK = (2, "J", "jack")
+    QUEEN = (3, "Q", "queen")
+    KING = (4, "K", "king")
+    TEN = (5, "10", "10")
+    ACE = (6, "A", "ace")
+
+    def __init__(self, value, short_name, rank_name):
+        self._value_ = value
+        self._short_name = short_name
+        self._rank_name = rank_name
+
+    @property
     def short_name(self):
-        SHORT_NAMES = {
-            Rank.NINE: "9",
-            Rank.JACK: "J",
-            Rank.QUEEN: "Q",
-            Rank.KING: "K",
-            Rank.TEN: "10",
-            Rank.ACE: "A",
-        }
-        return SHORT_NAMES[self]
-    
+        return self._short_name
+
+    @property
     def rank_name(self):
-        RANK_NAMES = {
-            Rank.NINE: "9",
-            Rank.JACK: "jack",
-            Rank.QUEEN: "queen",
-            Rank.KING: "king",
-            Rank.TEN: "10",
-            Rank.ACE: "ace",
-        }
-        return RANK_NAMES[self]
-        
+        return self._rank_name
