@@ -7,4 +7,5 @@ class Card:
         self.suit: Suit = suit
         
     def __str__(self):
-        pass
+        result = str(self.rank) + str(self.suit)
+        return result
