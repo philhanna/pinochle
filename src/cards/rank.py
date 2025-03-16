@@ -8,4 +8,14 @@ class Rank(Enum):
     KING = 4,
     TEN = 5,
     ACE = 6,
-    pass
+    
+    def short_name(self):
+        SHORT_NAMES = {
+            Rank.NINE: "9",
+            Rank.JACK: "J",
+            Rank.QUEEN: "Q",
+            Rank.KING: "K",
+            Rank.TEN: "10",
+            Rank.ACE: "A",
+        }
+        return SHORT_NAMES[self]
