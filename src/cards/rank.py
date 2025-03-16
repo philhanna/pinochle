@@ -9,10 +9,12 @@ class Rank(Enum):
     TEN = (5, "10", "10")
     ACE = (6, "A", "ace")
 
-    def __init__(self, value, short_name, rank_name):
-        self._value_ = value
-        self._short_name = short_name
-        self._rank_name = rank_name
+    def __new__(cls, value, short_name, rank_name):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj._short_name = short_name
+        obj._rank_name = rank_name
+        return obj
 
     @property
     def short_name(self):
