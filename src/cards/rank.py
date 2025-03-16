@@ -19,3 +19,15 @@ class Rank(Enum):
             Rank.ACE: "A",
         }
         return SHORT_NAMES[self]
+    
+    def rank_name(self):
+        RANK_NAMES = {
+            Rank.NINE: "9",
+            Rank.JACK: "jack",
+            Rank.QUEEN: "queen",
+            Rank.KING: "king",
+            Rank.TEN: "10",
+            Rank.ACE: "ace",
+        }
+        return RANK_NAMES[self]
+        

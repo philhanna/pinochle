@@ -24,3 +24,15 @@ def test_short_name(rank, expected):
     actual = rank.short_name()
     assert actual == expected
     
+
+@pytest.mark.parametrize(("rank", "expected"), [
+    (Rank.NINE, "9"),
+    (Rank.JACK, "jack"),
+    (Rank.QUEEN, "queen"),
+    (Rank.KING, "king"),
+    (Rank.TEN, "10"),
+    (Rank.ACE, "ace"),
+])
+def test_rank_name(rank, expected):
+    actual = rank.rank_name()
+    assert actual == expected
