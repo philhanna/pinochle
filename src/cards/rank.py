@@ -23,3 +23,6 @@ class Rank(Enum):
     @property
     def rank_name(self):
         return self._rank_name
+    
+    def __str__(self):
+        return self.short_name
