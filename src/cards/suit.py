@@ -5,8 +5,8 @@ from cards import IS_WINDOWS
 
 class Suit(Enum):
     SPADES = ('\u2660', "S", 0x1F0A0)
-    HEARTS = ('\u2661', "H", 0x1F0B0)
-    DIAMONDS = ('\u2662', "D", 0x1F0C0)
+    HEARTS = ('\u2665', "H", 0x1F0B0)
+    DIAMONDS = ('\u2666', "D", 0x1F0C0)
     CLUBS = ('\u2663', "C", 0x1F0D0)
 
     def __new__(cls, glyph: str, character: str, offset: int):
