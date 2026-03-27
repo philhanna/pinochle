@@ -1,6 +1,7 @@
+# tests.domain.test_rank
 import pytest
 
-from cards import Rank
+from pinochle.domain.cards import Rank
 
 
 @pytest.mark.parametrize(("rank1, rank2, expected"), [

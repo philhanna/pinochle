@@ -1,0 +1,19 @@
+# tests.ports.test_card_image_port
+"""Contract tests for CardImagePort."""
+from pinochle.domain.cards.card import Card
+from pinochle.domain.cards.rank import Rank
+from pinochle.domain.cards.suit import Suit
+from pinochle.ports.outbound.card_image_port import CardImagePort
+
+
+def run_contract(images: CardImagePort) -> None:
+    card = Card(Rank.ACE, Suit.SPADES)
+
+    svg_path = images.get_image_path(card, fmt="svg")
+    assert isinstance(svg_path, str) and len(svg_path) > 0
+
+    png_path = images.get_image_path(card, fmt="png")
+    assert isinstance(png_path, str) and len(png_path) > 0
+
+    back_svg = images.get_back_path(fmt="svg")
+    assert isinstance(back_svg, str) and len(back_svg) > 0

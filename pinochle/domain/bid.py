@@ -1,0 +1,76 @@
+# pinochle.domain.bid
+from dataclasses import dataclass
+
+MINIMUM_BID = 250
+BID_INCREMENT = 10
+
+
+def is_valid_bid(amount: int, current_high: int) -> bool:
+    """Return True if `amount` is a valid new bid above `current_high`."""
+    if amount < MINIMUM_BID:
+        return False
+    if amount % BID_INCREMENT != 0:
+        return False
+    return amount > current_high
+
+
+@dataclass
+class BidEntry:
+    player_id: str
+    amount: int | None  # None = pass
+
+
+class BiddingRound:
+    """Manages one round of bidding for four players.
+
+    Players bid in order; passing removes them from consideration.
+    Bidding ends when at most one active bidder remains.
+    """
+
+    def __init__(self, player_order: list[str]):
+        if len(player_order) != 4:
+            raise ValueError("Exactly four players required.")
+        self._order: list[str] = list(player_order)
+        self._passed: set[str] = set()
+        self._history: list[BidEntry] = []
+        self._current_high: int = 0
+
+    @property
+    def current_high(self) -> int:
+        return self._current_high
+
+    @property
+    def high_bidder(self) -> str | None:
+        for entry in reversed(self._history):
+            if entry.amount is not None:
+                return entry.player_id
+        return None
+
+    @property
+    def active_players(self) -> list[str]:
+        return [p for p in self._order if p not in self._passed]
+
+    @property
+    def is_over(self) -> bool:
+        return len(self.active_players) <= 1
+
+    def place_bid(self, player_id: str, amount: int | None) -> None:
+        """Record a bid (amount=None means pass).
+
+        Raises ValueError for an out-of-turn or invalid bid.
+        """
+        if self.is_over:
+            raise ValueError("Bidding is already over.")
+        if player_id not in self.active_players:
+            raise ValueError(f"{player_id} is not an active bidder.")
+
+        if amount is None:
+            self._passed.add(player_id)
+        else:
+            if not is_valid_bid(amount, self._current_high):
+                raise ValueError(
+                    f"Bid of {amount} is invalid (current high: {self._current_high})."
+                )
+            self._current_high = amount
+
+        self._history.append(BidEntry(player_id=player_id, amount=amount))

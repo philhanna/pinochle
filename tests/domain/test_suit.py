@@ -1,8 +1,9 @@
+# tests.domain.test_suit
 from unittest.mock import patch
 import pytest
-from cards import IS_WINDOWS
-from cards import Suit
-import cards
+
+import pinochle.domain.cards.suit as suit_module
+from pinochle.domain.cards import Suit
 
 
 @pytest.mark.parametrize(
@@ -15,7 +16,6 @@ import cards
     ],
 )
 def test_suit_properties(suit, expected_glyph, expected_character, expected_offset):
-    """Test that Suit enum members have correct properties."""
     assert suit.glyph == expected_glyph
     assert suit.character == expected_character
     assert suit.offset == expected_offset
@@ -30,13 +30,9 @@ def test_suit_properties(suit, expected_glyph, expected_character, expected_offs
         (Suit.CLUBS, "C", "♣"),
     ],
 )
-def test_suit_str(mocker, suit, expected_str_windows, expected_str_non_windows):
-    """Test the __str__ method of Suit based on the platform."""
-
-    # Mock IS_WINDOWS to return True and check string representation
-    with patch.object(cards.suit, "IS_WINDOWS", return_value=True):
+def test_suit_str(suit, expected_str_windows, expected_str_non_windows):
+    with patch.object(suit_module, "_is_windows", return_value=True):
         assert str(suit) == expected_str_windows
 
-    # Mock IS_WINDOWS to return False and check string representation
-    with patch.object(cards.suit, "IS_WINDOWS", return_value=False):
+    with patch.object(suit_module, "_is_windows", return_value=False):
         assert str(suit) == expected_str_non_windows
