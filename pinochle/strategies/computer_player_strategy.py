@@ -1,9 +1,9 @@
-# pinochle.adapters.computer_player_adapter
+# pinochle.strategies.computer_player_strategy
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
 
 
-class ComputerPlayerAdapter:
+class ComputerPlayerStrategy:
     """Rule-based AI decision helpers.
 
     Provides stateless strategy methods for choosing trump, cards to pass,

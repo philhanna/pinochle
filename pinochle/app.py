@@ -7,7 +7,7 @@ for building the object graph.  No game logic lives here.
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.adapters.svg_card_image import SvgCardImage
-from pinochle.adapters.computer_player_adapter import ComputerPlayerAdapter
+from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
 from pinochle.ports.card_image_port import CardImagePort
 from pinochle.services.game_service import GameService
 
@@ -24,7 +24,7 @@ def create_default_app() -> dict:
     notifier = PrintNotification()
     card_images: CardImagePort = SvgCardImage()
     service = GameService(game_state, notifier)
-    computer = ComputerPlayerAdapter()
+    computer = ComputerPlayerStrategy()
 
     return {
         "service": service,

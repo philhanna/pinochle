@@ -1,7 +1,7 @@
-# tests.adapters.test_computer_player
+# tests.strategies.test_computer_player_strategy
 import pytest
 
-from pinochle.adapters.computer_player_adapter import ComputerPlayerAdapter
+from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
@@ -19,7 +19,7 @@ def test_choose_trump_picks_most_common_suit():
         (Rank.ACE, Suit.HEARTS),
         (Rank.TEN, Suit.DIAMONDS),
     ])
-    assert ComputerPlayerAdapter.choose_trump(hand) == Suit.SPADES
+    assert ComputerPlayerStrategy.choose_trump(hand) == Suit.SPADES
 
 
 def test_choose_cards_to_pass_returns_lowest():
@@ -30,7 +30,7 @@ def test_choose_cards_to_pass_returns_lowest():
         (Rank.QUEEN, Suit.CLUBS),
         (Rank.TEN, Suit.SPADES),
     ])
-    passed = ComputerPlayerAdapter.choose_cards_to_pass(hand, count=4)
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, count=4)
     assert Rank.ACE not in {c.rank for c in passed}
     assert len(passed) == 4
 
@@ -41,4 +41,4 @@ def test_choose_play_picks_highest():
         (Rank.KING, Suit.HEARTS),
         (Rank.ACE, Suit.HEARTS),
     ])
-    assert ComputerPlayerAdapter.choose_play(legal) == Card(Rank.ACE, Suit.HEARTS)
+    assert ComputerPlayerStrategy.choose_play(legal) == Card(Rank.ACE, Suit.HEARTS)
