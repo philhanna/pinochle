@@ -5,6 +5,19 @@ The format is based on [Keep a Changelog].
 	
 ## [Unreleased]
 
+### Added
+- Hexagonal (ports and adapters) architecture
+- `pinochle/domain/`: pure game logic — `Rank`, `Suit`, `Card`, `Deck`,
+  `Player`, `Team`, `Hand`, `BiddingRound`, `detect_meld`, `Trick`,
+  `scoring`, `Round` state machine, `Game` aggregate root with domain events
+- `pinochle/ports/`: `AdminPort`, `PlayerActionPort` (inbound);
+  `GameStatePort`, `NotificationPort`, `CardImagePort` (outbound)
+- `pinochle/adapters/`: `InMemoryGameState`, `PrintNotification`,
+  `SvgCardImage`, `ComputerPlayerAdapter` (rule-based AI)
+- `pinochle/app.py`: `create_default_app()` wiring entry point
+- `pyproject.toml`: package metadata and pytest configuration
+- 84 unit tests across `tests/domain/`, `tests/ports/`, `tests/adapters/`
+
 ## [v0.0.0] - 2023-07-19
 Start of Go verion
 
