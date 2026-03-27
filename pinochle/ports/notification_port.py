@@ -1,4 +1,4 @@
-# pinochle.ports.outbound.notification_port
+# pinochle.ports.notification_port
 from abc import ABC, abstractmethod
 
 from pinochle.domain.game import GameEvent

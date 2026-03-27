@@ -1,4 +1,4 @@
-# pinochle.ports.inbound.admin_port
+# pinochle.ports.admin_port
 from abc import ABC, abstractmethod
 
 from pinochle.domain.player import Player

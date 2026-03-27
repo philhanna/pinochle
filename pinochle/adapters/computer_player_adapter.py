@@ -1,9 +1,9 @@
-# pinochle.adapters.inbound.computer_player_adapter
+# pinochle.adapters.computer_player_adapter
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.game import Game
-from pinochle.ports.inbound.player_action_port import PlayerActionPort
-from pinochle.ports.outbound.game_state_port import GameStatePort
+from pinochle.ports.player_action_port import PlayerActionPort
+from pinochle.ports.game_state_port import GameStatePort
 
 
 class ComputerPlayerAdapter(PlayerActionPort):

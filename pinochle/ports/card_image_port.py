@@ -1,4 +1,4 @@
-# pinochle.ports.outbound.card_image_port
+# pinochle.ports.card_image_port
 from abc import ABC, abstractmethod
 
 from pinochle.domain.cards.card import Card

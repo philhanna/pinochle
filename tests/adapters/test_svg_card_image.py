@@ -1,7 +1,7 @@
 # tests.adapters.test_svg_card_image
 import pytest
 
-from pinochle.adapters.outbound.svg_card_image import SvgCardImage
+from pinochle.adapters.svg_card_image import SvgCardImage
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit

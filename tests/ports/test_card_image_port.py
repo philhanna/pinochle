@@ -3,7 +3,7 @@
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
-from pinochle.ports.outbound.card_image_port import CardImagePort
+from pinochle.ports.card_image_port import CardImagePort
 
 
 def run_contract(images: CardImagePort) -> None:

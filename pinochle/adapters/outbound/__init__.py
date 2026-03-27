@@ -1,1 +1,0 @@
-# pinochle.adapters.outbound

@@ -1,4 +1,4 @@
-# pinochle.ports.outbound.game_state_port
+# pinochle.ports.game_state_port
 from abc import ABC, abstractmethod
 
 from pinochle.domain.game import Game

@@ -1,6 +1,6 @@
-# pinochle.adapters.outbound.in_memory_game_state
+# pinochle.adapters.in_memory_game_state
 from pinochle.domain.game import Game
-from pinochle.ports.outbound.game_state_port import GameStatePort
+from pinochle.ports.game_state_port import GameStatePort
 
 
 class InMemoryGameState(GameStatePort):

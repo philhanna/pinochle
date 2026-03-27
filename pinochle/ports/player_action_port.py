@@ -1,4 +1,4 @@
-# pinochle.ports.inbound.player_action_port
+# pinochle.ports.player_action_port
 from abc import ABC, abstractmethod
 
 from pinochle.domain.cards.card import Card

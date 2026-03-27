@@ -1,7 +1,7 @@
 # tests.adapters.test_in_memory_game_state
 import pytest
 
-from pinochle.adapters.outbound.in_memory_game_state import InMemoryGameState
+from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.domain.game import Game
 from tests.ports.test_game_state_port import run_contract
 

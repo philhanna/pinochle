@@ -1,11 +1,11 @@
-# pinochle.adapters.outbound.svg_card_image
+# pinochle.adapters.svg_card_image
 from pathlib import Path
 
 from pinochle.domain.cards.card import Card
-from pinochle.ports.outbound.card_image_port import CardImagePort
+from pinochle.ports.card_image_port import CardImagePort
 
 _RESOURCES = (
-    Path(__file__).parent.parent.parent  # pinochle/
+    Path(__file__).parent.parent  # pinochle/
     / "cards" / "resources" / "svg_playing_cards"
 )
 

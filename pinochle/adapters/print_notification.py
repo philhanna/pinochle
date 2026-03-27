@@ -1,6 +1,6 @@
-# pinochle.adapters.outbound.print_notification
+# pinochle.adapters.print_notification
 from pinochle.domain.game import GameEvent
-from pinochle.ports.outbound.notification_port import NotificationPort
+from pinochle.ports.notification_port import NotificationPort
 
 
 class PrintNotification(NotificationPort):

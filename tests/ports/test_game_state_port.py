@@ -8,7 +8,7 @@ new implementations.
 import pytest
 
 from pinochle.domain.game import Game
-from pinochle.ports.outbound.game_state_port import GameStatePort
+from pinochle.ports.game_state_port import GameStatePort
 
 
 def run_contract(store: GameStatePort) -> None:

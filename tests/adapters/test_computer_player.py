@@ -1,7 +1,7 @@
 # tests.adapters.test_computer_player
 import pytest
 
-from pinochle.adapters.inbound.computer_player_adapter import ComputerPlayerAdapter
+from pinochle.adapters.computer_player_adapter import ComputerPlayerAdapter
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
