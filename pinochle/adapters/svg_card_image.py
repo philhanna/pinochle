@@ -6,7 +6,7 @@ from pinochle.ports.card_image_port import CardImagePort
 
 _RESOURCES = (
     Path(__file__).parent.parent  # pinochle/
-    / "cards" / "resources" / "svg_playing_cards"
+    / "card_images" / "resources" / "svg_playing_cards"
 )
 
 _DEFAULT_BACK = "blue"

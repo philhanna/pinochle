@@ -1,4 +1,5 @@
-from cards import Rank, Suit
+from .rank import Rank
+from .suit import Suit
 
 class Card:
     """ A Card is a combination of a Rank and a Suit """

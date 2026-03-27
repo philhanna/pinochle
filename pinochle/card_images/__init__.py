@@ -1,4 +1,4 @@
-# pinochle.cards
+# pinochle.card_images
 import platform
 
 def IS_WINDOWS():

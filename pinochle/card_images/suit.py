@@ -1,6 +1,6 @@
 from enum import Enum
 
-from cards import IS_WINDOWS
+from . import IS_WINDOWS
 
 
 class Suit(Enum):
