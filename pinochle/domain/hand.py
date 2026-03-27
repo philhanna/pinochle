@@ -4,7 +4,14 @@ from pinochle.domain.cards.suit import Suit
 
 
 class Hand:
-    """A player's current set of cards."""
+    """A mutable collection of cards representing one player's current holding.
+
+    Provides the card-management operations needed throughout a round: adding
+    received cards, removing played or passed cards, and querying which cards
+    are legal to play given the current trick context.  The hand does not
+    enforce game rules itself — callers are responsible for invoking the
+    correct methods in the right sequence.
+    """
 
     def __init__(self, cards: list[Card] | None = None):
         """Initialize the hand with an optional starting card list."""

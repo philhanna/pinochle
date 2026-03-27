@@ -5,7 +5,13 @@ from pinochle.domain.game import Game
 
 
 class GameStatePort(ABC):
-    """Persistence interface for loading and saving game aggregates."""
+    """Secondary port defining the persistence contract for ``Game`` aggregates.
+
+    Implementations may back this with an in-memory dict (for tests), a
+    relational database, a document store, or any other durable mechanism.
+    The application core depends only on this interface, keeping persistence
+    technology swappable without modifying domain or service code.
+    """
 
     @abstractmethod
     def save(self, game: Game) -> None:

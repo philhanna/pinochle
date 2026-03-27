@@ -4,7 +4,13 @@ from pinochle.ports.game_state_port import GameStatePort
 
 
 class InMemoryGameState(GameStatePort):
-    """GameStatePort backed by a plain dict — suitable for dev and tests."""
+    """``GameStatePort`` backed by a plain in-memory ``dict``.
+
+    Suitable for unit tests, integration tests, and single-process development
+    sessions where durability is not required.  State is lost when the process
+    exits.  No serialization or copying is performed, so all callers share the
+    same object reference for a given game id.
+    """
 
     def __init__(self):
         """Initialize the in-memory storage dictionary."""

@@ -5,7 +5,16 @@ from pinochle.domain.game import GameEvent
 
 
 class NotificationPort(ABC):
-    """Interface for delivering game events to players or whole games."""
+    """Secondary port for delivering domain events to players.
+
+    Implementations may write to stdout (for development), push over
+    WebSockets, send emails, or use any other channel.  The core depends
+    only on this interface, keeping delivery technology swappable.
+
+    ``notify`` targets a single player; ``broadcast`` sends to all
+    participants in a game and is used for public events such as trick
+    completions and scoring.
+    """
 
     @abstractmethod
     def notify(self, player_id: str, event: GameEvent) -> None:

@@ -5,7 +5,13 @@ from pinochle.domain.cards.card import Card
 
 
 class CardImagePort(ABC):
-    """Interface for resolving card face and back image assets."""
+    """Secondary port for resolving card face and back image asset paths.
+
+    Decouples the application from the physical location and format of card
+    artwork.  Implementations may resolve bundled SVG/PNG files
+    (``SvgCardImage``), fetch remote URLs, or return placeholder paths for
+    testing.
+    """
 
     @abstractmethod
     def get_image_path(self, card: Card, fmt: str = "svg") -> str:

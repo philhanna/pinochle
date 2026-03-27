@@ -13,7 +13,17 @@ _DEFAULT_BACK = "blue"
 
 
 class SvgCardImage(CardImagePort):
-    """CardImagePort that resolves paths into the bundled SVG/PNG assets."""
+    """``CardImagePort`` that resolves image paths within the bundled card asset package.
+
+    Assets live under ``pinochle/card_images/``, organized as:
+
+    - ``fronts/`` — SVG face images named ``<suit>_<rank>.svg``.
+    - ``fronts/png_96_dpi/`` — 96-dpi PNG equivalents.
+    - ``backs/`` — SVG card-back images (default: ``blue.svg``).
+    - ``backs/png_96_dpi/`` — PNG card-back equivalents.
+
+    Raises ``FileNotFoundError`` if the requested asset does not exist on disk.
+    """
 
     def get_image_path(self, card: Card, fmt: str = "svg") -> str:
         """Return the asset path for a specific card face image."""

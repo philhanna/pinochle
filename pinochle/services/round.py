@@ -10,7 +10,21 @@ from pinochle.domain.trick import Trick
 
 
 class RoundPhase(Enum):
-    """Detailed lifecycle states for a single round of play."""
+    """Detailed lifecycle states for a single round of play.
+
+    States advance strictly forward through the sequence:
+    ``DEALING`` → ``BIDDING`` → ``TRUMP`` → ``PASSING`` → ``MELDING`` →
+    ``PLAYING`` → ``SCORING`` → ``COMPLETE``.
+
+    - ``DEALING``: Cards are being distributed to all players.
+    - ``BIDDING``: Players are submitting bids or passing.
+    - ``TRUMP``: The bid winner is declaring the trump suit.
+    - ``PASSING``: The bid winner and partner exchange four cards each.
+    - ``MELDING``: Players declare meld combinations from their hands.
+    - ``PLAYING``: Trick-taking is in progress.
+    - ``SCORING``: The round has ended and scores are being tallied.
+    - ``COMPLETE``: The round is fully resolved.
+    """
 
     DEALING = auto()
     BIDDING = auto()

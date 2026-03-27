@@ -6,7 +6,12 @@ from pinochle.domain.team import Team
 
 
 class AdminPort(ABC):
-    """Administrative operations for creating and configuring a game."""
+    """Primary port defining the administrative use cases for game setup.
+
+    Provides the operations needed to configure a game before play begins:
+    creating the game record, registering players and team assignments, and
+    transitioning to dealer selection once all four players are seated.
+    """
 
     @abstractmethod
     def create_game(self) -> str:

@@ -3,7 +3,20 @@ from enum import Enum
 
 
 class Rank(Enum):
-    """Ranks used in Pinochle ordered from low to high."""
+    """The six card ranks used in Pinochle, ordered from lowest to highest by value.
+
+    The integer ``value`` (1–6) establishes trick-winning precedence: a higher
+    value beats a lower one within the same suit.  Note the non-standard
+    ordering: TEN (value 5) outranks KING (value 4), which is a Pinochle-
+    specific rule.
+
+    Each member also carries:
+
+    - ``short_name``: compact notation used in card labels (e.g. ``"9"``,
+      ``"J"``).
+    - ``rank_name``: lowercase, filename-friendly form used in image asset
+      names (e.g. ``"ace"``, ``"10"``, ``"jack"``).
+    """
 
     NINE = (1, "9", "9")
     JACK = (2, "J", "jack")

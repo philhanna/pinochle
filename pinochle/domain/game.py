@@ -20,7 +20,12 @@ if TYPE_CHECKING:
 
 @dataclass
 class DealerSelected:
-    """Event emitted when dealer selection identifies a winner."""
+    """Emitted when dealer selection is resolved and a dealer has been chosen.
+
+    Attributes:
+        game_id: The game in which dealer selection occurred.
+        dealer_player_id: The player who will deal the first round.
+    """
 
     game_id: str
     dealer_player_id: str
@@ -28,7 +33,16 @@ class DealerSelected:
 
 @dataclass
 class CardsDealt:
-    """Event emitted once a new round hand has been dealt to a player."""
+    """Emitted once per player after a round's cards have been dealt.
+
+    One event is published per player so that each recipient receives only
+    their own private hand.
+
+    Attributes:
+        game_id: The game in which the deal occurred.
+        player_id: The player to whom this hand belongs.
+        cards: The 12 cards dealt to the player.
+    """
 
     game_id: str
     player_id: str
@@ -37,7 +51,13 @@ class CardsDealt:
 
 @dataclass
 class BidPlaced:
-    """Event emitted after a player bids or passes."""
+    """Emitted after each bid or pass during the bidding phase.
+
+    Attributes:
+        game_id: The game in which the bid occurred.
+        player_id: The player who bid or passed.
+        amount: The bid value, or ``None`` if the player passed.
+    """
 
     game_id: str
     player_id: str
@@ -46,7 +66,12 @@ class BidPlaced:
 
 @dataclass
 class TrumpNamed:
-    """Event emitted when the bid winner declares trump."""
+    """Emitted when the bid winner declares the trump suit for the round.
+
+    Attributes:
+        game_id: The game in which trump was declared.
+        suit: The suit designated as trump for this round.
+    """
 
     game_id: str
     suit: Suit
@@ -54,7 +79,13 @@ class TrumpNamed:
 
 @dataclass
 class TrickCompleted:
-    """Event emitted when four cards have been played into a trick."""
+    """Emitted after all four players have played a card into the current trick.
+
+    Attributes:
+        game_id: The game in which the trick was completed.
+        winner_player_id: The player who won the trick and will lead the next.
+        cards_played: The four cards played, in the order they were played.
+    """
 
     game_id: str
     winner_player_id: str
@@ -63,7 +94,13 @@ class TrickCompleted:
 
 @dataclass
 class RoundScored:
-    """Event emitted after round scores are applied to both teams."""
+    """Emitted after a round's trick and meld points have been tallied and applied.
+
+    Attributes:
+        game_id: The game in which scoring occurred.
+        ns_score: The North/South team's updated cumulative score.
+        ew_score: The East/West team's updated cumulative score.
+    """
 
     game_id: str
     ns_score: int
@@ -72,7 +109,12 @@ class RoundScored:
 
 @dataclass
 class GameOver:
-    """Event emitted when a team reaches the winning score."""
+    """Emitted when a team's cumulative score reaches or exceeds the winning threshold.
+
+    Attributes:
+        game_id: The game that has ended.
+        winning_team_id: The id of the team that won the game.
+    """
 
     game_id: str
     winning_team_id: str
@@ -89,7 +131,16 @@ GameEvent = (
 # ---------------------------------------------------------------------------
 
 class GamePhase(Enum):
-    """High-level lifecycle states for a persisted game."""
+    """High-level lifecycle states for a persisted ``Game`` aggregate.
+
+    States advance strictly in order:
+    ``SETUP`` → ``DEALER_SELECTION`` → ``IN_ROUND`` (repeating) → ``FINISHED``.
+
+    - ``SETUP``: Teams and players are being registered; no play yet.
+    - ``DEALER_SELECTION``: All players draw cards to determine the first dealer.
+    - ``IN_ROUND``: A ``Round`` is in progress.
+    - ``FINISHED``: A team has reached the winning score; no further play.
+    """
 
     SETUP = auto()
     DEALER_SELECTION = auto()

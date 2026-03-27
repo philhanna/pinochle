@@ -9,7 +9,20 @@ def _is_windows() -> bool:
 
 
 class Suit(Enum):
-    """Suits used in the deck along with display and asset metadata."""
+    """The four suits used in a Pinochle deck, with display and asset metadata.
+
+    Each member stores three pieces of metadata alongside its identity:
+
+    - ``glyph``: the Unicode suit symbol (♠ ♥ ♦ ♣) for display on capable
+      terminals.
+    - ``character``: a single ASCII fallback letter (S / H / D / C) used on
+      Windows where Unicode suit glyphs may not render.
+    - ``offset``: the Unicode playing-card block base codepoint for the suit,
+      used when composing individual card codepoints programmatically.
+
+    ``__str__`` returns the glyph on Unix/macOS and the ASCII character on
+    Windows.
+    """
 
     SPADES = ('\u2660', "S", 0x1F0A0)
     HEARTS = ('\u2665', "H", 0x1F0B0)

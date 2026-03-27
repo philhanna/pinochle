@@ -7,14 +7,26 @@ from pinochle.domain.cards.suit import Suit
 
 @dataclass
 class CardPlayed:
-    """A single play entry within a trick."""
+    """Records one card played into a trick, pairing the card with its player.
+
+    Attributes:
+        player_id: The player who played the card.
+        card: The card that was played.
+    """
 
     player_id: str
     card: Card
 
 
 class Trick:
-    """Tracks the four cards played in one trick and determines the winner."""
+    """Tracks the four cards played in one trick and determines the winner.
+
+    A trick begins when the leader plays a card, establishing the lead suit.
+    Subsequent players add their cards via ``play()``.  Once all four cards
+    are recorded (``is_complete`` is ``True``), ``winner()`` applies Pinochle
+    trick-taking rules: trump beats non-trump; within the same suit the higher
+    rank wins (by ``Rank.value``); a card of the lead suit loses to any trump.
+    """
 
     def __init__(self, lead_player_id: str, trump: Suit):
         """Start a new trick with the leader and trump suit."""

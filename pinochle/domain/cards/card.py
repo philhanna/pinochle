@@ -4,7 +4,14 @@ from pinochle.domain.cards.suit import Suit
 
 
 class Card:
-    """A Card is a combination of a Rank and a Suit."""
+    """An immutable playing card identified by its Rank and Suit.
+
+    Cards are value objects: two ``Card`` instances with the same rank and
+    suit compare equal and hash to the same value, making them safe to use
+    as dictionary keys or set members.  Because a Pinochle deck contains two
+    physical copies of every card, equality is purely structural (rank + suit);
+    callers that need to distinguish the two copies must track them separately.
+    """
 
     def __init__(self, rank: Rank, suit: Suit):
         """Create a card with the supplied rank and suit."""

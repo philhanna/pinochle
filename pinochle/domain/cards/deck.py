@@ -11,7 +11,14 @@ _PINOCHLE_SUITS = [Suit.SPADES, Suit.HEARTS, Suit.DIAMONDS, Suit.CLUBS]
 
 
 class Deck:
-    """A 48-card Pinochle deck: two copies of each rank/suit combination."""
+    """A standard 48-card Pinochle deck containing two copies of every rank/suit combination.
+
+    On construction the cards are in a deterministic suit-then-rank order.
+    Call ``shuffle()`` before dealing to randomize them.  ``deal(n)`` removes
+    cards from the top of the deck and returns them, so the deck shrinks with
+    each call.  The deck does not regenerate cards; create a new ``Deck``
+    instance to start a fresh deal.
+    """
 
     def __init__(self):
         """Build a fresh ordered Pinochle deck."""

@@ -4,14 +4,24 @@ from enum import Enum
 
 
 class PlayerType(Enum):
-    """Supported player controller types."""
+    """Distinguishes how a player's decisions are made.
+
+    ``HUMAN`` players submit actions through a delivery mechanism (API, CLI,
+    or UI).  ``COMPUTER`` players are driven autonomously by a strategy such
+    as ``ComputerPlayerStrategy``.
+    """
 
     HUMAN = "human"
     COMPUTER = "computer"
 
 
 class Position(Enum):
-    """Table positions in clockwise seat order."""
+    """The four table seats in clockwise order, starting from North.
+
+    The integer value of each member encodes the seat index and is used to
+    derive turn order and partnership pairing: seats 0 (NORTH) and 2 (SOUTH)
+    form one team, while seats 1 (EAST) and 3 (WEST) form the other.
+    """
 
     NORTH = 0
     EAST = 1
@@ -21,7 +31,17 @@ class Position(Enum):
 
 @dataclass
 class Player:
-    """A player registered in a game with seating and team metadata."""
+    """A player registered in a game, carrying seating and team metadata.
+
+    Attributes:
+        id: Stable unique identifier used throughout the system to reference
+            this player in events, hands, and bids.
+        name: Human-readable display name.
+        type: Whether the player is controlled by a human or the computer AI.
+        position: The table seat occupied by this player, which determines
+            turn order and partnership pairing.
+        team_id: The id of the ``Team`` this player belongs to.
+    """
 
     id: str
     name: str

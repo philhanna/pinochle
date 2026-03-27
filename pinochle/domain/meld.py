@@ -9,7 +9,13 @@ from pinochle.domain.cards.suit import Suit
 
 @dataclass
 class MeldUnit:
-    """A single named meld award and its point value."""
+    """A single recognized meld combination and the points it scores.
+
+    Attributes:
+        name: Human-readable meld name (e.g. ``"Run"``, ``"Double Pinochle"``,
+            ``"100 Aces"``).
+        points: Point value awarded for this meld combination.
+    """
 
     name: str
     points: int

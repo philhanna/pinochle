@@ -16,17 +16,30 @@ def is_valid_bid(amount: int, current_high: int) -> bool:
 
 @dataclass
 class BidEntry:
-    """One bidding action, including passes represented by ``None``."""
+    """A single bid or pass submitted by one player during the bidding phase.
+
+    Attributes:
+        player_id: The player who made this bid or pass.
+        amount: The bid value, or ``None`` when the player passed.  A ``None``
+            amount means the player is removed from subsequent bidding.
+    """
 
     player_id: str
     amount: int | None  # None = pass
 
 
 class BiddingRound:
-    """Manages one round of bidding for four players.
+    """Manages one complete round of bidding for the four players at the table.
 
-    Players bid in order; passing removes them from consideration.
-    Bidding ends when at most one active bidder remains.
+    Players bid in clockwise order starting from the player to the left of
+    the dealer.  Each bid must exceed the current high bid by at least one
+    increment and meet the minimum opening bid.  Passing removes a player
+    from further bidding.  Bidding concludes automatically once only one
+    active bidder remains; at that point ``is_over`` is ``True`` and
+    ``high_bidder`` identifies the bid winner.
+
+    Raises ``ValueError`` on any out-of-turn or invalid action, preserving
+    the existing state so callers can handle the error and retry.
     """
 
     def __init__(self, player_order: list[str]):
