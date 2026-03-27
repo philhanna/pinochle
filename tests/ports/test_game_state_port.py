@@ -12,6 +12,7 @@ from pinochle.ports.game_state_port import GameStatePort
 
 
 def run_contract(store: GameStatePort) -> None:
+    """Assert the game-state adapter can save, load, and delete games."""
     game = Game("g1")
 
     store.save(game)

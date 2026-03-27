@@ -6,6 +6,8 @@ from pinochle.domain.cards.suit import Suit
 
 
 class PlayerActionPort(ABC):
+    """Player-facing game actions exposed by the application layer."""
+
     @abstractmethod
     def draw_for_deal(self, game_id: str, player_id: str) -> Card:
         """Player draws a card to determine the dealer."""

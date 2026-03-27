@@ -11,6 +11,7 @@ from pinochle.domain.cards import Rank
     (Rank.QUEEN, Rank.NINE, True),
 ])
 def test_greater_than(rank1, rank2, expected):
+    """Rank values should preserve the intended trick-order comparison."""
     actual = rank1.value > rank2.value
     assert actual == expected
 
@@ -24,6 +25,7 @@ def test_greater_than(rank1, rank2, expected):
     (Rank.ACE, "A"),
 ])
 def test_short_name(rank, expected):
+    """Each rank should expose the expected short display name."""
     actual = rank.short_name
     assert actual == expected
 
@@ -37,5 +39,6 @@ def test_short_name(rank, expected):
     (Rank.ACE, "ace"),
 ])
 def test_rank_name(rank, expected):
+    """Each rank should expose the expected lowercase asset name."""
     actual = rank.rank_name
     assert actual == expected

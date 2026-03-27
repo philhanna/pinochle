@@ -7,6 +7,7 @@ from pinochle.ports.card_image_port import CardImagePort
 
 
 def run_contract(images: CardImagePort) -> None:
+    """Assert the card-image adapter returns usable paths for required assets."""
     card = Card(Rank.ACE, Suit.SPADES)
 
     svg_path = images.get_image_path(card, fmt="svg")

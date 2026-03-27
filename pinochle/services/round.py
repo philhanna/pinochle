@@ -10,6 +10,8 @@ from pinochle.domain.trick import Trick
 
 
 class RoundPhase(Enum):
+    """Detailed lifecycle states for a single round of play."""
+
     DEALING = auto()
     BIDDING = auto()
     TRUMP = auto()
@@ -81,6 +83,7 @@ class Round:
     # ------------------------------------------------------------------
 
     def place_bid(self, player_id: str, amount: int | None) -> None:
+        """Submit a bid or pass during the bidding phase."""
         if self.phase != RoundPhase.BIDDING:
             raise ValueError(f"Cannot bid in phase {self.phase}.")
         self._bidding.place_bid(player_id, amount)
@@ -94,6 +97,7 @@ class Round:
     # ------------------------------------------------------------------
 
     def name_trump(self, player_id: str, suit: Suit) -> None:
+        """Set the trump suit after bidding completes."""
         if self.phase != RoundPhase.TRUMP:
             raise ValueError(f"Cannot name trump in phase {self.phase}.")
         if player_id != self._bid_winner:
@@ -106,6 +110,7 @@ class Round:
     # ------------------------------------------------------------------
 
     def _partner_of(self, player_id: str) -> str:
+        """Return the partner seated across from ``player_id``."""
         idx = self.player_order.index(player_id)
         return self.player_order[(idx + 2) % 4]
 
@@ -134,6 +139,7 @@ class Round:
     # ------------------------------------------------------------------
 
     def advance_to_playing(self) -> None:
+        """Move from meld declaration into trick-taking play."""
         if self.phase != RoundPhase.MELDING:
             raise ValueError(f"Cannot advance to playing from phase {self.phase}.")
         self.phase = RoundPhase.PLAYING
@@ -174,20 +180,25 @@ class Round:
     # ------------------------------------------------------------------
 
     def hand(self, player_id: str) -> Hand:
+        """Return the mutable hand object for ``player_id``."""
         return self._hands[player_id]
 
     @property
     def tricks(self) -> list[Trick]:
+        """Return a copy of the completed tricks so far."""
         return list(self._tricks)
 
     @property
     def trump(self) -> Suit | None:
+        """Return the trump suit once it has been named."""
         return self._trump
 
     @property
     def bid_winner(self) -> str | None:
+        """Return the player who won the bidding."""
         return self._bid_winner
 
     @property
     def contract(self) -> int | None:
+        """Return the winning bid amount for the round."""
         return self._contract

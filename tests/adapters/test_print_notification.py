@@ -4,4 +4,5 @@ from tests.ports.test_notification_port import run_contract
 
 
 def test_contract():
+    """Verify the print-based notifier satisfies the shared contract."""
     run_contract(PrintNotification())

@@ -5,6 +5,8 @@ from pinochle.domain.game import Game
 
 
 class GameStatePort(ABC):
+    """Persistence interface for loading and saving game aggregates."""
+
     @abstractmethod
     def save(self, game: Game) -> None:
         """Persist the current game state."""

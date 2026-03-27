@@ -16,6 +16,8 @@ def is_valid_bid(amount: int, current_high: int) -> bool:
 
 @dataclass
 class BidEntry:
+    """One bidding action, including passes represented by ``None``."""
+
     player_id: str
     amount: int | None  # None = pass
 
@@ -28,6 +30,7 @@ class BiddingRound:
     """
 
     def __init__(self, player_order: list[str]):
+        """Initialize bidding state for the provided clockwise turn order."""
         if len(player_order) != 4:
             raise ValueError("Exactly four players required.")
         self._order: list[str] = list(player_order)
@@ -37,10 +40,12 @@ class BiddingRound:
 
     @property
     def current_high(self) -> int:
+        """Return the current highest bid amount."""
         return self._current_high
 
     @property
     def high_bidder(self) -> str | None:
+        """Return the player who most recently placed a non-pass bid."""
         for entry in reversed(self._history):
             if entry.amount is not None:
                 return entry.player_id
@@ -48,10 +53,12 @@ class BiddingRound:
 
     @property
     def active_players(self) -> list[str]:
+        """Return players who have not yet passed."""
         return [p for p in self._order if p not in self._passed]
 
     @property
     def is_over(self) -> bool:
+        """Return ``True`` when at most one active bidder remains."""
         return len(self.active_players) <= 1
 
     def place_bid(self, player_id: str, amount: int | None) -> None:

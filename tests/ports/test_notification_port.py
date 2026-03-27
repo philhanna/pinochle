@@ -5,6 +5,7 @@ from pinochle.ports.notification_port import NotificationPort
 
 
 def run_contract(notifier: NotificationPort) -> None:
+    """Assert the notifier can handle direct and broadcast events without error."""
     event = DealerSelected(game_id="g1", dealer_player_id="N")
 
     # Must not raise

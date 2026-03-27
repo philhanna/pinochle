@@ -14,6 +14,7 @@ class Deck:
     """A 48-card Pinochle deck: two copies of each rank/suit combination."""
 
     def __init__(self):
+        """Build a fresh ordered Pinochle deck."""
         self._cards: list[Card] = [
             Card(rank, suit)
             for suit in _PINOCHLE_SUITS
@@ -22,6 +23,7 @@ class Deck:
         ]
 
     def shuffle(self) -> None:
+        """Randomize the order of the remaining cards."""
         random.shuffle(self._cards)
 
     def deal(self, count: int) -> list[Card]:
@@ -35,7 +37,9 @@ class Deck:
         return dealt
 
     def __len__(self) -> int:
+        """Return the number of undealt cards still in the deck."""
         return len(self._cards)
 
     def __iter__(self):
+        """Iterate over the remaining cards in deck order."""
         return iter(self._cards)

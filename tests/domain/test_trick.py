@@ -11,6 +11,7 @@ TRUMP = Suit.SPADES
 
 
 def make_trick(plays: list[tuple[str, Rank, Suit]]) -> Trick:
+    """Build a trick from ``(player, rank, suit)`` tuples."""
     t = Trick(lead_player_id=plays[0][0], trump=TRUMP)
     for pid, rank, suit in plays:
         t.play(pid, Card(rank, suit))
@@ -18,6 +19,7 @@ def make_trick(plays: list[tuple[str, Rank, Suit]]) -> Trick:
 
 
 def test_highest_lead_suit_wins():
+    """Without trump, the highest card in the led suit should win."""
     t = make_trick([
         ("N", Rank.ACE, Suit.HEARTS),
         ("E", Rank.TEN, Suit.HEARTS),
@@ -28,6 +30,7 @@ def test_highest_lead_suit_wins():
 
 
 def test_trump_beats_lead_suit():
+    """Any trump card should beat cards in the led suit."""
     t = make_trick([
         ("N", Rank.ACE, Suit.HEARTS),
         ("E", Rank.NINE, Suit.SPADES),   # trump
@@ -38,6 +41,7 @@ def test_trump_beats_lead_suit():
 
 
 def test_higher_trump_wins():
+    """Among trump cards, the highest-ranked trump should win."""
     t = make_trick([
         ("N", Rank.ACE, Suit.HEARTS),
         ("E", Rank.NINE, Suit.SPADES),   # lower trump
@@ -48,6 +52,7 @@ def test_higher_trump_wins():
 
 
 def test_winner_raises_if_incomplete():
+    """Winner calculation should fail until the trick has four cards."""
     t = Trick(lead_player_id="N", trump=TRUMP)
     t.play("N", Card(Rank.ACE, Suit.HEARTS))
     with pytest.raises(ValueError):
@@ -55,6 +60,7 @@ def test_winner_raises_if_incomplete():
 
 
 def test_play_raises_after_four_cards():
+    """A fifth card should not be accepted into a completed trick."""
     t = make_trick([
         ("N", Rank.ACE, Suit.HEARTS),
         ("E", Rank.TEN, Suit.HEARTS),

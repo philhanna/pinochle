@@ -9,6 +9,7 @@ from tests.ports.test_card_image_port import run_contract
 
 
 def test_contract():
+    """Verify the image adapter satisfies the shared card-image contract."""
     run_contract(SvgCardImage())
 
 
@@ -21,6 +22,7 @@ def test_contract():
     (Rank.NINE, Suit.HEARTS),
 ])
 def test_svg_path_exists(rank, suit):
+    """Each supported SVG face image should resolve to an existing asset."""
     images = SvgCardImage()
     path = images.get_image_path(Card(rank, suit), fmt="svg")
     from pathlib import Path
@@ -28,6 +30,7 @@ def test_svg_path_exists(rank, suit):
 
 
 def test_png_path_exists():
+    """PNG face lookups should resolve to an existing asset."""
     images = SvgCardImage()
     path = images.get_image_path(Card(Rank.ACE, Suit.SPADES), fmt="png")
     from pathlib import Path
@@ -35,6 +38,7 @@ def test_png_path_exists():
 
 
 def test_back_path_exists():
+    """Both SVG and PNG back images should resolve to existing assets."""
     images = SvgCardImage()
     from pathlib import Path
     assert Path(images.get_back_path(fmt="svg")).exists()

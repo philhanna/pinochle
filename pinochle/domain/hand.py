@@ -7,22 +7,28 @@ class Hand:
     """A player's current set of cards."""
 
     def __init__(self, cards: list[Card] | None = None):
+        """Initialize the hand with an optional starting card list."""
         self._cards: list[Card] = list(cards) if cards else []
 
     def add(self, cards: list[Card]) -> None:
+        """Append multiple cards to the hand."""
         self._cards.extend(cards)
 
     def remove(self, card: Card) -> None:
+        """Remove a single matching card from the hand."""
         self._cards.remove(card)
 
     def remove_many(self, cards: list[Card]) -> None:
+        """Remove each card in ``cards`` from the hand."""
         for card in cards:
             self.remove(card)
 
     def cards_of_suit(self, suit: Suit) -> list[Card]:
+        """Return all cards in the hand that match ``suit``."""
         return [c for c in self._cards if c.suit == suit]
 
     def has_suit(self, suit: Suit) -> bool:
+        """Return whether the hand contains at least one card of ``suit``."""
         return any(c.suit == suit for c in self._cards)
 
     def legal_plays(self, lead_suit: Suit | None, trump: Suit) -> list[Card]:
@@ -43,10 +49,13 @@ class Hand:
         return list(self._cards)
 
     def __len__(self) -> int:
+        """Return the number of cards currently held."""
         return len(self._cards)
 
     def __iter__(self):
+        """Iterate over cards in their current hand order."""
         return iter(self._cards)
 
     def __contains__(self, card: Card) -> bool:
+        """Return whether ``card`` is present in the hand."""
         return card in self._cards

@@ -44,6 +44,7 @@ class GameService(AdminPort, PlayerActionPort):
     """
 
     def __init__(self, state: GameStatePort, notifier: NotificationPort):
+        """Wire the service to persistence and event-notification ports."""
         self._state = state
         self._notifier = notifier
         self._pending_draws: dict[str, dict[str, Card]] = {}
@@ -53,16 +54,19 @@ class GameService(AdminPort, PlayerActionPort):
     # ------------------------------------------------------------------
 
     def _dispatch(self, game: Game) -> None:
+        """Broadcast and clear all pending domain events for ``game``."""
         for event in game.pop_events():
             self._notifier.broadcast(game.id, event)
 
     def _load_save(self, game_id: str, fn) -> None:
+        """Load a game, mutate it via ``fn``, dispatch events, and persist it."""
         game = self._state.load(game_id)
         fn(game)
         self._dispatch(game)
         self._state.save(game)
 
     def _start_round(self, game: Game) -> None:
+        """Create, deal, and announce a fresh round for the current dealer."""
         round_state = Round(
             dealer_id=game.dealer_id,
             player_order=game.player_order,
@@ -79,10 +83,12 @@ class GameService(AdminPort, PlayerActionPort):
 
     @staticmethod
     def _player_team_map(game: Game) -> dict[str, str]:
+        """Return a mapping from player ids to their team ids."""
         return {pid: game.team_id_for_player(pid) for pid in game.players}
 
     @staticmethod
     def _meld_scores(game: Game, round_state: Round) -> dict[str, int]:
+        """Accumulate meld totals for each team from player hands."""
         totals: dict[str, int] = {}
         for pid in game.players:
             team_id = game.team_id_for_player(pid)
@@ -94,6 +100,7 @@ class GameService(AdminPort, PlayerActionPort):
 
     @staticmethod
     def _check_winner(game: Game, bid_winner: str | None) -> str | None:
+        """Determine whether a team has won the game after scoring."""
         over = [team for team in game.teams.values() if team.cumulative_score >= WINNING_SCORE]
         if not over:
             return None
@@ -102,6 +109,7 @@ class GameService(AdminPort, PlayerActionPort):
         return over[0].id
 
     def _score_round(self, game: Game) -> None:
+        """Score the completed round, emit events, and advance game state."""
         round_state = game.current_round
         player_team = self._player_team_map(game)
         tricks = round_state.tricks
@@ -134,22 +142,27 @@ class GameService(AdminPort, PlayerActionPort):
     # ------------------------------------------------------------------
 
     def create_game(self) -> str:
+        """Create, persist, and return a new empty game id."""
         game_id = str(uuid.uuid4())
         game = Game(game_id)
         self._state.save(game)
         return game_id
 
     def add_player(self, game_id: str, player: Player) -> None:
+        """Add a player to an existing setup-phase game."""
         self._load_save(game_id, lambda g: g.add_player(player))
 
     def assign_teams(self, game_id: str, ns: Team, ew: Team) -> None:
+        """Attach the two partnerships to the target game."""
         def _assign(g: Game) -> None:
+            """Persist both team registrations on the aggregate."""
             g.add_team(ns)
             g.add_team(ew)
 
         self._load_save(game_id, _assign)
 
     def start_game(self, game_id: str) -> None:
+        """Enter dealer selection and reset any pending draw state."""
         self._load_save(game_id, lambda g: g.start_dealer_selection())
         self._pending_draws[game_id] = {}
 
@@ -158,6 +171,7 @@ class GameService(AdminPort, PlayerActionPort):
     # ------------------------------------------------------------------
 
     def draw_for_deal(self, game_id: str, player_id: str) -> Card:
+        """Deal a draw card for dealer selection and advance when resolved."""
         deck = Deck()
         deck.shuffle()
         card = deck.deal(1)[0]
@@ -172,6 +186,7 @@ class GameService(AdminPort, PlayerActionPort):
                 self._pending_draws.pop(game_id, None)
 
                 def _set_dealer_and_deal(g: Game) -> None:
+                    """Persist the dealer selection result and begin the round."""
                     g.set_dealer(winner)
                     g.emit(DealerSelected(game_id=g.id, dealer_player_id=winner))
                     self._start_round(g)
@@ -184,29 +199,37 @@ class GameService(AdminPort, PlayerActionPort):
 
     @staticmethod
     def _resolve_draw(draws: dict[str, Card]) -> str | None:
+        """Return the unique highest draw winner or ``None`` on a tie."""
         max_value = max(c.rank.value for c in draws.values())
         winners = [pid for pid, c in draws.items() if c.rank.value == max_value]
         return winners[0] if len(winners) == 1 else None
 
     def place_bid(self, game_id: str, player_id: str, amount: int | None) -> None:
+        """Record a player's bid or pass and publish the resulting event."""
         def _place_bid(g: Game) -> None:
+            """Apply a bid to the current round and emit ``BidPlaced``."""
             g.current_round.place_bid(player_id, amount)
             g.emit(BidPlaced(game_id=g.id, player_id=player_id, amount=amount))
 
         self._load_save(game_id, _place_bid)
 
     def name_trump(self, game_id: str, player_id: str, suit: Suit) -> None:
+        """Record the named trump suit for the active round."""
         def _name_trump(g: Game) -> None:
+            """Apply the trump declaration and emit ``TrumpNamed``."""
             g.current_round.name_trump(player_id, suit)
             g.emit(TrumpNamed(game_id=g.id, suit=suit))
 
         self._load_save(game_id, _name_trump)
 
     def pass_cards(self, game_id: str, player_id: str, cards: list[Card]) -> None:
+        """Submit a partner pass during the passing phase."""
         self._load_save(game_id, lambda g: g.current_round.pass_cards(player_id, cards))
 
     def play_card(self, game_id: str, player_id: str, card: Card) -> None:
+        """Play a card into the current trick and score the round if needed."""
         def _play_card(g: Game) -> None:
+            """Apply a trick play and handle trick-complete side effects."""
             winner_id = g.current_round.play_card(player_id, card)
             if winner_id is None:
                 return

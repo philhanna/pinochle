@@ -6,6 +6,8 @@ from pinochle.domain.team import Team
 
 
 class AdminPort(ABC):
+    """Administrative operations for creating and configuring a game."""
+
     @abstractmethod
     def create_game(self) -> str:
         """Create a new game and return its ID."""

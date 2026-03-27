@@ -9,11 +9,14 @@ from pinochle.domain.cards.suit import Suit
 
 @dataclass
 class MeldUnit:
+    """A single named meld award and its point value."""
+
     name: str
     points: int
 
 
 def _count(cards: list[Card], rank: Rank, suit: Suit) -> int:
+    """Count copies of a specific rank and suit in ``cards``."""
     return sum(1 for c in cards if c.rank == rank and c.suit == suit)
 
 
@@ -89,4 +92,5 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
 
 
 def total_meld(cards: list[Card], trump: Suit) -> int:
+    """Return the total meld points available in ``cards``."""
     return sum(u.points for u in detect_meld(cards, trump))

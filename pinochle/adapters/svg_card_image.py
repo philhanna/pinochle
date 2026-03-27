@@ -16,6 +16,7 @@ class SvgCardImage(CardImagePort):
     """CardImagePort that resolves paths into the bundled SVG/PNG assets."""
 
     def get_image_path(self, card: Card, fmt: str = "svg") -> str:
+        """Return the asset path for a specific card face image."""
         suit_name = card.suit.name.lower()      # e.g. "spades"
         rank_name = card.rank.rank_name.lower() # e.g. "ace", "10", "jack"
         filename = f"{suit_name}_{rank_name}.{fmt}"
@@ -30,6 +31,7 @@ class SvgCardImage(CardImagePort):
         return str(path)
 
     def get_back_path(self, fmt: str = "svg", name: str = _DEFAULT_BACK) -> str:
+        """Return the asset path for a named card back image."""
         filename = f"{name}.{fmt}"
 
         if fmt == "png":

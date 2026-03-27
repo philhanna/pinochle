@@ -16,6 +16,7 @@ from pinochle.domain.cards import Suit
     ],
 )
 def test_suit_properties(suit, expected_glyph, expected_character, expected_offset):
+    """Each suit should expose its configured glyph, fallback, and offset."""
     assert suit.glyph == expected_glyph
     assert suit.character == expected_character
     assert suit.offset == expected_offset
@@ -31,6 +32,7 @@ def test_suit_properties(suit, expected_glyph, expected_character, expected_offs
     ],
 )
 def test_suit_str(suit, expected_str_windows, expected_str_non_windows):
+    """String conversion should switch between ASCII and glyph output by OS."""
     with patch.object(suit_module, "_is_windows", return_value=True):
         assert str(suit) == expected_str_windows
 

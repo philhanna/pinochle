@@ -5,6 +5,8 @@ from pinochle.domain.game import GameEvent
 
 
 class NotificationPort(ABC):
+    """Interface for delivering game events to players or whole games."""
+
     @abstractmethod
     def notify(self, player_id: str, event: GameEvent) -> None:
         """Push a game event to a specific player."""

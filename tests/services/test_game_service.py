@@ -29,12 +29,14 @@ PLAYERS = [
 
 
 def make_service() -> tuple[GameService, InMemoryGameState]:
+    """Create a game service wired to in-memory test adapters."""
     state = InMemoryGameState()
     notifier = PrintNotification()
     return GameService(state, notifier), state
 
 
 def setup_game(service: GameService) -> str:
+    """Create a game, add teams and players, and start dealer selection."""
     game_id = service.create_game()
     service.assign_teams(game_id, TEAMS[0], TEAMS[1])
     for player in PLAYERS:
@@ -48,6 +50,7 @@ def setup_game(service: GameService) -> str:
 # ---------------------------------------------------------------------------
 
 def test_create_game_returns_id():
+    """Creating a game should return a persisted non-empty id."""
     service, state = make_service()
     game_id = service.create_game()
     assert isinstance(game_id, str) and len(game_id) > 0
@@ -55,6 +58,7 @@ def test_create_game_returns_id():
 
 
 def test_add_player_registered():
+    """Added players should appear in persisted game state."""
     service, state = make_service()
     game_id = service.create_game()
     service.assign_teams(game_id, TEAMS[0], TEAMS[1])
@@ -64,6 +68,7 @@ def test_add_player_registered():
 
 
 def test_assign_teams():
+    """Assigned team ids should be stored on the game aggregate."""
     service, state = make_service()
     game_id = service.create_game()
     service.assign_teams(game_id, TEAMS[0], TEAMS[1])
@@ -73,6 +78,7 @@ def test_assign_teams():
 
 
 def test_start_game_enters_dealer_selection():
+    """Starting a fully configured game should enter dealer selection."""
     service, state = make_service()
     game_id = setup_game(service)
     game = state.load(game_id)
@@ -84,6 +90,7 @@ def test_start_game_enters_dealer_selection():
 # ---------------------------------------------------------------------------
 
 def test_draw_for_deal_returns_card():
+    """A dealer-selection draw should return the dealt card."""
     service, state = make_service()
     game_id = setup_game(service)
     card = service.draw_for_deal(game_id, "N")
@@ -91,6 +98,7 @@ def test_draw_for_deal_returns_card():
 
 
 def test_all_four_draws_starts_round():
+    """Four dealer-selection draws should resolve or trigger a redraw."""
     service, state = make_service()
     game_id = setup_game(service)
     for pid in ["N", "E", "S", "W"]:
@@ -119,6 +127,7 @@ def _advance_to_bidding(service: GameService, state: InMemoryGameState) -> str:
 
 
 def test_place_bid_recorded():
+    """Bids placed through the service should update the round bidding state."""
     service, state = make_service()
     game_id = _advance_to_bidding(service, state)
     # Bid order starts left of dealer (N), so E bids first
@@ -128,6 +137,7 @@ def test_place_bid_recorded():
 
 
 def test_place_bid_pass_recorded():
+    """Passing through the service should remove the player from active bidding."""
     service, state = make_service()
     game_id = _advance_to_bidding(service, state)
     service.place_bid(game_id, "E", None)
@@ -140,6 +150,7 @@ def test_place_bid_pass_recorded():
 # ---------------------------------------------------------------------------
 
 def test_events_broadcast(capsys):
+    """Service actions should dispatch emitted events through the notifier."""
     service, state = make_service()
     game_id = _advance_to_bidding(service, state)
     service.place_bid(game_id, "E", 250)
@@ -152,6 +163,7 @@ def test_events_broadcast(capsys):
 # ---------------------------------------------------------------------------
 
 def test_resolve_draw_unique_winner():
+    """The highest unique dealer-selection draw should win."""
     from pinochle.domain.cards.card import Card
     from pinochle.domain.cards.rank import Rank
     draws = {
@@ -164,6 +176,7 @@ def test_resolve_draw_unique_winner():
 
 
 def test_resolve_draw_tie_returns_none():
+    """Dealer-selection ties should return ``None`` and force a redraw."""
     from pinochle.domain.cards.card import Card
     from pinochle.domain.cards.rank import Rank
     draws = {

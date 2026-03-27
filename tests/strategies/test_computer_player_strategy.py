@@ -8,10 +8,12 @@ from pinochle.domain.cards.suit import Suit
 
 
 def make_hand(specs: list[tuple[Rank, Suit]]) -> list[Card]:
+    """Build a hand from ``(rank, suit)`` tuples."""
     return [Card(r, s) for r, s in specs]
 
 
 def test_choose_trump_picks_most_common_suit():
+    """Trump selection should choose the suit that appears most often."""
     hand = make_hand([
         (Rank.ACE, Suit.SPADES),
         (Rank.KING, Suit.SPADES),
@@ -23,6 +25,7 @@ def test_choose_trump_picks_most_common_suit():
 
 
 def test_choose_cards_to_pass_returns_lowest():
+    """Passing strategy should return the lowest-ranked cards."""
     hand = make_hand([
         (Rank.ACE, Suit.SPADES),
         (Rank.NINE, Suit.HEARTS),
@@ -36,6 +39,7 @@ def test_choose_cards_to_pass_returns_lowest():
 
 
 def test_choose_play_picks_highest():
+    """Play selection should choose the highest-ranked legal card."""
     legal = make_hand([
         (Rank.NINE, Suit.HEARTS),
         (Rank.KING, Suit.HEARTS),
