@@ -18,10 +18,10 @@ The format is based on [Keep a Changelog].
 - `pyproject.toml`: package metadata and pytest configuration
 - 84 unit tests across `tests/domain/`, `tests/ports/`, `tests/adapters/`
 
-## [v0.0.0] - 2023-07-19
-Start of Go verion
+## [0.0.0] - 2023-07-19
+Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/v0.0.0..HEAD
-[v0.0.0]: https://github.com/philhanna/pinochle/compare/b4aba0b..v0.0.0
+[Unreleased]: https://github.com/philhanna/pinochle/compare/0.0.0..HEAD
+[0.0.0]: https://github.com/philhanna/pinochle/compare/b4aba0b..0.0.0
