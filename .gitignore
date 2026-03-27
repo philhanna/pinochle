@@ -1,11 +1,12 @@
 *.swp
+*.swp
 *.pyc
 *.pyo
-.vscode/
 .pytest_cache
 __pycache__
 .idea/
 venv/
+.venv/
 build/
 dist/
 *.egg-info/
