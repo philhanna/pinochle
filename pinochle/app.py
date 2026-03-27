@@ -8,28 +8,26 @@ from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.adapters.svg_card_image import SvgCardImage
 from pinochle.adapters.computer_player_adapter import ComputerPlayerAdapter
-from pinochle.ports.game_state_port import GameStatePort
-from pinochle.ports.notification_port import NotificationPort
 from pinochle.ports.card_image_port import CardImagePort
+from pinochle.services.game_service import GameService
 
 
 def create_default_app() -> dict:
     """Return the default wired-up application components.
 
     Returns a dict with keys:
-        game_state   – GameStatePort implementation
-        notifier     – NotificationPort implementation
+        service      – GameService (implements AdminPort + PlayerActionPort)
         card_images  – CardImagePort implementation
-        computer     – ComputerPlayerAdapter (inbound, for AI players)
+        computer     – ComputerPlayerAdapter (AI decision helpers)
     """
-    game_state: GameStatePort = InMemoryGameState()
-    notifier: NotificationPort = PrintNotification()
+    game_state = InMemoryGameState()
+    notifier = PrintNotification()
     card_images: CardImagePort = SvgCardImage()
-    computer = ComputerPlayerAdapter(game_state)
+    service = GameService(game_state, notifier)
+    computer = ComputerPlayerAdapter()
 
     return {
-        "game_state": game_state,
-        "notifier": notifier,
+        "service": service,
         "card_images": card_images,
         "computer": computer,
     }

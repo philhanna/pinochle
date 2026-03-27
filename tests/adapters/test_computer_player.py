@@ -31,9 +31,7 @@ def test_choose_cards_to_pass_returns_lowest():
         (Rank.TEN, Suit.SPADES),
     ])
     passed = ComputerPlayerAdapter.choose_cards_to_pass(hand, count=4)
-    passed_ranks = {c.rank for c in passed}
-    # The four lowest by value: NINE(1), JACK(2), QUEEN(3), TEN(5) — not ACE(6)
-    assert Rank.ACE not in passed_ranks
+    assert Rank.ACE not in {c.rank for c in passed}
     assert len(passed) == 4
 
 
