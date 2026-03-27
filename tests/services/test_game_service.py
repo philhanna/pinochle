@@ -4,7 +4,8 @@ import pytest
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.domain.cards.suit import Suit
-from pinochle.domain.game import GamePhase, CardsDealt, BidPlaced, TrumpNamed
+from pinochle.domain.game import GamePhase
+from pinochle.services.round import Round
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import Team
 from pinochle.services.game_service import GameService
@@ -107,9 +108,11 @@ def _advance_to_bidding(service: GameService, state: InMemoryGameState) -> str:
     """Set up a game and force past dealer selection."""
     game_id = setup_game(service)
     game = state.load(game_id)
-    # Force dealer directly via domain, bypassing draw protocol
+    game.phase = GamePhase.DEALER_SELECTION
     game.set_dealer("N")
-    game.deal()
+    round_state = Round(dealer_id="N", player_order=["N", "E", "S", "W"])
+    round_state.deal()
+    game.begin_round(round_state)
     game.pop_events()
     state.save(game)
     return game_id
