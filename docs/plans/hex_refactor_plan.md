@@ -39,10 +39,17 @@ pinochle/                          # top-level package
 │
 ├── adapters/                      # Concrete implementations (flat — no subdirs)
 │   ├── __init__.py
-│   ├── computer_player_adapter.py # Rule-based AI implementing PlayerActionPort
 │   ├── in_memory_game_state.py    # GameStatePort — dict-backed store
 │   ├── print_notification.py      # NotificationPort — logs events to stdout
 │   └── svg_card_image.py          # CardImagePort — resolves bundled SVG/PNG assets
+│
+├── services/                      # Use-case / application layer
+│   ├── __init__.py
+│   └── game_service.py            # GameService — implements AdminPort + PlayerActionPort
+│
+├── strategies/                    # AI / rule-based decision logic
+│   ├── __init__.py
+│   └── computer_player_strategy.py  # ComputerPlayerStrategy — stateless AI helpers
 │
 ├── cards/
 │   └── resources/                 # SVG/PNG card images (unchanged)
@@ -70,12 +77,17 @@ tests/
 │   ├── test_card_image_port.py    # contract tests (run_contract helpers)
 │   ├── test_game_state_port.py
 │   └── test_notification_port.py
-└── adapters/
+├── adapters/
+│   ├── __init__.py
+│   ├── test_in_memory_game_state.py
+│   ├── test_print_notification.py
+│   └── test_svg_card_image.py
+├── services/
+│   ├── __init__.py
+│   └── test_game_service.py
+└── strategies/
     ├── __init__.py
-    ├── test_computer_player.py
-    ├── test_in_memory_game_state.py
-    ├── test_print_notification.py
-    └── test_svg_card_image.py
+    └── test_computer_player_strategy.py
 ```
 
 ---
@@ -200,13 +212,28 @@ class CardImagePort(ABC):
 
 | Adapter | Port | Status |
 |---|---|---|
-| `ComputerPlayerAdapter` | `PlayerActionPort` | ✅ implemented |
 | `InMemoryGameState` | `GameStatePort` | ✅ implemented |
 | `PrintNotification` | `NotificationPort` | ✅ implemented (stdout, dev only) |
 | `SvgCardImage` | `CardImagePort` | ✅ implemented |
 | `HttpAdminAdapter` | `AdminPort` | ⬜ not yet implemented |
 | `HttpPlayerAdapter` | `PlayerActionPort` | ⬜ not yet implemented |
 | `WebSocketNotification` | `NotificationPort` | ⬜ not yet implemented |
+
+## Services (Use-Case Layer)
+
+| Service | Implements | Status |
+|---|---|---|
+| `GameService` | `AdminPort` + `PlayerActionPort` | ✅ implemented |
+
+`GameService` lives in `pinochle/services/` and acts as the single orchestrator for game setup and player moves. It depends on `GameStatePort` and `NotificationPort` (injected), and delegates AI decisions to `ComputerPlayerStrategy`.
+
+## Strategies (AI / Rule-Based Logic)
+
+| Strategy | Purpose | Status |
+|---|---|---|
+| `ComputerPlayerStrategy` | Stateless AI helpers (trump, passing, playing) | ✅ implemented |
+
+`ComputerPlayerStrategy` is **not** an adapter — it does not implement a port. It lives in `pinochle/strategies/` and provides three static methods: `choose_trump()`, `choose_cards_to_pass()`, `choose_play()`. Callers (e.g. a CLI or WebSocket handler) use it alongside `PlayerActionPort` to submit the chosen moves.
 
 ---
 
@@ -252,26 +279,29 @@ Contract tests in `tests/ports/` that every adapter must satisfy.
 `InMemoryGameState`, `PrintNotification`, `SvgCardImage` — all tested via contract tests
 in `tests/adapters/`.
 
-### Phase 5 — Implement inbound adapters (partial)
+### Phase 5 — Services and strategies ✅
 
-- `ComputerPlayerAdapter` ✅ — rule-based AI (play highest card, most-held trump, pass lowest).
+- `GameService` (`pinochle/services/game_service.py`) ✅ — implements `AdminPort` + `PlayerActionPort`; single orchestrator for all game setup and player move use cases.
+- `ComputerPlayerStrategy` (`pinochle/strategies/computer_player_strategy.py`) ✅ — stateless rule-based AI helpers; not a port implementation.
 - `HttpAdminAdapter` ⬜ — FastAPI routes under `/admin/`.
 - `HttpPlayerAdapter` ⬜ — FastAPI routes under `/player/`.
 
 ### Phase 6 — Application bootstrap ✅
 
-`pinochle/app.py` — `create_default_app()` wires all implemented adapters:
+`pinochle/app.py` — `create_default_app()` wires all implemented components:
 
 ```python
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.adapters.svg_card_image import SvgCardImage
-from pinochle.adapters.computer_player_adapter import ComputerPlayerAdapter
+from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
+from pinochle.services.game_service import GameService
 
 game_state = InMemoryGameState()
 notifier = PrintNotification()
 card_images = SvgCardImage()
-computer = ComputerPlayerAdapter(game_state)
+service = GameService(game_state, notifier)
+computer = ComputerPlayerStrategy()
 ```
 
 ---
@@ -289,6 +319,8 @@ computer = ComputerPlayerAdapter(game_state)
 
 ```
 adapters  →  ports  →  domain
+services  →  ports  →  domain
+strategies           →  domain
 ```
 
-All arrows point inward. The domain is unaware of adapters or ports. Ports are unaware of adapters.
+All arrows point inward. The domain is unaware of adapters, ports, services, or strategies. Services depend on ports (injected) and the domain. Strategies depend only on domain types. Adapters implement ports and may depend on the domain.
