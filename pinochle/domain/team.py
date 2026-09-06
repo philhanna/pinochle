@@ -1,6 +1,11 @@
 # pinochle.domain.team
 from dataclasses import dataclass, field
 
+# The two partnerships are fixed by the seating, so their identifiers are
+# constants rather than configuration.  Only a team's name is per-game.
+NS_TEAM_ID = "NS"
+EW_TEAM_ID = "EW"
+
 
 @dataclass
 class Team:

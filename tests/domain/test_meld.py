@@ -73,6 +73,40 @@ def test_marriage_non_trump():
     assert total_meld(hand, TRUMP) == 20
 
 
+RUN = ((Rank.ACE, TRUMP), (Rank.TEN, TRUMP), (Rank.KING, TRUMP),
+       (Rank.QUEEN, TRUMP), (Rank.JACK, TRUMP))
+
+
+def test_run_alone_scores_no_royal_marriage():
+    """The King and Queen inside a run are consumed by it."""
+    hand = cards(*RUN)
+    assert "Royal Marriage" not in meld_names(hand, TRUMP)
+    assert total_meld(hand, TRUMP) == 150
+
+
+def test_run_plus_spare_pair_scores_a_royal_marriage():
+    """A second trump King and Queen beyond the run melds as 40 (FR-49)."""
+    hand = cards(*RUN, (Rank.KING, TRUMP), (Rank.QUEEN, TRUMP))
+    assert "Royal Marriage" in meld_names(hand, TRUMP)
+    assert total_meld(hand, TRUMP) == 190
+
+
+def test_double_run_consumes_both_pairs():
+    """Two runs use both trump King-Queen pairs, leaving no marriage."""
+    hand = cards(*RUN, *RUN)
+    assert "Royal Marriage" not in meld_names(hand, TRUMP)
+    assert total_meld(hand, TRUMP) == 1500
+
+
+def test_royal_marriages_without_a_run():
+    """With no run, each trump King-Queen pair melds in full."""
+    hand = cards((Rank.KING, TRUMP), (Rank.QUEEN, TRUMP))
+    assert total_meld(hand, TRUMP) == 40
+    doubled = cards((Rank.KING, TRUMP), (Rank.QUEEN, TRUMP),
+                    (Rank.KING, TRUMP), (Rank.QUEEN, TRUMP))
+    assert total_meld(doubled, TRUMP) == 80
+
+
 def test_trump_nine():
     """A nine in trump should receive the trump-nine bonus."""
     hand = cards((Rank.NINE, TRUMP),)

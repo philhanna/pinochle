@@ -22,10 +22,10 @@ TEAMS = [
 ]
 
 PLAYERS = [
-    Player("N", "North", PlayerType.HUMAN, Position.NORTH, "NS"),
-    Player("E", "East",  PlayerType.HUMAN, Position.EAST,  "EW"),
-    Player("S", "South", PlayerType.HUMAN, Position.SOUTH, "NS"),
-    Player("W", "West",  PlayerType.HUMAN, Position.WEST,  "EW"),
+    Player("N", "North", PlayerType.HUMAN, Position.NORTH),
+    Player("E", "East",  PlayerType.HUMAN, Position.EAST),
+    Player("S", "South", PlayerType.HUMAN, Position.SOUTH),
+    Player("W", "West",  PlayerType.HUMAN, Position.WEST),
 ]
 
 
@@ -76,6 +76,14 @@ def test_assign_teams():
     game = state.load(game_id)
     assert "NS" in game.teams
     assert "EW" in game.teams
+
+
+def test_assign_teams_rejects_configurable_ids():
+    """Team ids are fixed by the seating and may not be renamed."""
+    service, _ = make_service()
+    game_id = service.create_game()
+    with pytest.raises(ValueError):
+        service.assign_teams(game_id, Team("US", "Us"), Team("THEM", "Them"))
 
 
 def test_start_game_enters_dealer_selection():

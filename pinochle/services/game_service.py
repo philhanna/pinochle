@@ -20,16 +20,13 @@ from pinochle.domain.game import (
 )
 from pinochle.domain.player import Player
 from pinochle.domain.scoring import WINNING_SCORE, resolve_round, score_tricks
-from pinochle.domain.team import Team
+from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.ports.admin_port import AdminPort
 from pinochle.ports.game_state_port import GameStatePort
 from pinochle.ports.notification_port import NotificationPort
 from pinochle.ports.player_action_port import PlayerActionPort
 from pinochle.ports.scheduler_port import SchedulerPort
 from pinochle.services.round import Round, RoundPhase
-
-_NS = "NS"
-_EW = "EW"
 
 # How long the exposed meld stays on the table before trick play begins.
 MELD_DISPLAY_SECONDS = 8.0
@@ -159,8 +156,8 @@ class GameService(AdminPort, PlayerActionPort):
         for team_id, points in net.items():
             game.add_score(team_id, points)
 
-        ns_score = game.teams.get(_NS, Team(_NS, "N/S")).cumulative_score
-        ew_score = game.teams.get(_EW, Team(_EW, "E/W")).cumulative_score
+        ns_score = game.teams.get(NS_TEAM_ID, Team(NS_TEAM_ID, "N/S")).cumulative_score
+        ew_score = game.teams.get(EW_TEAM_ID, Team(EW_TEAM_ID, "E/W")).cumulative_score
         game.emit(RoundScored(game_id=game.id, ns_score=ns_score, ew_score=ew_score))
 
         winner = self._check_winner(game, round_state.bid_winner)
@@ -169,8 +166,7 @@ class GameService(AdminPort, PlayerActionPort):
             game.emit(GameOver(game_id=game.id, winning_team_id=winner))
             return
 
-        game.phase = GamePhase.DEALER_SELECTION
-        game.set_dealer(game.next_dealer())
+        game.rotate_dealer()
         self._start_round(game)
 
     # ------------------------------------------------------------------
@@ -189,7 +185,13 @@ class GameService(AdminPort, PlayerActionPort):
         self._load_save(game_id, lambda g: g.add_player(player))
 
     def assign_teams(self, game_id: str, ns: Team, ew: Team) -> None:
-        """Attach the two partnerships to the target game."""
+        """Attach the two partnerships, whose ids are fixed by the seating."""
+        if (ns.id, ew.id) != (NS_TEAM_ID, EW_TEAM_ID):
+            raise ValueError(
+                f"Team ids are fixed at {NS_TEAM_ID!r} and {EW_TEAM_ID!r}; "
+                f"got {ns.id!r} and {ew.id!r}."
+            )
+
         def _assign(g: Game) -> None:
             """Persist both team registrations on the aggregate."""
             g.add_team(ns)

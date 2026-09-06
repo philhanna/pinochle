@@ -1,6 +1,8 @@
 # pinochle.domain.player
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
+
+from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID
 
 
 class PlayerType(Enum):
@@ -28,6 +30,11 @@ class Position(Enum):
     SOUTH = 2
     WEST = 3
 
+    @property
+    def team_id(self) -> str:
+        """Return the partnership this seat belongs to."""
+        return NS_TEAM_ID if self in (Position.NORTH, Position.SOUTH) else EW_TEAM_ID
+
 
 @dataclass
 class Player:
@@ -40,11 +47,17 @@ class Player:
         type: Whether the player is controlled by a human or the computer AI.
         position: The table seat occupied by this player, which determines
             turn order and partnership pairing.
-        team_id: The id of the ``Team`` this player belongs to.
+
+    The partnership is not stored: it follows from ``position``, so a player
+    seated North on the East/West team cannot be represented at all.
     """
 
     id: str
     name: str
     type: PlayerType
     position: Position
-    team_id: str
+
+    @property
+    def team_id(self) -> str:
+        """Return the partnership implied by this player's seat."""
+        return self.position.team_id

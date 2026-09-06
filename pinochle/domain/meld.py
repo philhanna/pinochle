@@ -40,16 +40,14 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
 
     # --- Marriages ---
     for suit in Suit:
-        kings = _count(cards, Rank.KING, suit)
-        queens = _count(cards, Rank.QUEEN, suit)
-        marriages = min(kings, queens)
-        if marriages >= 1:
+        pairs = min(_count(cards, Rank.KING, suit), _count(cards, Rank.QUEEN, suit))
+        if suit == trump:
+            # Each run consumes one trump King and Queen; only spare pairs meld.
+            pairs -= single_run_count
+        if pairs >= 1:
             name = "Royal Marriage" if suit == trump else "Marriage"
-            # Run already covers the trump marriage cards; only add standalone
-            # marriages for non-trump suits, and royal marriages when no run.
-            if suit != trump or single_run_count == 0:
-                points = 40 if suit == trump else 20
-                units.append(MeldUnit(name, points * marriages))
+            points = 40 if suit == trump else 20
+            units.append(MeldUnit(name, points * pairs))
 
     # --- Pinochle (Q♠ + J♦) ---
     pinochle_count = min(

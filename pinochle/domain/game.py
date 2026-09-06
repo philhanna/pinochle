@@ -263,6 +263,15 @@ class Game:
         idx = self._player_order.index(self._dealer_id)
         return self._player_order[(idx + 1) % 4]
 
+    def rotate_dealer(self) -> None:
+        """Pass the deal one seat clockwise between rounds.
+
+        Distinct from ``set_dealer``, which belongs to the once-per-game
+        dealer-selection draw; rotation happens in every later round and must
+        not pretend the game has re-entered that phase.
+        """
+        self._dealer_id = self.next_dealer()
+
     def set_finished(self) -> None:
         """Mark the game as finished."""
         self.phase = GamePhase.FINISHED
