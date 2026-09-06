@@ -4,16 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pinochle"
-version = "0.0.0"
+version = "0.2.0"
 description = "Web-based four-player Pinochle game"
 readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Phil Hanna" }]
 requires-python = ">=3.12"
-dependencies = []
-
-[project.optional-dependencies]
-dev = ["pytest", "pytest-mock"]
+dependencies = ["pytest", "pytest-mock"]
 
 [tool.setuptools.packages.find]
 where = ["."]
