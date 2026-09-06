@@ -118,13 +118,20 @@ SETUP → DEALER_SELECTION → [ round ]* → FINISHED
 
 round: DEALING → BIDDING ─┬─────────────→ TRUMP → PASSING → MELDING
                           │                                    │
-                          ├─ CONFIRMING ─→ TRUMP               ↓
-                          │   (lone bidder, FR-32)          PLAYING
-                          │                                    │
-                          └─ ABANDONED ──→ next round          ↓
-                              (all pass, FR-31;             SCORING
-                               or bid declined)
+                          ├─ CONFIRMING ─→ TRUMP     ┌─────────┴─────────┐
+                          │   (lone bidder, FR-32)   ↓                   ↓
+                          │                       PLAYING            (toss in,
+                          └─ ABANDONED               │                FR-50b)
+                              (all pass, FR-31;      ↓                   │
+                               or bid declined)   SCORING ←──────────────┘
+                                    │                │
+                                    └────────────────┴──→ next round
 ```
+
+Two phases wait on a player rather than on the server: `CONFIRMING`, where a
+lone bidder chooses whether to be held to their bid, and `MELDING`, where the
+auction winner reads the table and chooses to play or concede. Neither is
+timed. The only server-owned pause left is the trick clear (UI-15).
 
 ### 3.1 Dealer selection
 
@@ -275,13 +282,25 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
 - **FR-50** Meld shall be computed by the server from the player's hand. A
   player shall not declare or claim their own meld, and shall not be able to
   under-claim or over-claim it. `[OQ-9, resolved]`
-- **FR-50a** The MELDING phase shall therefore be a display pause with no
-  player action: the server exposes every player's meld, records the team
-  totals per FR-46, holds for a fixed configurable interval, and advances to
-  trick play automatically. The interval shall be substantially longer than the
-  trick-clear delay of UI-15, since there are four hands of meld to read. No
-  player shall be able to shorten or extend it, and the interval shall be
-  counted by the server (RT-8). `[OQ-27, resolved]`
+- **FR-50a** The MELDING phase shall hold until the auction winner acts, with
+  no timer. The server exposes every player's meld, records the team totals per
+  FR-46, and waits. The auction winner is the right person to hold the game
+  open: they lead the first trick, so play cannot usefully begin before they
+  are ready. No other player may end the display.
+  `[OQ-27, revised 2026-09-06]`
+- **FR-50b** At that same moment the auction winner shall be offered a second
+  option: to **toss the contract in** rather than play it out. This is the
+  first point at which they have seen both their final twelve cards and every
+  exposed meld, and so the first point at which they can judge the contract
+  unmakeable.
+- **FR-50c** When a contract is tossed in, the contract amount shall be
+  deducted from the bidding team's cumulative score and the opposing team shall
+  add their meld. Neither side scores trick points and no last-trick bonus
+  arises, because no trick is played.
+- **FR-50d** Tossing in shall therefore cost the bidding team **less** than
+  playing on and going set, which forfeits the contract *and* their meld
+  (FR-63). Conceding caps the loss, and that asymmetry is what makes the option
+  worth taking on a hopeless hand rather than a formality.
 
 ### 3.8 Trick play
 
@@ -473,7 +492,7 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
 - **RT-7** A computer player's move should be delayed slightly so that human
   players can follow the play. See FR-75c. `[OQ-19, resolved]`
 - **RT-8** Every timed pause in the game — the trick-clear interval (UI-15),
-  the meld display (FR-50a), and the computer-move delay (FR-75c) — shall be
+  and the computer-move delay (FR-75c) — shall be
   owned and counted by the server. The client shall hold no timers that affect
   what it displays: it renders the state it was last told about and changes
   only when an event tells it to. `[OQ-30, resolved]`
@@ -593,10 +612,10 @@ rule-based computer strategy.
    filtering to build one from.
 8. No computer substitution or reclaim for a disconnected seat (FR-77, FR-78).
 9. `SchedulerPort` (ARC-9) exists with an `ImmediateScheduler` that collapses
-   every delay to zero. Still missing: the asyncio adapter that honours a real
-   delay, the fake with a virtual clock (ARC-10), and two of the three pauses —
-   the computer-move delay (FR-75c) and the trick clear (UI-15). Only the meld
-   display (FR-50a) is wired to the port.
+   every delay to zero, and the trick clear (UI-15) is wired to it. Still
+   missing: the asyncio adapter that honours a real delay, the fake with a
+   virtual clock (ARC-10), and the computer-move delay (FR-75c). The meld
+   display is no longer a timed pause at all (FR-50a).
 10. No action/event logging (NFR-9).
 11. No seedable shuffle for reproducible deals in tests (NFR-7) — `Deck.shuffle`
     calls the module-level `random.shuffle`.
@@ -614,45 +633,58 @@ rule-based computer strategy.
   player, including `CardsDealt`. It now routes each event by a visibility
   rule: a dealt hand goes to its owner, a pass to the two partners, everything
   else is public (FR-22, RT-1, NFR-6).
-- **D-4** `draw_for_deal` shuffles a fresh deck per player, so two players can
-  draw the identical card (violates FR-12); ties are resolved on rank only, and
-  the `PlayerActionPort` docstring's claim that suit breaks ties contradicts
-  FR-14.
-- **D-5** All four players passing leaves `bid_winner` as `None` and the
-  contract as 0, and the round advances to `TRUMP` anyway (violates FR-31).
+- ✅ **D-4 and D-15 — fixed.** `draw_for_deal` built a fresh shuffled deck per
+  call and took its top card, so two players could draw the identical card and
+  the face-down spread of FR-11 did not exist. Drawing now names a position
+  into one shared 48-card spread, making FR-12 hold by construction; a tie lays
+  out a wholly fresh spread (FR-14); and the docstring claiming suit breaks
+  ties is corrected.
+- ✅ **D-5 and D-9 — fixed.** All four passing left `bid_winner` as `None` with
+  a contract of 0 and advanced to `TRUMP` regardless, and a lone bidder had no
+  way to decline. `RoundPhase` gained `CONFIRMING` and `ABANDONED`;
+  abandonment rotates the deal and redeals with both scores untouched (FR-31,
+  FR-32). Fixing this exposed a further bug: bidding ended as soon as one
+  active bidder remained, so after three passes the fourth player was never
+  offered a turn and could neither open nor throw the round in.
 - ✅ **D-6 — fixed.** `Hand.legal_plays` enforced follow-suit and must-trump
   but not the obligation to beat, because its signature carried only the lead
   suit. It now takes the trick, and applies FR-53 in full: beat the best card
   of the led suit when following, overtrump when void and able. `Round` exposes
   `legal_plays(player_id)` for UI-9, and `play_card` now rejects an illegal
   card rather than accepting it (FR-53, NFR-4).
-- **D-7** `detect_meld` discards a spare trump King-Queen pair whenever a run
-  is present (violates FR-49).
-- **D-8** `Round.pass_cards` accepts the two passes in either order (violates
-  FR-42, decided under OQ-6).
-- **D-9** The lone bidder's option to decline is not implemented (FR-32), and
-  the round state machine has no `CONFIRMING` state.
-- **D-10** `_score_round` sets `GamePhase.DEALER_SELECTION` merely to rotate the
-  dealer, which misrepresents the phase; dealer selection happens once per game
-  (FR-16).
+- ✅ **D-7 — fixed.** A run consumed every trump King-Queen pair, so a run plus
+  a spare pair scored 150 rather than 190. Each run now consumes exactly one
+  pair and the remainder meld as royal marriages (FR-49).
+- ✅ **D-8 — fixed.** `pass_cards` accepted the two passes in either order. It
+  now routes through `current_player`, so the partner passes first and the
+  auction winner chooses their return while holding sixteen cards (FR-42).
+
+- ✅ **D-10 — fixed.** `_score_round` set `GamePhase.DEALER_SELECTION` purely so
+  that `set_dealer` would accept the rotation, misrepresenting a once-per-game
+  phase as recurring. `Game.rotate_dealer` now expresses it directly (FR-16).
 - **D-11** `Player.type` is a fixed field, but under FR-78 a seat's control can
   change between human and computer mid-game. Seat control needs to be mutable
   state that the computer-move scheduler re-checks at the moment it acts.
+  *Not fixable in isolation:* substitution and reclaim (FR-77, FR-78) depend on
+  seat tokens and an administrative surface, neither of which exists yet, so
+  this resolves as part of the transport work rather than on its own.
 - **D-12** `ComputerPlayerStrategy.choose_trump` and `choose_cards_to_pass` are
   superseded by FR-75a and FR-75b. `choose_play` is retained as-is by the
   deliberate deferral in OQ-28.
-- **D-13** `Round.play_card` moves straight from a completed trick to the next
-  one, leaving no state in which the trick is complete but not yet cleared.
-  Under RT-8 that intermediate state must exist, must reject a premature lead
-  (RT-9), and must be visible in a reconnect snapshot (RT-10). The equivalent
-  hold for MELDING now exists (D-2); this is the remaining half.
-- **D-14** `Player.team_id` is settable independently of `Player.position`,
-  allowing a North player on the East/West team (violates FR-4a). It should be
-  removed and derived, taking the `_NS` / `_EW` constants in `GameService` with
-  it.
-- **D-15** `draw_for_deal` takes no position argument, so a player cannot
-  choose a card from the spread (FR-11a). It also builds a new `Deck` per call
-  rather than drawing from one shared spread — the same root cause as D-4.
+  *Not a defect so much as unbuilt work:* the current strategy is legal and
+  finishes games, but it bids nothing and passes its four lowest cards, so a
+  mixed human/computer game is not yet worth playing. This is the largest
+  remaining piece of engine work.
+- ✅ **D-13 — fixed.** `play_card` moved straight from a completed trick to the
+  next, so the four cards never sat on the table. A completed trick is now held
+  until `clear_trick` sweeps it; during the hold nobody is on the clock and a
+  premature lead is refused (RT-8, RT-9). Still outstanding: RT-10 requires the
+  hold to appear in a reconnect snapshot, which has no implementation yet.
+- ✅ **D-14 — fixed.** `Player.team_id` was settable independently of the seat,
+  making a North player on East/West constructible. Partnership is now derived
+  from `Position`, the ids are constants in `team.py`, and `assign_teams`
+  rejects renamed ids (FR-4a).
+
 - ✅ **D-16 — fixed.** `Round.current_player` now reports who is on the clock
   for bidding, trump, passing, and trick play, and returns `None` for the
   server-driven phases. `BiddingRound` gained the turn pointer this needed and
@@ -734,8 +766,8 @@ left over.
 
 **OQ-9 — Is meld automatic or declared?** ✅ **Resolved 2026-09-06: automatic.**
 The server detects and exposes all meld; players cannot miss or overclaim. See
-FR-50 and FR-50a. The MELDING phase carries no player action, only a display
-pause whose length is governed by OQ-16.
+FR-50 and FR-50a. The MELDING phase carries no *claiming* action; ending the
+display is the auction winner's call (OQ-27).
 
 **OQ-10 — Confirm the must-beat rules.** ✅ **Resolved 2026-09-06: overtrump is
 mandatory.** A player void in the led suit must play a trump, and if a trump
@@ -783,8 +815,8 @@ equivalent, and the pair applies to card selection everywhere. See UI-8.
 **OQ-16 — How long does a completed trick stay visible, and who clears it?** ✅
 **Resolved 2026-09-06: fixed delay, auto-clear**, about 1.5 seconds,
 configurable, with no player acknowledgement. See UI-15. Note this also sets
-the shape of the MELDING pause (FR-50a), which needs its own interval —
-considerably longer, since there is much more to read.
+the trick-clear hold only. The meld display is not a timed pause at all —
+see OQ-27.
 
 **OQ-17 — What browsers and screen sizes must be supported?** ✅ **Resolved
 2026-09-06: current desktop Chrome and Firefox.** A fixed table layout scaled
@@ -806,10 +838,18 @@ mid-game, so it cannot stay a fixed `PlayerType` on the `Player` dataclass. The
 scheduler must also check, at the moment it is due to act, that the seat is
 still computer-controlled.
 
-**OQ-27 — How does the meld display advance?** ✅ **Resolved 2026-09-06: a
-longer fixed timer**, auto-advancing, with no ready-up and no way for a player
-to skip. See FR-50a. The exact interval is a tuning question best answered by
-playing a game; start around 8 seconds.
+**OQ-27 — How does the meld display advance?** ✅ **Revised 2026-09-06: the
+auction winner ends it.** Originally resolved as a long fixed timer; the user
+replaced that with an explicit ready from the auction winner, and added a
+second choice at the same moment — play the contract, or toss it in (FR-50a
+through FR-50d).
+
+The revision is better than what it replaced. A timer either rushes a player
+who is still counting or bores three who are not, and no single interval suits
+both. Handing the decision to the auction winner also puts the toss-in exactly
+where it belongs: the concession needs the same information as the decision to
+play, and there is no earlier point at which the winner knows both their final
+hand and every opponent's meld.
 
 **OQ-28 — When is the computer's card play improved?** ✅ **Deferred
 2026-09-06.** `choose_play` keeps "always play the highest legal card" for now.
