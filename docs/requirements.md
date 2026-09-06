@@ -537,10 +537,12 @@ timed. The only server-owned pause left is the trick clear (UI-15).
 - **FR-75a** The computer player shall bid on the basis of its detected meld
   plus a conservative estimate of the trick points its hand can take, derived
   from its aces and its length in the prospective trump suit. It shall pass
-  rather than bid beyond that estimate. `[OQ-20, resolved]`
+  rather than bid beyond that estimate. `[OQ-20, resolved — deferred, not yet
+  built]`
 - **FR-75b** When passing to a partner who won the auction, the computer player
   shall pass cards that support the contract — trump and aces — while retaining
   cards that complete its own meld. It shall not simply pass its lowest cards.
+  `[deferred, not yet built]`
 - **FR-75c** A computer player's action shall be delayed by a configurable
   interval, defaulting to approximately one second, so that human players can
   follow the play. The delay shall be reducible to zero so that all-computer
@@ -609,11 +611,19 @@ rule-based computer strategy.
    missing: the asyncio adapter that honours a real delay, the fake with a
    virtual clock (ARC-10), and the computer-move delay (FR-75c). The meld
    display is no longer a timed pause at all (FR-50a).
-10. No action/event logging (NFR-9).
-11. No seedable shuffle for reproducible deals in tests (NFR-7) — `Deck.shuffle`
+10. The computer player's strategy is the original placeholder: longest suit
+    as trump, the four lowest cards passed, highest legal card played. It is
+    legal and finishes games, but it does not bid on its meld and its pass
+    actively hands a partner the worst cards in hand, so FR-75a and FR-75b are
+    unmet. Deferred deliberately (OQ-20) — good enough until there is a client
+    to play against it from.
+11. No action/event logging (NFR-9).
+12. No seedable shuffle for reproducible deals in tests (NFR-7) — `Deck.shuffle`
     calls the module-level `random.shuffle`.
 
-**Known defects against this specification**, roughly in order of severity:
+**Known defects against this specification.** As of 2026-09-06 every defect
+found has been fixed; the engine plays a complete game that matches these
+rules. The entries are kept as a record of what was wrong and why.
 
 - ✅ **D-1 — fixed.** Meld was computed in `_score_round` from hands that were
   empty by then, so every meld scored zero. `Round` now captures each player's
@@ -658,13 +668,6 @@ rule-based computer strategy.
 - *(**D-11** withdrawn 2026-09-06 — it existed only because a seat's control
   could change mid-game. With substitution dropped for the first release
   (FR-2a), `Player.type` being a fixed field is correct rather than a defect.)*
-- **D-12** `ComputerPlayerStrategy.choose_trump` and `choose_cards_to_pass` are
-  superseded by FR-75a and FR-75b. `choose_play` is retained as-is by the
-  deliberate deferral in OQ-28.
-  *Not a defect so much as unbuilt work:* the current strategy is legal and
-  finishes games, but it bids nothing and passes its four lowest cards, so a
-  mixed human/computer game is not yet worth playing. This is the largest
-  remaining piece of engine work.
 - ✅ **D-13 — fixed.** `play_card` moved straight from a completed trick to the
   next, so the four cards never sat on the table. A completed trick is now held
   until `clear_trick` sweeps it; during the hold nobody is on the clock and a
@@ -927,10 +930,12 @@ meld-aware bidding and contract-aware passing.** Bidding values detected meld
 plus a conservative trick estimate from aces and trump length; passing sends
 trump and aces to a partner who won the auction rather than the four lowest
 cards. See FR-75a and FR-75b.
-*Consequence:* all three of the current strategy's methods are replaced.
-`choose_play` — always play the highest legal card — was not raised as a
-question and is retained, but it is weak: it spends aces on tricks already won
-and never leads low to protect a partner. Worth revisiting once the rest works.
+**Deferred 2026-09-06.** The placeholder strategy stays for now: it is legal,
+it finishes games, and nothing yet plays against it. FR-75a and FR-75b remain
+the target and are listed in §9 as unbuilt rather than as defects.
+*When it is picked up,* all three methods change. `choose_play` — always the
+highest legal card — was never raised as a question and is the weakest of them:
+it spends aces on tricks the partner has already won, and never leads low.
 
 **OQ-21 — Should there be selectable difficulty levels?** ✅ **Resolved
 2026-09-06: deferred.** One strategy, behind the existing replaceable
