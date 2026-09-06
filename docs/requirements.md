@@ -620,9 +620,12 @@ rule-based computer strategy.
   FR-14.
 - **D-5** All four players passing leaves `bid_winner` as `None` and the
   contract as 0, and the round advances to `TRUMP` anyway (violates FR-31).
-- **D-6** `Hand.legal_plays` enforces follow-suit and must-trump but not the
-  obligation to beat the current high card (violates FR-53). Its signature
-  takes only the lead suit, so it cannot; it needs the current trick.
+- ✅ **D-6 — fixed.** `Hand.legal_plays` enforced follow-suit and must-trump
+  but not the obligation to beat, because its signature carried only the lead
+  suit. It now takes the trick, and applies FR-53 in full: beat the best card
+  of the led suit when following, overtrump when void and able. `Round` exposes
+  `legal_plays(player_id)` for UI-9, and `play_card` now rejects an illegal
+  card rather than accepting it (FR-53, NFR-4).
 - **D-7** `detect_meld` discards a spare trump King-Queen pair whenever a run
   is present (violates FR-49).
 - **D-8** `Round.pass_cards` accepts the two passes in either order (violates
@@ -650,11 +653,12 @@ rule-based computer strategy.
 - **D-15** `draw_for_deal` takes no position argument, so a player cannot
   choose a card from the spread (FR-11a). It also builds a new `Deck` per call
   rather than drawing from one shared spread — the same root cause as D-4.
-- **D-16** `Round` exposes no way to ask whose turn it is. Driving a game
-  requires reaching into `_bidding.active_players` and `_next_leader`, so the
-  HTTP layer would have nothing public to answer UI-7 with, and the reconnect
-  snapshot (RT-10) has no turn state to serialize. A round needs to report the
-  player currently on the clock for every phase that has one.
+- ✅ **D-16 — fixed.** `Round.current_player` now reports who is on the clock
+  for bidding, trump, passing, and trick play, and returns `None` for the
+  server-driven phases. `BiddingRound` gained the turn pointer this needed and
+  now enforces turn order, which its docstring had always claimed but never
+  did. `Round.play_card` rejects an out-of-turn play in every seat, not only
+  the lead (UI-7, RT-10, NFR-4).
 
 ---
 

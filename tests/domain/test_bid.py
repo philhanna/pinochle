@@ -51,6 +51,56 @@ def test_bidding_ends_when_three_pass():
     assert b.current_high == 250
 
 
+def test_current_bidder_starts_at_the_head_of_the_order():
+    """The first player in the order opens the bidding."""
+    assert BiddingRound(PLAYERS).current_bidder == "N"
+
+
+def test_current_bidder_advances_clockwise():
+    """Each bid or pass moves the turn to the next player."""
+    b = BiddingRound(PLAYERS)
+    b.place_bid("N", 250)
+    assert b.current_bidder == "E"
+    b.place_bid("E", None)
+    assert b.current_bidder == "S"
+
+
+def test_current_bidder_skips_players_who_passed():
+    """A player who has passed is not offered another turn."""
+    b = BiddingRound(PLAYERS)
+    b.place_bid("N", 250)
+    b.place_bid("E", None)
+    b.place_bid("S", 260)
+    b.place_bid("W", None)
+    assert b.current_bidder == "N"
+
+
+def test_current_bidder_is_none_once_over():
+    """Bidding that has ended has nobody on the clock."""
+    b = BiddingRound(PLAYERS)
+    b.place_bid("N", 250)
+    for player_id in ("E", "S", "W"):
+        b.place_bid(player_id, None)
+    assert b.current_bidder is None
+
+
+def test_bid_out_of_turn_is_rejected():
+    """Bidding before your turn comes round must be refused."""
+    b = BiddingRound(PLAYERS)
+    with pytest.raises(ValueError):
+        b.place_bid("S", 250)
+
+
+def test_out_of_turn_bid_leaves_state_untouched():
+    """A rejected bid must not change the high bid or the turn."""
+    b = BiddingRound(PLAYERS)
+    b.place_bid("N", 250)
+    with pytest.raises(ValueError):
+        b.place_bid("W", 300)
+    assert b.current_high == 250
+    assert b.current_bidder == "E"
+
+
 def test_bid_raises_on_invalid_amount():
     """An invalid numeric bid should raise ``ValueError``."""
     b = BiddingRound(PLAYERS)

@@ -181,12 +181,14 @@ class Round:
         """Play a card. Returns winner player_id when trick completes, else None."""
         if self.phase != RoundPhase.PLAYING:
             raise ValueError(f"Cannot play in phase {self.phase}.")
+        if player_id != self.current_player:
+            raise ValueError(f"It is {self.current_player}'s turn to play.")
         if card not in self._hands[player_id]:
             raise ValueError(f"{player_id} does not hold {card}.")
+        if card not in self.legal_plays(player_id):
+            raise ValueError(f"{card} is not a legal play for {player_id}.")
 
         if self._current_trick is None:
-            if player_id != self._next_leader:
-                raise ValueError(f"It is {self._next_leader}'s turn to lead.")
             self._current_trick = Trick(lead_player_id=player_id, trump=self._trump)
 
         self._current_trick.play(player_id, card)
@@ -206,6 +208,43 @@ class Round:
     # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------
+
+    @property
+    def current_player(self) -> str | None:
+        """Return the player who must act next, or ``None`` if nobody is on the clock.
+
+        DEALING, MELDING, SCORING and COMPLETE are driven by the server rather
+        than by a player, so they have no current player.
+        """
+        if self.phase == RoundPhase.BIDDING:
+            return self._bidding.current_bidder
+        if self.phase == RoundPhase.TRUMP:
+            return self._bid_winner
+        if self.phase == RoundPhase.PASSING:
+            return self._next_passer()
+        if self.phase == RoundPhase.PLAYING:
+            return self._next_to_play()
+        return None
+
+    def _next_passer(self) -> str | None:
+        """Return whoever still owes a pass, the partner going first."""
+        partner = self.partner_of(self._bid_winner)
+        if partner not in self._pending_pass:
+            return partner
+        if self._bid_winner not in self._pending_pass:
+            return self._bid_winner
+        return None
+
+    def _next_to_play(self) -> str | None:
+        """Return the player due to play into the current trick."""
+        if self._current_trick is None:
+            return self._next_leader
+        idx = self.player_order.index(self._next_leader)
+        return self.player_order[(idx + len(self._current_trick.cards)) % 4]
+
+    def legal_plays(self, player_id: str) -> list[Card]:
+        """Return the cards ``player_id`` may legally play into the current trick."""
+        return self._hands[player_id].legal_plays(self._current_trick, self._trump)
 
     def hand(self, player_id: str) -> Hand:
         """Return the mutable hand object for ``player_id``."""

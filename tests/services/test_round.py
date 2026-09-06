@@ -1,4 +1,8 @@
 # tests.services.test_round
+import pytest
+
+from pinochle.domain.cards.card import Card
+from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.meld import detect_meld
 from pinochle.services.round import Round, RoundPhase
@@ -79,12 +83,8 @@ def test_cannot_play_before_meld_display_ends():
     round_state = round_at_passing()
     complete_exchange(round_state)
     card = list(round_state.hand("E"))[0]
-    try:
+    with pytest.raises(ValueError):
         round_state.play_card("E", card)
-    except ValueError:
-        pass
-    else:
-        raise AssertionError("play_card should be rejected during MELDING")
 
 
 def test_advance_to_playing_gives_lead_to_auction_winner():
@@ -95,3 +95,79 @@ def test_advance_to_playing_gives_lead_to_auction_winner():
     assert round_state.phase == RoundPhase.PLAYING
     card = list(round_state.hand("E"))[0]
     assert round_state.play_card("E", card) is None
+
+
+# ---------------------------------------------------------------------------
+# Turn state
+# ---------------------------------------------------------------------------
+
+def test_current_player_through_the_phases():
+    """Every phase that expects a player names one; the rest name nobody."""
+    round_state = Round(dealer_id="N", player_order=PLAYER_ORDER)
+    assert round_state.current_player is None          # DEALING
+
+    round_state.deal()
+    assert round_state.current_player == "E"           # BIDDING, left of dealer
+
+    round_state.place_bid("E", 250)
+    for player_id in ("S", "W", "N"):
+        round_state.place_bid(player_id, None)
+    assert round_state.current_player == "E"           # TRUMP, the bid winner
+
+    round_state.name_trump("E", Suit.SPADES)
+    assert round_state.current_player == "W"           # PASSING, partner first
+
+    round_state.pass_cards("W", list(round_state.hand("W"))[:4])
+    assert round_state.current_player == "E"           # PASSING, winner returns
+
+    round_state.pass_cards("E", list(round_state.hand("E"))[:4])
+    assert round_state.current_player is None          # MELDING is untimed by players
+
+    round_state.advance_to_playing()
+    assert round_state.current_player == "E"           # PLAYING, winner leads
+
+
+def test_current_player_walks_clockwise_within_a_trick():
+    """Each card played hands the turn to the next seat."""
+    round_state = round_at_passing()
+    complete_exchange(round_state)
+    round_state.advance_to_playing()
+
+    expected = ["E", "S", "W", "N"]
+    for player_id in expected:
+        assert round_state.current_player == player_id
+        round_state.play_card(player_id, round_state.legal_plays(player_id)[0])
+    assert round_state.current_player is not None      # winner leads the next
+
+
+def test_play_out_of_turn_is_rejected():
+    """A player may not play before the turn reaches them."""
+    round_state = round_at_passing()
+    complete_exchange(round_state)
+    round_state.advance_to_playing()
+    with pytest.raises(ValueError):
+        round_state.play_card("S", round_state.legal_plays("S")[0])
+
+
+def test_illegal_play_is_rejected():
+    """A card outside the legal set must be refused even though it is held.
+
+    ``S`` is dealt a hand that can follow the lead, so the off-suit card is
+    unambiguously illegal regardless of what the shuffle produced.
+    """
+    round_state = round_at_passing(Suit.SPADES)
+    complete_exchange(round_state)
+    round_state.advance_to_playing()
+
+    lead = round_state.legal_plays("E")[0]
+    round_state.play_card("E", lead)
+
+    off_suit = next(s for s in Suit if s not in (lead.suit, Suit.SPADES))
+    discard = Card(Rank.ACE, off_suit)
+    hand = round_state.hand("S")
+    hand.remove_many(list(hand))
+    hand.add([Card(Rank.NINE, lead.suit), discard])
+
+    assert discard not in round_state.legal_plays("S")
+    with pytest.raises(ValueError):
+        round_state.play_card("S", discard)

@@ -1,6 +1,7 @@
 # pinochle.domain.hand
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.trick import Trick
 
 
 class Hand:
@@ -38,22 +39,46 @@ class Hand:
         """Return whether the hand contains at least one card of ``suit``."""
         return any(c.suit == suit for c in self._cards)
 
-    def legal_plays(self, lead_suit: Suit | None, trump: Suit) -> list[Card]:
-        """Return the subset of cards that are legal to play.
+    def legal_plays(self, trick: Trick | None, trump: Suit) -> list[Card]:
+        """Return the subset of cards that may legally be played into ``trick``.
 
-        Rules (simplified):
-        - If leading: any card.
-        - If following: must follow suit if able.
-        - If void in lead suit: must trump if able.
-        - Otherwise: any card.
+        Pinochle obliges a player not merely to follow suit but to try to win:
+
+        - Leading, or no card played yet: any card.
+        - Holding the led suit: must follow it, and must beat the best card of
+          the led suit already played if able.
+        - Void in the led suit but holding trump: must trump, and must overtrump
+          the best trump already played if able.
+        - Void in both: any card.
+
+        The whole trick is needed rather than just the led suit, because the
+        obligation to beat depends on what has already been played.
         """
-        if lead_suit is None:
+        if trick is None or not trick.cards:
             return list(self._cards)
-        if self.has_suit(lead_suit):
-            return self.cards_of_suit(lead_suit)
-        if self.has_suit(trump):
-            return self.cards_of_suit(trump)
+
+        following = self.cards_of_suit(trick.lead_suit)
+        if following:
+            return self._must_beat(following, trick.cards, trick.lead_suit)
+
+        trumps = self.cards_of_suit(trump)
+        if trumps:
+            return self._must_beat(trumps, trick.cards, trump)
+
         return list(self._cards)
+
+    @staticmethod
+    def _must_beat(candidates: list[Card], played: list[Card], suit: Suit) -> list[Card]:
+        """Narrow ``candidates`` to those beating the best ``suit`` card in ``played``.
+
+        Falls back to the full set when nothing beats it, since the obligation
+        is to win if you can, not to win at any cost.
+        """
+        in_suit = [c for c in played if c.suit == suit]
+        if not in_suit:
+            return candidates
+        best = max(c.rank.value for c in in_suit)
+        return [c for c in candidates if c.rank.value > best] or candidates
 
     def __len__(self) -> int:
         """Return the number of cards currently held."""

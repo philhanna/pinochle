@@ -50,6 +50,7 @@ class BiddingRound:
         self._passed: set[str] = set()
         self._history: list[BidEntry] = []
         self._current_high: int = 0
+        self._turn: int = 0
 
     @property
     def current_high(self) -> int:
@@ -74,6 +75,13 @@ class BiddingRound:
         """Return ``True`` when at most one active bidder remains."""
         return len(self.active_players) <= 1
 
+    @property
+    def current_bidder(self) -> str | None:
+        """Return the player whose turn it is, or ``None`` once bidding is over."""
+        if self.is_over:
+            return None
+        return self._order[self._turn]
+
     def place_bid(self, player_id: str, amount: int | None) -> None:
         """Record a bid (amount=None means pass).
 
@@ -83,6 +91,8 @@ class BiddingRound:
             raise ValueError("Bidding is already over.")
         if player_id not in self.active_players:
             raise ValueError(f"{player_id} is not an active bidder.")
+        if player_id != self.current_bidder:
+            raise ValueError(f"It is {self.current_bidder}'s turn to bid.")
 
         if amount is None:
             self._passed.add(player_id)
@@ -94,3 +104,13 @@ class BiddingRound:
             self._current_high = amount
 
         self._history.append(BidEntry(player_id=player_id, amount=amount))
+        self._advance_turn()
+
+    def _advance_turn(self) -> None:
+        """Move the turn to the next player who has not yet passed."""
+        if self.is_over:
+            return
+        for _ in range(len(self._order)):
+            self._turn = (self._turn + 1) % len(self._order)
+            if self._order[self._turn] not in self._passed:
+                return
