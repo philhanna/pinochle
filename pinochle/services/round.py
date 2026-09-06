@@ -19,6 +19,8 @@ class RoundPhase(Enum):
 
     - ``DEALING``: Cards are being distributed to all players.
     - ``BIDDING``: Players are submitting bids or passing.
+    - ``CONFIRMING``: A lone bidder is deciding whether to take the contract.
+    - ``ABANDONED``: The round ended before play, leaving all scores unchanged.
     - ``TRUMP``: The bid winner is declaring the trump suit.
     - ``PASSING``: The bid winner and partner exchange four cards each.
     - ``MELDING``: Each player's meld is exposed and held on screen. No player
@@ -30,6 +32,8 @@ class RoundPhase(Enum):
 
     DEALING = auto()
     BIDDING = auto()
+    CONFIRMING = auto()
+    ABANDONED = auto()
     TRUMP = auto()
     PASSING = auto()
     MELDING = auto()
@@ -71,8 +75,8 @@ class Round:
         self._current_trick: Trick | None = None
         self._next_leader: str | None = None
 
-        # Passing state
-        self._pending_pass: dict[str, list[Card]] = {}
+        # Passing state: who has already sent their four cards.
+        self._passed_cards: dict[str, list[Card]] = {}
 
         # Meld, captured once at the end of PASSING and never recomputed,
         # because the cards leave the hands during trick play.
@@ -107,10 +111,36 @@ class Round:
         if self.phase != RoundPhase.BIDDING:
             raise ValueError(f"Cannot bid in phase {self.phase}.")
         self._bidding.place_bid(player_id, amount)
-        if self._bidding.is_over:
-            self._bid_winner = self._bidding.high_bidder
-            self._contract = self._bidding.current_high
+        if not self._bidding.is_over:
+            return
+
+        self._bid_winner = self._bidding.high_bidder
+        self._contract = self._bidding.current_high
+        if self._bid_winner is None:
+            # FR-31: nobody bid, so the round is thrown in.
+            self.phase = RoundPhase.ABANDONED
+        elif self._bidding.bid_count == 1:
+            # FR-32: a lone bidder may decline rather than be held to it.
+            self.phase = RoundPhase.CONFIRMING
+        else:
             self.phase = RoundPhase.TRUMP
+
+    # ------------------------------------------------------------------
+    # Phase: CONFIRMING
+    # ------------------------------------------------------------------
+
+    def confirm_contract(self, player_id: str, accept: bool) -> None:
+        """Take or decline a contract won without anyone bidding against you."""
+        if self.phase != RoundPhase.CONFIRMING:
+            raise ValueError(f"Cannot confirm a contract in phase {self.phase}.")
+        if player_id != self._bid_winner:
+            raise ValueError("Only the lone bidder may accept or decline.")
+        if accept:
+            self.phase = RoundPhase.TRUMP
+            return
+        self._bid_winner = None
+        self._contract = None
+        self.phase = RoundPhase.ABANDONED
 
     # ------------------------------------------------------------------
     # Phase: TRUMP
@@ -135,23 +165,27 @@ class Round:
         return self.player_order[(idx + 2) % 4]
 
     def pass_cards(self, player_id: str, cards: list[Card]) -> None:
-        """Bid winner passes 4 cards to partner; partner passes 4 back."""
+        """Pass four cards to a partner, the auction winner's partner going first.
+
+        The exchange is strictly ordered (FR-42), so the cards arrive before
+        the auction winner chooses what to send back and their choice is an
+        informed one — they are holding sixteen cards when they make it.
+        """
         if self.phase != RoundPhase.PASSING:
             raise ValueError(f"Cannot pass cards in phase {self.phase}.")
+        if player_id != self.current_player:
+            raise ValueError(f"It is {self.current_player}'s turn to pass.")
         if len(cards) != self.PASS_COUNT:
             raise ValueError(f"Must pass exactly {self.PASS_COUNT} cards.")
-        partner = self.partner_of(player_id)
         for card in cards:
             if card not in self._hands[player_id]:
                 raise ValueError(f"{player_id} does not hold {card}.")
+
         self._hands[player_id].remove_many(cards)
-        self._pending_pass[player_id] = cards
-        # Both directions complete?
-        if len(self._pending_pass) == 2:
-            for giver, given in self._pending_pass.items():
-                receiver = self.partner_of(giver)
-                self._hands[receiver].add(given)
-            self._pending_pass.clear()
+        self._hands[self.partner_of(player_id)].add(cards)
+        self._passed_cards[player_id] = cards
+
+        if len(self._passed_cards) == 2:
             self._capture_meld()
             self.phase = RoundPhase.MELDING
 
@@ -218,6 +252,8 @@ class Round:
         """
         if self.phase == RoundPhase.BIDDING:
             return self._bidding.current_bidder
+        if self.phase == RoundPhase.CONFIRMING:
+            return self._bid_winner
         if self.phase == RoundPhase.TRUMP:
             return self._bid_winner
         if self.phase == RoundPhase.PASSING:
@@ -229,9 +265,9 @@ class Round:
     def _next_passer(self) -> str | None:
         """Return whoever still owes a pass, the partner going first."""
         partner = self.partner_of(self._bid_winner)
-        if partner not in self._pending_pass:
+        if partner not in self._passed_cards:
             return partner
-        if self._bid_winner not in self._pending_pass:
+        if self._bid_winner not in self._passed_cards:
             return self._bid_winner
         return None
 

@@ -21,14 +21,16 @@ def round_at_passing(trump: Suit = Suit.SPADES) -> Round:
     round_state.place_bid("E", 250)
     for player_id in ("S", "W", "N"):
         round_state.place_bid(player_id, None)
+    round_state.confirm_contract("E", accept=True)
     round_state.name_trump("E", trump)
     return round_state
 
 
 def complete_exchange(round_state: Round) -> None:
-    """Pass four cards each way between the auction winner and their partner."""
-    for player_id in ("E", "W"):
-        round_state.pass_cards(player_id, list(round_state.hand(player_id))[:4])
+    """Pass four cards each way, in whatever order the round requires."""
+    while round_state.phase == RoundPhase.PASSING:
+        passer = round_state.current_player
+        round_state.pass_cards(passer, list(round_state.hand(passer))[:4])
 
 
 def test_exchange_moves_round_to_melding():
@@ -98,6 +100,70 @@ def test_advance_to_playing_gives_lead_to_auction_winner():
 
 
 # ---------------------------------------------------------------------------
+# Bidding outcomes
+# ---------------------------------------------------------------------------
+
+def dealt_round() -> Round:
+    """Return a freshly dealt round sitting in the bidding phase."""
+    round_state = Round(dealer_id="N", player_order=PLAYER_ORDER)
+    round_state.deal()
+    return round_state
+
+
+def test_all_four_passing_abandons_the_round():
+    """Nobody bidding throws the round in, with no contract to play (FR-31)."""
+    round_state = dealt_round()
+    for player_id in ("E", "S", "W", "N"):
+        round_state.place_bid(player_id, None)
+    assert round_state.phase == RoundPhase.ABANDONED
+    assert round_state.bid_winner is None
+    assert round_state.current_player is None
+
+
+def test_lone_bidder_is_asked_to_confirm():
+    """One bid and three passes offers the bidder a way out (FR-32)."""
+    round_state = dealt_round()
+    round_state.place_bid("E", 250)
+    for player_id in ("S", "W", "N"):
+        round_state.place_bid(player_id, None)
+    assert round_state.phase == RoundPhase.CONFIRMING
+
+
+def test_declining_a_lone_contract_abandons_the_round():
+    """A declined contract leaves no bid winner and no contract."""
+    round_state = dealt_round()
+    round_state.place_bid("E", 250)
+    for player_id in ("S", "W", "N"):
+        round_state.place_bid(player_id, None)
+    round_state.confirm_contract("E", accept=False)
+    assert round_state.phase == RoundPhase.ABANDONED
+    assert round_state.bid_winner is None
+    assert round_state.contract is None
+
+
+def test_contested_bidding_skips_confirmation():
+    """Someone who was bid against is held to their contract."""
+    round_state = dealt_round()
+    round_state.place_bid("E", 250)
+    round_state.place_bid("S", 260)
+    round_state.place_bid("W", None)
+    round_state.place_bid("N", None)
+    round_state.place_bid("E", None)
+    assert round_state.phase == RoundPhase.TRUMP
+    assert round_state.bid_winner == "S"
+
+
+def test_only_the_lone_bidder_may_confirm():
+    """No other player can accept or decline on the bidder's behalf."""
+    round_state = dealt_round()
+    round_state.place_bid("E", 250)
+    for player_id in ("S", "W", "N"):
+        round_state.place_bid(player_id, None)
+    with pytest.raises(ValueError):
+        round_state.confirm_contract("W", accept=True)
+
+
+# ---------------------------------------------------------------------------
 # Turn state
 # ---------------------------------------------------------------------------
 
@@ -112,6 +178,10 @@ def test_current_player_through_the_phases():
     round_state.place_bid("E", 250)
     for player_id in ("S", "W", "N"):
         round_state.place_bid(player_id, None)
+    assert round_state.phase == RoundPhase.CONFIRMING  # E bid alone
+    assert round_state.current_player == "E"
+
+    round_state.confirm_contract("E", accept=True)
     assert round_state.current_player == "E"           # TRUMP, the bid winner
 
     round_state.name_trump("E", Suit.SPADES)

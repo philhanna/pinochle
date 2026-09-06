@@ -66,6 +66,22 @@ class BidPlaced:
 
 
 @dataclass
+class RoundAbandoned:
+    """Emitted when a round ends before any card is played.
+
+    Happens when all four players pass, or when a lone bidder declines the
+    contract they were left holding.  No score changes; the deal moves on.
+
+    Attributes:
+        game_id: The game in which the round was abandoned.
+        declined_by: The lone bidder who declined, or ``None`` if nobody bid.
+    """
+
+    game_id: str
+    declined_by: str | None
+
+
+@dataclass
 class TrumpNamed:
     """Emitted when the bid winner declares the trump suit for the round.
 
@@ -164,8 +180,8 @@ class GameOver:
 
 
 GameEvent = (
-    DealerSelected | CardsDealt | BidPlaced | TrumpNamed | CardsPassed
-    | MeldExposed | TrickCompleted | RoundScored | GameOver
+    DealerSelected | CardsDealt | BidPlaced | RoundAbandoned | TrumpNamed
+    | CardsPassed | MeldExposed | TrickCompleted | RoundScored | GameOver
 )
 
 

@@ -72,8 +72,24 @@ class BiddingRound:
 
     @property
     def is_over(self) -> bool:
-        """Return ``True`` when at most one active bidder remains."""
-        return len(self.active_players) <= 1
+        """Return ``True`` once no further bid can be made.
+
+        A single remaining bidder ends the auction only if a bid has actually
+        been placed.  When the other three pass without anyone opening, the
+        last player still gets their turn: they may open the bidding or pass
+        and throw the round in.
+        """
+        active = self.active_players
+        if not active:
+            return True
+        if len(active) > 1:
+            return False
+        return self.bid_count > 0
+
+    @property
+    def bid_count(self) -> int:
+        """Return how many actual bids, as opposed to passes, have been made."""
+        return sum(1 for entry in self._history if entry.amount is not None)
 
     @property
     def current_bidder(self) -> str | None:

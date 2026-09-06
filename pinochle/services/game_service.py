@@ -15,6 +15,7 @@ from pinochle.domain.game import (
     GamePhase,
     GameOver,
     MeldExposed,
+    RoundAbandoned,
     RoundScored,
     TrickCompleted,
     TrumpNamed,
@@ -301,8 +302,26 @@ class GameService(AdminPort, PlayerActionPort):
             """Apply a bid to the current round and emit ``BidPlaced``."""
             g.current_round.place_bid(player_id, amount)
             g.emit(BidPlaced(game_id=g.id, player_id=player_id, amount=amount))
+            if g.current_round.phase == RoundPhase.ABANDONED:
+                self._abandon_round(g, declined_by=None)
 
         self._load_save(game_id, _place_bid)
+
+    def confirm_contract(self, game_id: str, player_id: str, accept: bool) -> None:
+        """Take or decline a contract nobody bid against."""
+        def _confirm(g: Game) -> None:
+            """Apply the lone bidder's decision and abandon the round if declined."""
+            g.current_round.confirm_contract(player_id, accept)
+            if g.current_round.phase == RoundPhase.ABANDONED:
+                self._abandon_round(g, declined_by=player_id)
+
+        self._load_save(game_id, _confirm)
+
+    def _abandon_round(self, game: Game, declined_by: str | None) -> None:
+        """End a round before play and deal the next one, scores untouched."""
+        game.emit(RoundAbandoned(game_id=game.id, declined_by=declined_by))
+        game.rotate_dealer()
+        self._start_round(game)
 
     def name_trump(self, game_id: str, player_id: str, suit: Suit) -> None:
         """Record the named trump suit for the active round."""

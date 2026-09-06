@@ -227,14 +227,16 @@ def _advance_to_passing(service: GameService, state: InMemoryGameState) -> str:
     service.place_bid(game_id, "E", 250)
     for player_id in ("S", "W", "N"):
         service.place_bid(game_id, player_id, None)
+    service.confirm_contract(game_id, "E", accept=True)
     service.name_trump(game_id, "E", Suit.SPADES)
     return game_id
 
 
 def _complete_exchange(service: GameService, game_id: str, round_state: Round) -> None:
     """Pass four cards each way between the auction winner and their partner."""
-    for player_id in ("E", "W"):
-        service.pass_cards(game_id, player_id, list(round_state.hand(player_id))[:4])
+    while round_state.phase == RoundPhase.PASSING:
+        passer = round_state.current_player
+        service.pass_cards(game_id, passer, list(round_state.hand(passer))[:4])
 
 
 def test_completed_exchange_reaches_trick_play():

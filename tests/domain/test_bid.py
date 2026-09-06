@@ -75,6 +75,35 @@ def test_current_bidder_skips_players_who_passed():
     assert b.current_bidder == "N"
 
 
+def test_last_player_still_gets_a_turn_after_three_passes():
+    """Three passes with no bid must not end the auction over the fourth's head."""
+    b = BiddingRound(PLAYERS)
+    for player_id in ("N", "E", "S"):
+        b.place_bid(player_id, None)
+    assert not b.is_over
+    assert b.current_bidder == "W"
+
+
+def test_last_player_may_open_after_three_passes():
+    """The last active player can still open the bidding."""
+    b = BiddingRound(PLAYERS)
+    for player_id in ("N", "E", "S"):
+        b.place_bid(player_id, None)
+    b.place_bid("W", 250)
+    assert b.is_over
+    assert b.high_bidder == "W"
+
+
+def test_everyone_passing_ends_with_no_bidder():
+    """All four passing leaves nobody holding a contract."""
+    b = BiddingRound(PLAYERS)
+    for player_id in PLAYERS:
+        b.place_bid(player_id, None)
+    assert b.is_over
+    assert b.high_bidder is None
+    assert b.bid_count == 0
+
+
 def test_current_bidder_is_none_once_over():
     """Bidding that has ended has nobody on the clock."""
     b = BiddingRound(PLAYERS)

@@ -92,3 +92,17 @@ class PlayerActionPort(ABC):
             player_id: Unique identifier of the playing player.
             card: A card from the player's hand to play into the current trick.
         """
+
+    @abstractmethod
+    def confirm_contract(self, game_id: str, player_id: str, accept: bool) -> None:
+        """Take or decline a contract won without opposition.
+
+        Offered only when a single player bid and the other three passed.
+        Accepting proceeds to naming trump; declining abandons the round with
+        no change to either score, and the deal moves on.
+
+        Args:
+            game_id: Unique identifier of the game session.
+            player_id: The lone bidder being offered the choice.
+            accept: ``True`` to take the contract, ``False`` to decline it.
+        """
