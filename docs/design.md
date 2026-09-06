@@ -44,7 +44,7 @@ where implementing a requirement exposed a gap in another, §14 records it.
 ║              ▼                               ▼                           ║
 ║   ┌──────────────────────────────────────────────────────┐               ║
 ║   │  pinochle/web/  — FastAPI driving adapter            │               ║
-║   │  routers: admin · player · stream · cards            │               ║
+║   │  routers: admin · player · stream                    │               ║
 ║   │  (no game logic; translates HTTP ⇄ ports)            │               ║
 ║   └──────────────────────────────────────────────────────┘               ║
 ╚═══════════════════════════════│══════════════════════════════════════════╝
@@ -60,7 +60,7 @@ where implementing a requirement exposed a gap in another, §14 records it.
 ║   depends only on these ABCs:                                            ║
 ║     AdminPort · PlayerActionPort          (driving)                      ║
 ║     GameStatePort · NotificationPort ·    (driven)                       ║
-║     SchedulerPort · CardImagePort · SeatTokenPort                        ║
+║     SchedulerPort · SeatTokenPort                                        ║
 ╚═══════════════════════════════│══════════════════════════════════════════╝
                                 │ implemented by
                                 ▼
@@ -73,7 +73,6 @@ where implementing a requirement exposed a gap in another, §14 records it.
 ║   CompositeNotification  → NotificationPort   (tees to the above)        ║
 ║   AsyncioScheduler       → SchedulerPort      (production)               ║
 ║   FakeScheduler          → SchedulerPort      (tests, virtual clock)     ║
-║   SvgCardImage           → CardImagePort                                 ║
 ║   InMemorySeatTokens     → SeatTokenPort                                 ║
 ╚═══════════════════════════════│══════════════════════════════════════════╝
                                 │ uses
@@ -90,7 +89,8 @@ where implementing a requirement exposed a gap in another, §14 records it.
 **Data flow:** browser gesture → `POST /api/games/{id}/…` → web router
 authenticates the seat token and decodes the body → `PlayerActionPort` method →
 `ComputerDriver` delegates to `GameService` → `GameService` loads the `Game`,
-mutates it through `Round` and the domain, drains the emitted events → the
+executes the requested domain operation through `Round`, drains the emitted
+events → the
 composite notifier logs them and hands each one to the SSE hub → the hub places
 it on every subscribed queue that the event's recipient list permits → each
 `GET /api/games/{id}/stream` generator serialises it as an SSE frame → the
@@ -120,10 +120,11 @@ ARC-2 and RT-8 are enforced by three habits, applied throughout §6 and §8:
 
 ## 3. Repository layout
 
-The server and the front end are kept in separate top-level trees. Nothing under
-`frontend/` is imported by Python, and nothing under `pinochle/` is compiled by
-`tsc`. The only contract between them is the HTTP + SSE surface described in §5
-and §6.
+The server and the front end are kept in separate top-level trees. The Python
+package contains application code only; every browser-facing asset, including
+card artwork, belongs under `frontend/`. Nothing under `frontend/` is imported
+by Python, and nothing under `pinochle/` is compiled by `tsc`. The runtime
+contract between them is the HTTP + SSE surface described in §5 and §6.
 
 ```
 $PROJECT_ROOT/
@@ -133,7 +134,6 @@ $PROJECT_ROOT/
 │   ├── services/              # application layer
 │   ├── adapters/              # driven adapters
 │   ├── web/                   # FastAPI driving adapter  (new)
-│   ├── card_images/           # bundled card artwork (server-owned, §5.4)
 │   └── app.py                 # composition root
 │
 ├── frontend/                  # FRONT END — everything the browser runs
@@ -142,6 +142,9 @@ $PROJECT_ROOT/
 │   ├── public/                # hand-written static assets, served as-is
 │   │   ├── index.html         # the player's table page
 │   │   ├── admin.html         # the administrator's console
+│   │   ├── cards/             # all card artwork (browser-owned, §5.4)
+│   │   │   ├── fronts/        # card faces, named by wire code (e.g. QS.svg)
+│   │   │   └── backs/         # card backs (e.g. blue.svg)
 │   │   └── styles/
 │   ├── src/                   # TypeScript sources
 │   └── dist/                  # tsc output — generated, git-ignored
@@ -158,15 +161,15 @@ $PROJECT_ROOT/
 
 Two boundary notes:
 
-- **Card artwork stays with the server.** `pinochle/card_images/` is already a
-  Python subpackage resolved through `CardImagePort` (ARC-5), and the port is the
-  designated seam for it. The browser reaches the images by URL (`/cards/…`,
-  §5.4), so no image file needs to be copied into `frontend/`. This is the one
-  browser-facing asset that deliberately lives outside `frontend/`.
-- **The served document root is `frontend/`.** The server mounts
-  `frontend/public/` at `/` and `frontend/dist/` at `/static/`. The path is
-  configurable (`PINOCHLE_FRONTEND_DIR`) so that the container can place the
-  built assets wherever it likes without the Python code caring.
+- **Card artwork belongs to the front end.** Faces and backs live only under
+  `frontend/public/cards/` alongside the other browser-facing static assets.
+  The browser loads them directly from `/assets/cards/…` (§5.4); the Python
+  application neither resolves nor packages image files.
+- **The served document root is `frontend/`.** The server serves the HTML pages
+  from `frontend/public/`, mounts that directory at `/assets/`, and mounts
+  `frontend/dist/` at `/static/`. The path is configurable
+  (`PINOCHLE_FRONTEND_DIR`) so that the container can place the built assets
+  wherever it likes without the Python code caring.
 
 ---
 
@@ -221,8 +224,14 @@ requirements, including `CONFIRMING` and `ABANDONED`.
 
 ### 4.2 Ports
 
-Existing, unchanged: `AdminPort`, `PlayerActionPort`, `GameStatePort`,
-`NotificationPort`, `CardImagePort`, `SchedulerPort`.
+Existing server ports retained by this design: `AdminPort`, `PlayerActionPort`,
+`GameStatePort`, `NotificationPort`, and `SchedulerPort`.
+
+`CardImagePort` is retired. Card artwork is presentation data owned and resolved
+by the browser, so it does not cross an application-layer boundary and does not
+need a server port. The existing `SvgCardImage` adapter and
+`pinochle/card_images/` package are removed when the front end is introduced;
+the artwork moves to `frontend/public/cards/`.
 
 One port is added, in its own module per ARC-3/ARC-4:
 
@@ -249,11 +258,12 @@ Token generation belongs behind a port for the same reason shuffling does
 
 ### 4.3 Application layer
 
-**`GameService`** keeps its present shape and its `load → mutate → dispatch →
-save` discipline. Its `_recipients` static method is the single place where
-event privacy is decided (RT-1, NFR-6), and it already routes `CardsDealt` to
-one player and `CardsPassed` to the two partners. The new events fit the same
-rule: all are public except `turn_prompt` (§6.5), which is addressed to one seat.
+**`GameService`** keeps its present shape and its `load → execute domain
+operation → dispatch events → save` discipline. Its `_recipients` static
+method is the single place where event privacy is decided (RT-1, NFR-6), and it
+already routes `CardsDealt` to one player and `CardsPassed` to the two partners.
+The new events fit the same rule: all are public except `turn_prompt` (§6.5),
+which is addressed to one seat.
 
 Changes needed:
 
@@ -279,7 +289,6 @@ computer seats. It is described in full in §7.
 | `AsyncioScheduler` | `SchedulerPort` | New. `loop.call_later(delay, callback)`; a delay of `0` becomes `loop.call_soon`, which still defers to a later tick (this matters — see §7). |
 | `FakeScheduler` | `SchedulerPort` | New, used by tests. Holds `(due_at, callback)` pairs against a virtual clock and runs them when `advance(seconds)` is called (ARC-10). |
 | `ImmediateScheduler` | `SchedulerPort` | Exists. Kept for headless domain-level drivers only; it is *not* suitable once the computer driver is wired, because running a callback synchronously re-enters an in-flight `load/dispatch/save` cycle. |
-| `SvgCardImage` | `CardImagePort` | Exists. |
 | `InMemorySeatTokens` | `SeatTokenPort` | New. `secrets.token_urlsafe(32)`, stored in a nested dict keyed by game id. Constructor takes a token factory so tests can inject a deterministic one. |
 
 ### 4.5 The web layer (driving adapter)
@@ -298,8 +307,7 @@ pinochle/web/
 └── routers/
     ├── admin.py       # §5.2
     ├── player.py      # §5.3
-    ├── stream.py      # §6
-    └── cards.py       # §5.4
+    └── stream.py      # §6
 ```
 
 No module in `pinochle/web/` contains a game rule. Routers do exactly four
@@ -358,9 +366,9 @@ Consequences the implementation must respect:
 3. **Scheduler callbacks run on the same loop thread**, via `loop.call_later`, so
    they never race with a request handler.
 4. Because everything is serialised on one thread, `GameService`'s
-   `load → mutate → dispatch → save` cycle is atomic by construction. NFR-4's "the
-   game state shall be left exactly as it was" then reduces to: raise before
-   mutating, which the domain already does.
+   `load → execute domain operation → dispatch events → save` cycle is atomic
+   by construction. NFR-4's "the game state shall be left exactly as it was"
+   then reduces to: raise before changing state, which the domain already does.
 
 ### 4.8 Error handling
 
@@ -508,14 +516,14 @@ absence is RT-5 and it is deliberate — see §6.9.
 | `GET /join/{game_id}` | The same table page; the `?t=` token is read by the client from `location.search` and then removed from the address bar with `history.replaceState`. |
 | `GET /admin` | `frontend/public/admin.html` |
 | `GET /static/*` | `frontend/dist/` — the compiled ES modules |
-| `GET /assets/*` | `frontend/public/` — stylesheets, fonts |
-| `GET /cards/fronts/{code}.{fmt}` | A card face, resolved through `CardImagePort.get_image_path` (UI-16) |
-| `GET /cards/backs/{name}.{fmt}` | A card back, via `get_back_path` |
+| `GET /assets/*` | `frontend/public/` — stylesheets, fonts, and card artwork |
 | `GET /healthz` | `{"status":"ok"}` for the container health check (§10) |
 
-Card images are served with `Cache-Control: public, max-age=31536000, immutable`
-— the artwork never changes for a given code — and the format defaults to
-`PINOCHLE_CARD_FORMAT`.
+Card faces and backs are ordinary static front-end assets under
+`frontend/public/cards/`. They do not have a Python route or pass through an
+application port. Requests below `/assets/cards/` are served with
+`Cache-Control: public, max-age=31536000, immutable`; an artwork filename must
+therefore change whenever its contents change.
 
 ### 5.5 Error catalogue
 
@@ -891,8 +899,9 @@ scheduler.call_later(delay_seconds, lambda: self._act(G, seat))
 
 Three details matter:
 
-- **Coalescing.** One `load/mutate/dispatch/save` cycle can publish several
-  events — four `CardsDealt`, then four `MeldExposed`. Without the pending flag
+- **Coalescing.** One `load → execute domain operation → dispatch events →
+  save` cycle can publish several events — four `CardsDealt`, then four
+  `MeldExposed`. Without the pending flag
   the driver would schedule several callbacks for the same turn. The flag is
   cleared in `_act`, after the action has been submitted.
 - **Deferral is mandatory.** The driver must never act synchronously inside
@@ -1074,9 +1083,11 @@ teleport.
 seat, so all four cards are simultaneously visible and attributable. Cards remain
 in place until `trick_cleared`, then animate toward the winner's seat.
 
-**Card images (UI-16).** `<img src="/cards/fronts/QS.svg">` for faces and
-`/cards/backs/blue.svg` for backs. Opponents' hands are fanned backs with the
-correct remaining count, which the client derives from cards played (UI-5).
+**Card images (UI-16).** `<img src="/assets/cards/fronts/QS.svg">` for faces
+and `/assets/cards/backs/blue.svg` for backs. These URLs refer directly to
+files in `frontend/public/cards/`; no server-side card-image resolver is
+involved. Opponents' hands are fanned backs with the correct remaining count,
+which the client derives from cards played (UI-5).
 
 **Table (UI-2, UI-17).** A fixed-size table element, centred and scaled to the
 viewport with a single CSS `transform: scale()` driven by one resize listener.
@@ -1227,9 +1238,9 @@ run at full speed, which is useful for demonstrating or exercising the server.
 
 ### 10.1 What the image contains
 
-One image runs the whole system: the FastAPI server, the compiled front end, and
-the bundled card artwork. There is no database (NFR-8) and no second service, so
-there is nothing to orchestrate beyond one container.
+One image runs the whole system: the FastAPI server and the compiled front end,
+including its card artwork. There is no database (NFR-8) and no second service,
+so there is nothing to orchestrate beyond one container.
 
 It is built in two stages. The first uses Node solely to run `tsc`; the second is
 a slim Python runtime that receives the compiled JavaScript. **No Node, no npm,
@@ -1313,8 +1324,6 @@ services:
       PINOCHLE_TRICK_CLEAR_SECONDS: "1.5"
       PINOCHLE_COMPUTER_DELAY_SECONDS: "1.0"
       PINOCHLE_LOG_LEVEL: "INFO"
-      PINOCHLE_CARD_FORMAT: "svg"
-      PINOCHLE_CARD_BACK: "blue"
       PINOCHLE_SSE_KEEPALIVE_SECONDS: "15"
       PINOCHLE_SSE_QUEUE_MAXSIZE: "256"
     healthcheck:
@@ -1340,8 +1349,6 @@ that a reload drops every SSE connection and therefore every seat.
 | `PINOCHLE_TRICK_CLEAR_SECONDS` | `1.5` | Trick-clear pause | UI-15 |
 | `PINOCHLE_COMPUTER_DELAY_SECONDS` | `1.0` | Computer thinking delay; `0` disables | FR-75c, RT-7 |
 | `PINOCHLE_LOG_LEVEL` | `INFO` | Enables the action/event log without a code change | NFR-9 |
-| `PINOCHLE_CARD_FORMAT` | `svg` | `svg` or `png` artwork | UI-16 |
-| `PINOCHLE_CARD_BACK` | `blue` | Which bundled back to serve | UI-5 |
 | `PINOCHLE_SSE_KEEPALIVE_SECONDS` | `15` | Comment-frame interval | §6.8 |
 | `PINOCHLE_SSE_QUEUE_MAXSIZE` | `256` | Per-connection buffer before the stream is dropped | §6.8 |
 | `PINOCHLE_FRONTEND_DIR` | `frontend` | Where `public/` and `dist/` are found | §3 |
@@ -1465,7 +1472,7 @@ Each step leaves the suite green and the system demonstrable.
 5. **Notification adapters.** `SseNotification`, `LoggingNotification`,
    `CompositeNotification`, and the frame encoder.
 6. **The web layer.** Container, dependencies, error handler, admin router,
-   player router, stream router, card router; `httpx` tests throughout.
+   player router, and stream router; `httpx` tests throughout.
 7. **The computer driver.** `ComputerDriver`, `SeatView`, the pump, and the
    strategy improvements for FR-75a and FR-75b. At the end of this step an
    all-computer game runs end to end over HTTP with no browser.
@@ -1522,5 +1529,11 @@ that is not the token; the design chose to keep FR-10a literal.
 **14.6 One process, one worker.** NFR-5 allows one game at a time and NFR-8 keeps
 state in memory, so the design commits to a single event loop in a single worker
 and takes the simplicity that buys: no locks, no serialisation, atomic
-mutate-and-dispatch cycles. It is recorded here because it is invisible in the
-code and fatal to violate.
+domain-operation-and-dispatch cycles. It is recorded here because it is
+invisible in the code and fatal to violate.
+
+**14.7 Front-end ownership supersedes the card-image portion of ARC-5.** ARC-5
+currently names card image resolution as a driven server port. This design no
+longer includes that port: immutable artwork used only for presentation lives in
+`frontend/public/cards/` and is resolved by static browser URLs. ARC-5 must be
+amended to remove card image resolution when the requirements are next updated.
