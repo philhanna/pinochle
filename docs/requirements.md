@@ -67,6 +67,11 @@ ranking or statistics, chat, and mobile-native clients.
   browser client) or **computer** (decisions produced by a server-side
   strategy). The two kinds shall be freely mixable, including all-human and
   all-computer games.
+- **FR-2a** A seat's designation shall be fixed when the game is set up and
+  shall not change for the life of the game. There is no substitution: a
+  computer seat is never taken over by a person, and a human seat is never
+  handed to the computer, however long that player is away.
+  `[OQ-18 and OQ-26, revised 2026-09-06]`
 - **FR-3** Players shall be assigned to the four seats North, East, South, and
   West. Turn order shall proceed clockwise: North → East → South → West →
   North.
@@ -99,7 +104,7 @@ ranking or statistics, chat, and mobile-native clients.
   server shall serve a given player's hand only to the holder of that seat's
   token.
 - **FR-10b** A join link shall remain usable for the life of the game, so that
-  a player who closes their browser can return to their seat (see FR-76).
+  a player who closes their browser can return to their seat (see RT-12).
 - **FR-10c** A seat token may drive several concurrent client connections. All
   of them shall show that seat's view and shall receive the same events, and
   any of them may act for the seat. Opening a seat in a second browser shall
@@ -508,6 +513,11 @@ timed. The only server-owned pause left is the trick clear (UI-15).
 - **RT-11** Because all four clients are driven from one clock, they shall
   display the same phase at the same time, to within network latency. No client
   shall be able to run ahead of or behind the others.
+- **RT-12** When a human player is disconnected, play shall block at that seat
+  and the other players shall be told the seat is waiting. The game shall not
+  be abandoned, no timeout shall act on its own, and no other player or process
+  shall act for that seat. Play resumes when that player returns through their
+  join link and receives the snapshot of RT-5. `[OQ-18, revised 2026-09-06]`
 
 ---
 
@@ -521,7 +531,7 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   seat is entitled to. It shall not read other players' hands, and shall be
   driven through the same ports a human client uses.
 - **FR-75** The decision logic shall be replaceable, so that strategies of
-  different strength can be substituted. The system shall ship exactly one
+  different strength can be swapped in. The system shall ship exactly one
   strategy; selectable difficulty levels are out of scope for this release.
   `[OQ-21, resolved]`
 - **FR-75a** The computer player shall bid on the basis of its detected meld
@@ -535,22 +545,6 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   interval, defaulting to approximately one second, so that human players can
   follow the play. The delay shall be reducible to zero so that all-computer
   games can be run at full speed in testing. `[OQ-19, resolved]`
-- **FR-76** When a human player is disconnected, play shall block at that seat
-  and the other players shall be told the seat is waiting. The game shall not
-  be abandoned and no timeout shall act on its own. `[OQ-18, resolved]`
-- **FR-77** The administrator shall be able to convert a disconnected human
-  seat to a computer player, at which point play resumes immediately with the
-  strategy acting for that seat. The substitution shall be announced to all
-  players.
-- **FR-78** A substitution shall be reversible. A human presenting the seat's
-  original join link shall reclaim the seat, and the computer strategy shall
-  stop acting for it. `[OQ-26, resolved]`
-- **FR-79** A reclaim shall take effect at the next decision point for that
-  seat. If the strategy is already committed to the current decision, that
-  action shall stand and the human shall take over from the following one. A
-  reclaim shall never roll back an action that has been published.
-- **FR-80** Substitutions and reclaims shall both be announced to all players,
-  so that everyone knows whether a seat is being played by its human.
 
 ---
 
@@ -610,7 +604,6 @@ rule-based computer strategy.
 6. No seat tokens or join links (FR-10, FR-10a, FR-10c).
 7. No state snapshot for reconnecting clients (RT-5), and no per-seat view
    filtering to build one from.
-8. No computer substitution or reclaim for a disconnected seat (FR-77, FR-78).
 9. `SchedulerPort` (ARC-9) exists with an `ImmediateScheduler` that collapses
    every delay to zero, and the trick clear (UI-15) is wired to it. Still
    missing: the asyncio adapter that honours a real delay, the fake with a
@@ -662,12 +655,9 @@ rule-based computer strategy.
 - ✅ **D-10 — fixed.** `_score_round` set `GamePhase.DEALER_SELECTION` purely so
   that `set_dealer` would accept the rotation, misrepresenting a once-per-game
   phase as recurring. `Game.rotate_dealer` now expresses it directly (FR-16).
-- **D-11** `Player.type` is a fixed field, but under FR-78 a seat's control can
-  change between human and computer mid-game. Seat control needs to be mutable
-  state that the computer-move scheduler re-checks at the moment it acts.
-  *Not fixable in isolation:* substitution and reclaim (FR-77, FR-78) depend on
-  seat tokens and an administrative surface, neither of which exists yet, so
-  this resolves as part of the transport work rather than on its own.
+- *(**D-11** withdrawn 2026-09-06 — it existed only because a seat's control
+  could change mid-game. With substitution dropped for the first release
+  (FR-2a), `Player.type` being a fixed field is correct rather than a defect.)*
 - **D-12** `ComputerPlayerStrategy.choose_trump` and `choose_cards_to_pass` are
   superseded by FR-75a and FR-75b. `choose_play` is retained as-is by the
   deliberate deferral in OQ-28.
@@ -823,20 +813,24 @@ see OQ-27.
 to the viewport is acceptable; tablet and phone are not requirements but should
 not be gratuitously precluded. See UI-17.
 
-**OQ-18 — What is the reconnection and disconnection policy?** ✅ **Resolved
-2026-09-06: the game waits, and the administrator may substitute.** No timeout
-acts on its own; a disconnected seat blocks play until the player returns or
-the administrator hands the seat to a computer player. Reconnecting with the
-original join link yields a full state snapshot. See FR-76, FR-77, RT-5.
+**OQ-18 — What is the reconnection and disconnection policy?** ✅ **Revised
+2026-09-06: the game simply waits.** Originally resolved as "the game waits and
+the administrator may substitute a computer player"; substitution is now out of
+scope for the first release. A disconnected seat blocks play until that player
+returns through their join link, at which point they receive a full state
+snapshot. Nothing acts on their behalf, and no timeout intervenes. See RT-12,
+FR-2a, RT-5.
+*Consequence:* an absent player can stall a game indefinitely, with no recourse
+short of abandoning it. That is an acceptable trade for a first release among
+people who know each other, and it removes a substantial amount of machinery —
+mutable seat control, a mid-decision handover rule, and an administrative
+surface to trigger it.
 
-**OQ-26 — Is a computer substitution reversible?** ✅ **Resolved 2026-09-06:
-yes, the human reclaims the seat.** Presenting the original join link takes the
-seat back; the reclaim lands at the next decision point, and any action the
-strategy has already published stands. See FR-78, FR-79, FR-80.
-*Consequence:* whether a seat is human- or computer-controlled becomes mutable
-mid-game, so it cannot stay a fixed `PlayerType` on the `Player` dataclass. The
-scheduler must also check, at the moment it is due to act, that the seat is
-still computer-controlled.
+**OQ-26 — Is a computer substitution reversible?** ✅ **Moot as of 2026-09-06.**
+Substitution itself is out of scope for the first release (FR-2a), so there is
+nothing to reverse. The question returns only if substitution is ever added,
+and the awkward part then remains what it was: a player returning mid-decision,
+while the strategy is already committed to an action.
 
 **OQ-27 — How does the meld display advance?** ✅ **Revised 2026-09-06: the
 auction winner ends it.** Originally resolved as a long fixed timer; the user
