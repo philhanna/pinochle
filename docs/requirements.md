@@ -220,6 +220,9 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
   `[OQ-6, resolved]`
 - **FR-43** A pass shall be rejected if it does not consist of exactly four
   cards currently held by the passing player.
+- **FR-43a** Only the auction-winning team exchanges cards. The two players on
+  the opposing team neither pass nor receive, and their hands are untouched
+  between the deal and the first trick.
 
 ### 3.7 Meld
 
@@ -249,6 +252,11 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
 - **FR-48** A single card may be counted in more than one combination of
   different categories (e.g. the trump King counts toward both the run and
   Kings-around), but shall not be counted twice within the same category.
+- **FR-48a** Meld shall be detected within a single player's hand and the two
+  partners' totals then summed. Cards held by different players shall never
+  combine: a King in one partner's hand and a Queen in the other's is not a
+  marriage. A team's meld is the sum of two independent detections, never a
+  detection over the twenty-four cards jointly held.
 - **FR-49** A run shall consume exactly one trump King and one trump Queen.
   Any trump King-Queen pair remaining after the runs have been accounted for
   shall score a royal marriage. A hand holding a run plus a spare trump K-Q
@@ -261,7 +269,8 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
   totals per FR-46, holds for a fixed configurable interval, and advances to
   trick play automatically. The interval shall be substantially longer than the
   trick-clear delay of UI-15, since there are four hands of meld to read. No
-  player shall be able to shorten or extend it. `[OQ-27, resolved]`
+  player shall be able to shorten or extend it, and the interval shall be
+  counted by the server (RT-8). `[OQ-27, resolved]`
 
 ### 3.8 Trick play
 
@@ -353,6 +362,14 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
 - **ARC-8** The browser client shall be written in **TypeScript with no UI
   framework**, compiled with `tsc` and served as static assets. No bundler or
   runtime dependency shall be required to run it. `[OQ-24, resolved]`
+- **ARC-9** Deferred execution shall be reached through a driven port — a
+  scheduler that accepts "invoke this after *n* seconds". The domain and
+  application layers shall express delays through that port and shall not
+  import `asyncio`, `time.sleep`, or any other concrete timing mechanism, in
+  keeping with ARC-1. The production adapter is asyncio-based; tests shall use
+  a fake that advances a virtual clock on demand.
+- **ARC-10** No automated test shall wait in real time for a game pause. A test
+  that exercises a timed transition shall advance the fake scheduler instead.
 
 ---
 
@@ -395,6 +412,8 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
 - **UI-15** A completed trick shall remain visible for a fixed, configurable
   interval — approximately 1.5 seconds by default — and shall then be cleared
   automatically to the winner. Clearing shall not require any player action.
+  The interval shall be counted by the server, which publishes an event when
+  the trick is cleared; the client shall not run this timer itself (RT-8).
   `[OQ-16, resolved]`
 - **UI-16** Card artwork shall be served for both faces and backs. The system
   shall support at least one raster or vector format for each card.
@@ -429,6 +448,23 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
   need not distinguish between them.
 - **RT-7** A computer player's move should be delayed slightly so that human
   players can follow the play. See FR-75c. `[OQ-19, resolved]`
+- **RT-8** Every timed pause in the game — the trick-clear interval (UI-15),
+  the meld display (FR-50a), and the computer-move delay (FR-75c) — shall be
+  owned and counted by the server. The client shall hold no timers that affect
+  what it displays: it renders the state it was last told about and changes
+  only when an event tells it to. `[OQ-30, resolved]`
+- **RT-9** A timed pause is therefore a real state the game occupies, not a
+  presentation effect. While the game is paused, player actions that would
+  advance past the pause shall be rejected exactly as any other out-of-phase
+  action (NFR-4); the next leader shall not be able to play before the
+  completed trick has been cleared.
+- **RT-10** The snapshot sent to a reconnecting client (RT-5) shall convey any
+  pause in progress, including what is being displayed during it — the
+  completed trick, or the exposed meld — so that a client reconnecting mid-pause
+  does not render the state that follows it.
+- **RT-11** Because all four clients are driven from one clock, they shall
+  display the same phase at the same time, to within network latency. No client
+  shall be able to run ahead of or behind the others.
 
 ---
 
@@ -532,8 +568,9 @@ rule-based computer strategy.
 7. No state snapshot for reconnecting clients (RT-5), and no per-seat view
    filtering to build one from.
 8. No computer substitution or reclaim for a disconnected seat (FR-77, FR-78).
-9. No scheduler for delayed computer moves (FR-75c), and no timers for the
-   trick-clear (UI-15) or meld (FR-50a) pauses.
+9. No scheduler port (ARC-9) and no adapter for it, so none of the three
+   server-owned pauses exist: computer-move delay (FR-75c), trick clear
+   (UI-15), meld display (FR-50a). No fake scheduler for tests (ARC-10).
 10. No action/event logging (NFR-9).
 11. No seedable shuffle for reproducible deals in tests (NFR-7) — `Deck.shuffle`
     calls the module-level `random.shuffle`.
@@ -573,6 +610,12 @@ rule-based computer strategy.
 - **D-12** `ComputerPlayerStrategy.choose_trump` and `choose_cards_to_pass` are
   superseded by FR-75a and FR-75b. `choose_play` is retained as-is by the
   deliberate deferral in OQ-28.
+- **D-13** `Round.play_card` moves straight from a completed trick to the next
+  one, leaving no state in which the trick is complete but not yet cleared.
+  Under RT-8 that intermediate state must exist, must reject a premature lead
+  (RT-9), and must be visible in a reconnect snapshot (RT-10). The same applies
+  to the MELDING hold, which `advance_to_playing()` currently expects a caller
+  to end immediately.
 
 ---
 
@@ -734,6 +777,24 @@ ones that matter for the game being playable at all. Revisit once the server
 and client work, at which point the targets are: don't overtake a partner who
 is already winning the trick, lead trump to draw it, and throw point cards to a
 partner who is winning.
+
+**OQ-30 — Who owns the game's timers, the server or the client?** ✅ **Resolved
+2026-09-06: the server, exclusively.** All three pauses — trick clear, meld
+display, computer-move delay — are counted server-side and end with a published
+event. The client holds no timing logic. See RT-8 through RT-11 and ARC-9.
+*Consequences, which are substantial:*
+- A pause becomes a state the game is *in*, not an effect the client draws. The
+  round state machine gains a waiting state after each completed trick, during
+  which the next lead must be rejected (RT-9). `Round.play_card` currently
+  transitions straight to the next trick (D-13).
+- The application layer needs a scheduler port (ARC-9) so that the domain can
+  defer work without importing `asyncio`, and so tests can advance a virtual
+  clock rather than sleeping (ARC-10).
+- The reconnect snapshot must be able to express "paused, showing this trick"
+  (RT-10), or a client reconnecting during a pause renders the wrong thing.
+- The argument for client-owned trick clearing was that a server-driven clear
+  forces the client to buffer animations. That concern disappears here: the
+  server does not run ahead, so there is nothing to buffer.
 
 **OQ-29 — Should there be a way to review the play so far?** Not raised in
 `prompt.md` and not decided. A player who looks away loses the trick after
