@@ -4,6 +4,7 @@
 Wires ports to their concrete adapters and exposes factory functions
 for building the object graph.  No game logic lives here.
 """
+from pinochle.adapters.immediate_scheduler import ImmediateScheduler
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.adapters.svg_card_image import SvgCardImage
@@ -22,8 +23,9 @@ def create_default_app() -> dict:
     """
     game_state = InMemoryGameState()
     notifier = PrintNotification()
+    scheduler = ImmediateScheduler()
     card_images: CardImagePort = SvgCardImage()
-    service = GameService(game_state, notifier)
+    service = GameService(game_state, notifier, scheduler)
     computer = ComputerPlayerStrategy()
 
     return {

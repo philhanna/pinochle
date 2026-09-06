@@ -592,24 +592,28 @@ rule-based computer strategy.
 7. No state snapshot for reconnecting clients (RT-5), and no per-seat view
    filtering to build one from.
 8. No computer substitution or reclaim for a disconnected seat (FR-77, FR-78).
-9. No scheduler port (ARC-9) and no adapter for it, so none of the three
-   server-owned pauses exist: computer-move delay (FR-75c), trick clear
-   (UI-15), meld display (FR-50a). No fake scheduler for tests (ARC-10).
+9. `SchedulerPort` (ARC-9) exists with an `ImmediateScheduler` that collapses
+   every delay to zero. Still missing: the asyncio adapter that honours a real
+   delay, the fake with a virtual clock (ARC-10), and two of the three pauses —
+   the computer-move delay (FR-75c) and the trick clear (UI-15). Only the meld
+   display (FR-50a) is wired to the port.
 10. No action/event logging (NFR-9).
 11. No seedable shuffle for reproducible deals in tests (NFR-7) — `Deck.shuffle`
     calls the module-level `random.shuffle`.
 
 **Known defects against this specification**, roughly in order of severity:
 
-- **D-1** Meld is computed in `_score_round` from hands that are empty by then,
-  so all meld scores as zero (violates FR-46). Meld must be captured at the end
-  of PASSING and carried on the round.
-- **D-2** `Round.advance_to_playing()` is never called, so a round can never
-  leave `MELDING` and trick play is unreachable.
-- **D-3** `GameService._dispatch` broadcasts every event to every player,
-  including `CardsDealt`, which exposes all four hands to all clients (violates
-  FR-22, RT-1, NFR-6). Events need a per-recipient visibility rule: public,
-  single-player, or team-only.
+- ✅ **D-1 — fixed.** Meld was computed in `_score_round` from hands that were
+  empty by then, so every meld scored zero. `Round` now captures each player's
+  meld at the PASSING → MELDING transition and scoring reads the recorded
+  totals (FR-46, FR-48a).
+- ✅ **D-2 — fixed.** `Round.advance_to_playing()` was never called, so trick
+  play was unreachable. The meld hold now ends on a server-owned timer reached
+  through `SchedulerPort` (ARC-9, FR-50a).
+- ✅ **D-3 — fixed.** `GameService._dispatch` broadcast every event to every
+  player, including `CardsDealt`. It now routes each event by a visibility
+  rule: a dealt hand goes to its owner, a pass to the two partners, everything
+  else is public (FR-22, RT-1, NFR-6).
 - **D-4** `draw_for_deal` shuffles a fresh deck per player, so two players can
   draw the identical card (violates FR-12); ties are resolved on rank only, and
   the `PlayerActionPort` docstring's claim that suit breaks ties contradicts
@@ -637,9 +641,8 @@ rule-based computer strategy.
 - **D-13** `Round.play_card` moves straight from a completed trick to the next
   one, leaving no state in which the trick is complete but not yet cleared.
   Under RT-8 that intermediate state must exist, must reject a premature lead
-  (RT-9), and must be visible in a reconnect snapshot (RT-10). The same applies
-  to the MELDING hold, which `advance_to_playing()` currently expects a caller
-  to end immediately.
+  (RT-9), and must be visible in a reconnect snapshot (RT-10). The equivalent
+  hold for MELDING now exists (D-2); this is the remaining half.
 - **D-14** `Player.team_id` is settable independently of `Player.position`,
   allowing a North player on the East/West team (violates FR-4a). It should be
   removed and derived, taking the `_NS` / `_EW` constants in `GameService` with

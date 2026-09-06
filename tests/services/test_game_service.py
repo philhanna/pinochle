@@ -1,11 +1,12 @@
 # tests.services.test_game_service
 import pytest
 
+from pinochle.adapters.immediate_scheduler import ImmediateScheduler
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.game import GamePhase
-from pinochle.services.round import Round
+from pinochle.services.round import Round, RoundPhase
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import Team
 from pinochle.services.game_service import GameService
@@ -32,7 +33,7 @@ def make_service() -> tuple[GameService, InMemoryGameState]:
     """Create a game service wired to in-memory test adapters."""
     state = InMemoryGameState()
     notifier = PrintNotification()
-    return GameService(state, notifier), state
+    return GameService(state, notifier, ImmediateScheduler()), state
 
 
 def setup_game(service: GameService) -> str:
@@ -161,6 +162,56 @@ def test_events_broadcast(capsys):
 # ---------------------------------------------------------------------------
 # _resolve_draw
 # ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Passing, meld, and the transition into trick play
+# ---------------------------------------------------------------------------
+
+def _advance_to_passing(service: GameService, state: InMemoryGameState) -> str:
+    """Set up a game where E has won the auction and named spades trump."""
+    game_id = _advance_to_bidding(service, state)
+    service.place_bid(game_id, "E", 250)
+    for player_id in ("S", "W", "N"):
+        service.place_bid(game_id, player_id, None)
+    service.name_trump(game_id, "E", Suit.SPADES)
+    return game_id
+
+
+def _complete_exchange(service: GameService, game_id: str, round_state: Round) -> None:
+    """Pass four cards each way between the auction winner and their partner."""
+    for player_id in ("E", "W"):
+        service.pass_cards(game_id, player_id, list(round_state.hand(player_id))[:4])
+
+
+def test_completed_exchange_reaches_trick_play():
+    """The meld hold must end and hand the lead to the auction winner.
+
+    With the immediate scheduler the meld display collapses to zero, so the
+    round arrives in PLAYING as soon as the second pass lands.
+    """
+    service, state = make_service()
+    game_id = _advance_to_passing(service, state)
+    round_state = state.load(game_id).current_round
+    _complete_exchange(service, game_id, round_state)
+    assert round_state.phase == RoundPhase.PLAYING
+    assert round_state.play_card("E", list(round_state.hand("E"))[0]) is None
+
+
+def test_meld_reaches_scoring_after_hands_are_emptied():
+    """Team meld totals must not collapse to zero once trick play is over."""
+    service, state = make_service()
+    game_id = _advance_to_passing(service, state)
+    game = state.load(game_id)
+    round_state = game.current_round
+    _complete_exchange(service, game_id, round_state)
+
+    expected = GameService._meld_scores(game, round_state)
+    for player_id in ("N", "E", "S", "W"):
+        hand = round_state.hand(player_id)
+        hand.remove_many(list(hand))
+
+    assert GameService._meld_scores(game, round_state) == expected
+
 
 def test_resolve_draw_unique_winner():
     """The highest unique dealer-selection draw should win."""

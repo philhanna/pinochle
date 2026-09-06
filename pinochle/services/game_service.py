@@ -7,15 +7,17 @@ from pinochle.domain.cards.suit import Suit
 from pinochle.domain.game import (
     BidPlaced,
     CardsDealt,
+    CardsPassed,
     DealerSelected,
     Game,
+    GameEvent,
     GamePhase,
     GameOver,
+    MeldExposed,
     RoundScored,
     TrickCompleted,
     TrumpNamed,
 )
-from pinochle.domain.meld import total_meld
 from pinochle.domain.player import Player
 from pinochle.domain.scoring import WINNING_SCORE, resolve_round, score_tricks
 from pinochle.domain.team import Team
@@ -23,10 +25,14 @@ from pinochle.ports.admin_port import AdminPort
 from pinochle.ports.game_state_port import GameStatePort
 from pinochle.ports.notification_port import NotificationPort
 from pinochle.ports.player_action_port import PlayerActionPort
+from pinochle.ports.scheduler_port import SchedulerPort
 from pinochle.services.round import Round, RoundPhase
 
 _NS = "NS"
 _EW = "EW"
+
+# How long the exposed meld stays on the table before trick play begins.
+MELD_DISPLAY_SECONDS = 8.0
 
 
 class GameService(AdminPort, PlayerActionPort):
@@ -43,10 +49,16 @@ class GameService(AdminPort, PlayerActionPort):
     transient application-flow logic rather than persisted domain state.
     """
 
-    def __init__(self, state: GameStatePort, notifier: NotificationPort):
-        """Wire the service to persistence and event-notification ports."""
+    def __init__(
+        self,
+        state: GameStatePort,
+        notifier: NotificationPort,
+        scheduler: SchedulerPort,
+    ):
+        """Wire the service to persistence, notification, and timing ports."""
         self._state = state
         self._notifier = notifier
+        self._scheduler = scheduler
         self._pending_draws: dict[str, dict[str, Card]] = {}
 
     # ------------------------------------------------------------------
@@ -54,9 +66,32 @@ class GameService(AdminPort, PlayerActionPort):
     # ------------------------------------------------------------------
 
     def _dispatch(self, game: Game) -> None:
-        """Broadcast and clear all pending domain events for ``game``."""
+        """Deliver and clear all pending domain events for ``game``.
+
+        Each event goes only to the players entitled to see it, so that
+        private state never reaches a client that does not own it.
+        """
         for event in game.pop_events():
-            self._notifier.broadcast(game.id, event)
+            recipients = self._recipients(event)
+            if recipients is None:
+                self._notifier.broadcast(game.id, event)
+            else:
+                for player_id in recipients:
+                    self._notifier.notify(player_id, event)
+
+    @staticmethod
+    def _recipients(event: GameEvent) -> list[str] | None:
+        """Return who may see ``event``, or ``None`` when it is public.
+
+        A dealt hand belongs to one player, and a pass is known only to the
+        two partners who made it.  Everything else — bids, trump, exposed
+        meld, played cards, scores — is public at a real table.
+        """
+        if isinstance(event, CardsDealt):
+            return [event.player_id]
+        if isinstance(event, CardsPassed):
+            return [event.from_player_id, event.to_player_id]
+        return None
 
     def _load_save(self, game_id: str, fn) -> None:
         """Load a game, mutate it via ``fn``, dispatch events, and persist it."""
@@ -88,14 +123,15 @@ class GameService(AdminPort, PlayerActionPort):
 
     @staticmethod
     def _meld_scores(game: Game, round_state: Round) -> dict[str, int]:
-        """Accumulate meld totals for each team from player hands."""
+        """Accumulate each team's meld from the totals recorded after the pass.
+
+        Read from the round rather than recomputed, because by scoring time
+        the hands are empty and would detect no meld at all.
+        """
         totals: dict[str, int] = {}
         for pid in game.players:
             team_id = game.team_id_for_player(pid)
-            totals[team_id] = totals.get(team_id, 0) + total_meld(
-                list(round_state.hand(pid)),
-                round_state.trump,
-            )
+            totals[team_id] = totals.get(team_id, 0) + round_state.meld_total(pid)
         return totals
 
     @staticmethod
@@ -223,8 +259,49 @@ class GameService(AdminPort, PlayerActionPort):
         self._load_save(game_id, _name_trump)
 
     def pass_cards(self, game_id: str, player_id: str, cards: list[Card]) -> None:
-        """Submit a partner pass during the passing phase."""
-        self._load_save(game_id, lambda g: g.current_round.pass_cards(player_id, cards))
+        """Submit a partner pass, exposing meld once both passes are in."""
+        exchange_complete = False
+
+        def _pass_cards(g: Game) -> None:
+            """Apply the pass and announce meld when the exchange completes."""
+            nonlocal exchange_complete
+            round_state = g.current_round
+            round_state.pass_cards(player_id, cards)
+            g.emit(CardsPassed(
+                game_id=g.id,
+                from_player_id=player_id,
+                to_player_id=round_state.partner_of(player_id),
+                cards=list(cards),
+            ))
+            if round_state.phase == RoundPhase.MELDING:
+                self._emit_meld_exposed(g)
+                exchange_complete = True
+
+        self._load_save(game_id, _pass_cards)
+
+        # Started only after the save above has completed: the callback opens
+        # its own load-mutate-save cycle, which must not nest inside this one.
+        if exchange_complete:
+            self._scheduler.call_later(
+                MELD_DISPLAY_SECONDS,
+                lambda: self._begin_trick_play(game_id),
+            )
+
+    @staticmethod
+    def _emit_meld_exposed(game: Game) -> None:
+        """Announce every player's recorded meld to the table."""
+        round_state = game.current_round
+        for pid in game.player_order:
+            game.emit(MeldExposed(
+                game_id=game.id,
+                player_id=pid,
+                units=round_state.meld(pid),
+                total=round_state.meld_total(pid),
+            ))
+
+    def _begin_trick_play(self, game_id: str) -> None:
+        """End the meld display and move the round into trick-taking."""
+        self._load_save(game_id, lambda g: g.current_round.advance_to_playing())
 
     def play_card(self, game_id: str, player_id: str, card: Card) -> None:
         """Play a card into the current trick and score the round if needed."""

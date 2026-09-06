@@ -6,6 +6,7 @@ from pinochle.domain.cards.deck import Deck
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.hand import Hand
 from pinochle.domain.bid import BiddingRound
+from pinochle.domain.meld import MeldUnit, detect_meld
 from pinochle.domain.trick import Trick
 
 
@@ -20,7 +21,8 @@ class RoundPhase(Enum):
     - ``BIDDING``: Players are submitting bids or passing.
     - ``TRUMP``: The bid winner is declaring the trump suit.
     - ``PASSING``: The bid winner and partner exchange four cards each.
-    - ``MELDING``: Players declare meld combinations from their hands.
+    - ``MELDING``: Each player's meld is exposed and held on screen. No player
+      acts during this phase; it ends on a server-owned timer.
     - ``PLAYING``: Trick-taking is in progress.
     - ``SCORING``: The round has ended and scores are being tallied.
     - ``COMPLETE``: The round is fully resolved.
@@ -71,6 +73,10 @@ class Round:
 
         # Passing state
         self._pending_pass: dict[str, list[Card]] = {}
+
+        # Meld, captured once at the end of PASSING and never recomputed,
+        # because the cards leave the hands during trick play.
+        self._meld: dict[str, list[MeldUnit]] = {}
 
     # ------------------------------------------------------------------
     # Phase: DEALING
@@ -123,7 +129,7 @@ class Round:
     # Phase: PASSING
     # ------------------------------------------------------------------
 
-    def _partner_of(self, player_id: str) -> str:
+    def partner_of(self, player_id: str) -> str:
         """Return the partner seated across from ``player_id``."""
         idx = self.player_order.index(player_id)
         return self.player_order[(idx + 2) % 4]
@@ -134,7 +140,7 @@ class Round:
             raise ValueError(f"Cannot pass cards in phase {self.phase}.")
         if len(cards) != self.PASS_COUNT:
             raise ValueError(f"Must pass exactly {self.PASS_COUNT} cards.")
-        partner = self._partner_of(player_id)
+        partner = self.partner_of(player_id)
         for card in cards:
             if card not in self._hands[player_id]:
                 raise ValueError(f"{player_id} does not hold {card}.")
@@ -143,17 +149,25 @@ class Round:
         # Both directions complete?
         if len(self._pending_pass) == 2:
             for giver, given in self._pending_pass.items():
-                receiver = self._partner_of(giver)
+                receiver = self.partner_of(giver)
                 self._hands[receiver].add(given)
             self._pending_pass.clear()
+            self._capture_meld()
             self.phase = RoundPhase.MELDING
 
+    def _capture_meld(self) -> None:
+        """Record every player's meld from their hand as it stands after the pass."""
+        self._meld = {
+            player_id: detect_meld(list(hand), self._trump)
+            for player_id, hand in self._hands.items()
+        }
+
     # ------------------------------------------------------------------
-    # Phase: MELDING (declarative — caller detects meld externally)
+    # Phase: MELDING
     # ------------------------------------------------------------------
 
     def advance_to_playing(self) -> None:
-        """Move from meld declaration into trick-taking play."""
+        """End the meld display and begin trick-taking."""
         if self.phase != RoundPhase.MELDING:
             raise ValueError(f"Cannot advance to playing from phase {self.phase}.")
         self.phase = RoundPhase.PLAYING
@@ -196,6 +210,14 @@ class Round:
     def hand(self, player_id: str) -> Hand:
         """Return the mutable hand object for ``player_id``."""
         return self._hands[player_id]
+
+    def meld(self, player_id: str) -> list[MeldUnit]:
+        """Return the meld combinations recorded for ``player_id`` after the pass."""
+        return list(self._meld.get(player_id, []))
+
+    def meld_total(self, player_id: str) -> int:
+        """Return the meld points recorded for ``player_id`` after the pass."""
+        return sum(unit.points for unit in self._meld.get(player_id, []))
 
     @property
     def tricks(self) -> list[Trick]:

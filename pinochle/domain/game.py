@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.meld import MeldUnit
 from pinochle.domain.player import Player
 from pinochle.domain.team import Team
 
@@ -78,6 +79,48 @@ class TrumpNamed:
 
 
 @dataclass
+class CardsPassed:
+    """Emitted when one player hands four cards to their partner.
+
+    Visible only to the two players on the auction-winning team; the opposing
+    team must not learn which cards were exchanged.
+
+    Attributes:
+        game_id: The game in which the pass occurred.
+        from_player_id: The player giving the cards.
+        to_player_id: The partner receiving them.
+        cards: The four cards passed.
+    """
+
+    game_id: str
+    from_player_id: str
+    to_player_id: str
+    cards: list[Card]
+
+
+@dataclass
+class MeldExposed:
+    """Emitted once per player when meld is laid on the table after the pass.
+
+    Meld is public: every player sees every other player's combinations, so
+    this event is broadcast.  It carries the points recorded for scoring, which
+    are fixed at this moment and not recomputed once trick play empties the
+    hands.
+
+    Attributes:
+        game_id: The game in which meld was exposed.
+        player_id: The player whose meld this is.
+        units: The combinations detected in the player's hand.
+        total: The points those combinations are worth.
+    """
+
+    game_id: str
+    player_id: str
+    units: list[MeldUnit]
+    total: int
+
+
+@dataclass
 class TrickCompleted:
     """Emitted after all four players have played a card into the current trick.
 
@@ -121,8 +164,8 @@ class GameOver:
 
 
 GameEvent = (
-    DealerSelected | CardsDealt | BidPlaced | TrumpNamed
-    | TrickCompleted | RoundScored | GameOver
+    DealerSelected | CardsDealt | BidPlaced | TrumpNamed | CardsPassed
+    | MeldExposed | TrickCompleted | RoundScored | GameOver
 )
 
 
