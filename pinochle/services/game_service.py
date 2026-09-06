@@ -1,5 +1,6 @@
 # pinochle.services.game_service
 import uuid
+from dataclasses import dataclass, field
 
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.deck import Deck
@@ -32,6 +33,27 @@ from pinochle.services.round import Round, RoundPhase
 MELD_DISPLAY_SECONDS = 8.0
 
 
+@dataclass
+class _DealerSpread:
+    """One shuffled deck laid face-down for the dealer-selection draw.
+
+    Transient application state rather than persisted domain state: it exists
+    only between ``start_game`` and the moment a dealer is settled, and a tie
+    replaces it wholesale.
+
+    Attributes:
+        cards: The 48 cards in spread order; an index is a position on the table.
+        drawn: Which position each player took.
+    """
+
+    cards: list[Card]
+    drawn: dict[str, int] = field(default_factory=dict)
+
+    def cards_drawn(self) -> dict[str, Card]:
+        """Return the card each player took, keyed by player."""
+        return {player_id: self.cards[i] for player_id, i in self.drawn.items()}
+
+
 class GameService(AdminPort, PlayerActionPort):
     """Application service — the use-case layer.
 
@@ -42,8 +64,8 @@ class GameService(AdminPort, PlayerActionPort):
         3. Drain and broadcast all pending events.
         4. Save updated game state.
 
-    Dealer selection state (drawn cards) is tracked here because it is
-    transient application-flow logic rather than persisted domain state.
+    The dealer-selection spread is tracked here because it is transient
+    application-flow logic rather than persisted domain state.
     """
 
     def __init__(
@@ -56,7 +78,7 @@ class GameService(AdminPort, PlayerActionPort):
         self._state = state
         self._notifier = notifier
         self._scheduler = scheduler
-        self._pending_draws: dict[str, dict[str, Card]] = {}
+        self._spreads: dict[str, _DealerSpread] = {}
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -202,42 +224,73 @@ class GameService(AdminPort, PlayerActionPort):
     def start_game(self, game_id: str) -> None:
         """Enter dealer selection and reset any pending draw state."""
         self._load_save(game_id, lambda g: g.start_dealer_selection())
-        self._pending_draws[game_id] = {}
+        self._reset_spread(game_id)
 
     # ------------------------------------------------------------------
     # PlayerActionPort
     # ------------------------------------------------------------------
 
-    def draw_for_deal(self, game_id: str, player_id: str) -> Card:
-        """Deal a draw card for dealer selection and advance when resolved."""
-        deck = Deck()
-        deck.shuffle()
-        card = deck.deal(1)[0]
+    def draw_for_deal(self, game_id: str, player_id: str, position: int) -> Card:
+        """Take the card at ``position`` from the face-down spread.
 
-        draws = self._pending_draws.setdefault(game_id, {})
-        draws[player_id] = card
+        Each position may be taken by only one player, so the four drawn cards
+        are necessarily four distinct cards from one deck (FR-12).
+        """
+        spread = self._spreads[game_id]
+        if not 0 <= position < len(spread.cards):
+            raise ValueError(f"Position {position} is not in the spread.")
+        if player_id in spread.drawn:
+            raise ValueError(f"{player_id} has already drawn.")
+        if position in spread.drawn.values():
+            raise ValueError(f"Position {position} has already been taken.")
+
+        spread.drawn[player_id] = position
+        card = spread.cards[position]
 
         game = self._state.load(game_id)
-        if len(draws) == len(game.players):
-            winner = self._resolve_draw(draws)
-            if winner:
-                self._pending_draws.pop(game_id, None)
-
-                def _set_dealer_and_deal(g: Game) -> None:
-                    """Persist the dealer selection result and begin the round."""
-                    g.set_dealer(winner)
-                    g.emit(DealerSelected(game_id=g.id, dealer_player_id=winner))
-                    self._start_round(g)
-
-                self._load_save(game_id, _set_dealer_and_deal)
-            else:
-                self._pending_draws[game_id] = {}
+        if len(spread.drawn) == len(game.players):
+            self._resolve_dealer_selection(game_id, spread)
 
         return card
 
+    def _resolve_dealer_selection(self, game_id: str, spread: "_DealerSpread") -> None:
+        """Settle a completed round of draws, redealing the spread on a tie."""
+        winner = self._resolve_draw(spread.cards_drawn())
+        if winner is None:
+            # FR-14: a tie restarts the whole draw, all four players included.
+            self._reset_spread(game_id)
+            return
+
+        self._spreads.pop(game_id, None)
+
+        def _set_dealer_and_deal(g: Game) -> None:
+            """Persist the dealer selection result and begin the round."""
+            g.set_dealer(winner)
+            g.emit(DealerSelected(game_id=g.id, dealer_player_id=winner))
+            self._start_round(g)
+
+        self._load_save(game_id, _set_dealer_and_deal)
+
+    def spread_size(self, game_id: str) -> int:
+        """Return how many positions the dealer-selection spread offers."""
+        return len(self._spreads[game_id].cards)
+
+    def positions_taken(self, game_id: str) -> set[int]:
+        """Return the spread positions already claimed by a player."""
+        return set(self._spreads[game_id].drawn.values())
+
+    def _reset_spread(self, game_id: str) -> None:
+        """Lay out a freshly shuffled face-down spread with nothing taken."""
+        deck = Deck()
+        deck.shuffle()
+        self._spreads[game_id] = _DealerSpread(cards=list(deck))
+
     @staticmethod
     def _resolve_draw(draws: dict[str, Card]) -> str | None:
-        """Return the unique highest draw winner or ``None`` on a tie."""
+        """Return the unique highest draw winner or ``None`` on a tie.
+
+        Rank alone decides it; suit never breaks a tie (FR-14).
+        """
         max_value = max(c.rank.value for c in draws.values())
         winners = [pid for pid, c in draws.items() if c.rank.value == max_value]
         return winners[0] if len(winners) == 1 else None

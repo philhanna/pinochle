@@ -1,4 +1,6 @@
 # pinochle.strategies.computer_player_strategy
+import random
+
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
 
@@ -15,6 +17,18 @@ class ComputerPlayerStrategy:
     - Passing: give the partner the four lowest-ranked cards.
     - Playing: always play the highest legal card.
     """
+
+    @staticmethod
+    def choose_draw_position(taken: set[int], spread_size: int) -> int:
+        """Pick an untaken position from the face-down dealer-selection spread.
+
+        The spread is face down, so no information distinguishes one position
+        from another and a random untaken choice is exactly right.
+        """
+        available = [i for i in range(spread_size) if i not in taken]
+        if not available:
+            raise ValueError("No positions remain in the spread.")
+        return random.choice(available)
 
     @staticmethod
     def choose_trump(hand_cards: list[Card]) -> Suit:

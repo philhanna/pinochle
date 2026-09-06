@@ -4,6 +4,8 @@ import pytest
 from pinochle.adapters.immediate_scheduler import ImmediateScheduler
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
+from pinochle.domain.cards.card import Card
+from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.game import GamePhase
 from pinochle.services.round import Round, RoundPhase
@@ -98,23 +100,67 @@ def test_start_game_enters_dealer_selection():
 # draw_for_deal — dealer selection
 # ---------------------------------------------------------------------------
 
-def test_draw_for_deal_returns_card():
-    """A dealer-selection draw should return the dealt card."""
+def test_draw_for_deal_returns_the_card_at_that_position():
+    """Drawing returns whichever card lies at the chosen spread position."""
     service, state = make_service()
     game_id = setup_game(service)
-    card = service.draw_for_deal(game_id, "N")
-    assert card is not None
+    expected = service._spreads[game_id].cards[7]
+    assert service.draw_for_deal(game_id, "N", 7) == expected
 
 
 def test_all_four_draws_starts_round():
     """Four dealer-selection draws should resolve or trigger a redraw."""
     service, state = make_service()
     game_id = setup_game(service)
-    for pid in ["N", "E", "S", "W"]:
-        service.draw_for_deal(game_id, pid)
+    for position, pid in enumerate(["N", "E", "S", "W"]):
+        service.draw_for_deal(game_id, pid, position)
     # After all four draw, game either re-draws (tie) or moves to IN_ROUND
     game = state.load(game_id)
     assert game.phase in (GamePhase.DEALER_SELECTION, GamePhase.IN_ROUND)
+
+
+def test_a_position_cannot_be_taken_twice():
+    """Two players may not draw the same physical card (FR-12)."""
+    service, _ = make_service()
+    game_id = setup_game(service)
+    service.draw_for_deal(game_id, "N", 3)
+    with pytest.raises(ValueError):
+        service.draw_for_deal(game_id, "E", 3)
+
+
+def test_a_player_cannot_draw_twice():
+    """Each player takes exactly one card from the spread."""
+    service, _ = make_service()
+    game_id = setup_game(service)
+    service.draw_for_deal(game_id, "N", 0)
+    with pytest.raises(ValueError):
+        service.draw_for_deal(game_id, "N", 1)
+
+
+def test_position_outside_the_spread_is_rejected():
+    """Only the 48 laid-out positions may be chosen."""
+    service, _ = make_service()
+    game_id = setup_game(service)
+    assert service.spread_size(game_id) == 48
+    with pytest.raises(ValueError):
+        service.draw_for_deal(game_id, "N", 48)
+
+
+def test_tie_lays_out_a_fresh_spread_for_all_four():
+    """A tie on rank restarts the whole draw, not just for those tied."""
+    service, state = make_service()
+    game_id = setup_game(service)
+    cards = service._spreads[game_id].cards
+    cards[0] = Card(Rank.ACE, Suit.SPADES)
+    cards[1] = Card(Rank.ACE, Suit.HEARTS)
+    cards[2] = Card(Rank.NINE, Suit.CLUBS)
+    cards[3] = Card(Rank.NINE, Suit.DIAMONDS)
+
+    for position, pid in enumerate(["N", "E", "S", "W"]):
+        service.draw_for_deal(game_id, pid, position)
+
+    assert state.load(game_id).dealer_id is None
+    assert service.positions_taken(game_id) == set()
 
 
 # ---------------------------------------------------------------------------

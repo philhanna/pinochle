@@ -15,20 +15,21 @@ class PlayerActionPort(ABC):
     """
 
     @abstractmethod
-    def draw_for_deal(self, game_id: str, player_id: str) -> Card:
-        """Draw a card from the shuffled deck to determine the dealer.
+    def draw_for_deal(self, game_id: str, player_id: str, position: int) -> Card:
+        """Take one card from the face-down spread to determine the dealer.
 
-        Each player calls this once at the start of a new game.  The player
-        who draws the highest card becomes the first dealer; ties on rank are
-        broken by suit.  The drawn card is returned so the caller can display
-        it to the player.
+        The spread is a single shuffled deck of 48 addressable positions, so a
+        position taken by one player is unavailable to the others.  Each player
+        draws once; the highest card deals.  A tie on rank restarts the whole
+        draw with a fresh spread — suit never breaks it.
 
         Args:
             game_id: Unique identifier of the game session.
             player_id: Unique identifier of the player drawing the card.
+            position: Index of the chosen card in the spread.
 
         Returns:
-            The card drawn by the player.
+            The card lying at that position.
         """
 
     @abstractmethod
