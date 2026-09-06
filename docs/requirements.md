@@ -650,6 +650,11 @@ rule-based computer strategy.
 - **D-15** `draw_for_deal` takes no position argument, so a player cannot
   choose a card from the spread (FR-11a). It also builds a new `Deck` per call
   rather than drawing from one shared spread — the same root cause as D-4.
+- **D-16** `Round` exposes no way to ask whose turn it is. Driving a game
+  requires reaching into `_bidding.active_players` and `_next_leader`, so the
+  HTTP layer would have nothing public to answer UI-7 with, and the reconnect
+  snapshot (RT-10) has no turn state to serialize. A round needs to report the
+  player currently on the clock for every phase that has one.
 
 ---
 
