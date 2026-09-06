@@ -137,6 +137,19 @@ class MeldExposed:
 
 
 @dataclass
+class ContractTossedIn:
+    """Emitted when the auction winner concedes rather than play the contract.
+
+    Attributes:
+        game_id: The game in which the contract was given up.
+        player_id: The auction winner who tossed it in.
+    """
+
+    game_id: str
+    player_id: str
+
+
+@dataclass
 class TrickCompleted:
     """Emitted after all four players have played a card into the current trick.
 
@@ -181,7 +194,8 @@ class GameOver:
 
 GameEvent = (
     DealerSelected | CardsDealt | BidPlaced | RoundAbandoned | TrumpNamed
-    | CardsPassed | MeldExposed | TrickCompleted | RoundScored | GameOver
+    | CardsPassed | MeldExposed | ContractTossedIn | TrickCompleted
+    | RoundScored | GameOver
 )
 
 

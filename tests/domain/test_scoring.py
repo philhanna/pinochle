@@ -5,7 +5,13 @@ from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.trick import Trick
-from pinochle.domain.scoring import score_cards, score_tricks, resolve_round, LAST_TRICK_BONUS
+from pinochle.domain.scoring import (
+    LAST_TRICK_BONUS,
+    resolve_round,
+    resolve_toss_in,
+    score_cards,
+    score_tricks,
+)
 
 TRUMP = Suit.SPADES
 PLAYER_TEAM = {"N": "NS", "E": "EW", "S": "NS", "W": "EW"}
@@ -75,3 +81,34 @@ def test_resolve_round_non_bidder_no_tricks():
     meld_scores = {"NS": 150, "EW": 60}
     net = resolve_round(trick_scores, meld_scores, bid_team_id="NS", contract=250)
     assert net["EW"] == 0  # no tricks → forfeits meld
+
+
+# ---------------------------------------------------------------------------
+# Tossing the contract in
+# ---------------------------------------------------------------------------
+
+def test_toss_in_costs_the_bidding_team_the_contract():
+    """Conceding deducts the bid and nothing else."""
+    net = resolve_toss_in({"NS": 90, "EW": 40}, bid_team_id="NS", contract=300)
+    assert net["NS"] == -300
+
+
+def test_toss_in_leaves_the_opponents_their_meld():
+    """The other team keeps its meld; no trick points exist either way."""
+    net = resolve_toss_in({"NS": 90, "EW": 40}, bid_team_id="NS", contract=300)
+    assert net["EW"] == 40
+
+
+def test_tossing_in_costs_less_than_going_set():
+    """Conceding caps the loss at the bid; playing on and failing also forfeits meld.
+
+    This asymmetry is the whole point of the option: once a hand is plainly
+    unmakeable, giving it up is cheaper than proving it.
+    """
+    meld = {"NS": 90, "EW": 40}
+    conceded = resolve_toss_in(meld, bid_team_id="NS", contract=300)
+    played_and_failed = resolve_round(
+        {"NS": 60, "EW": 190}, meld, bid_team_id="NS", contract=300)
+    assert conceded["NS"] == -300
+    assert played_and_failed["NS"] == -390
+    assert conceded["NS"] > played_and_failed["NS"]

@@ -240,15 +240,13 @@ def _complete_exchange(service: GameService, game_id: str, round_state: Round) -
 
 
 def test_completed_exchange_reaches_trick_play():
-    """The meld hold must end and hand the lead to the auction winner.
-
-    With the immediate scheduler the meld display collapses to zero, so the
-    round arrives in PLAYING as soon as the second pass lands.
-    """
+    """The meld display ends when the auction winner says so, not on a timer."""
     service, state = make_service()
     game_id = _advance_to_passing(service, state)
     round_state = state.load(game_id).current_round
     _complete_exchange(service, game_id, round_state)
+    assert round_state.phase == RoundPhase.MELDING
+    service.begin_play(game_id, "E")
     assert round_state.phase == RoundPhase.PLAYING
     assert round_state.play_card("E", list(round_state.hand("E"))[0]) is None
 

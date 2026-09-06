@@ -9,6 +9,7 @@ from pinochle.domain.game import (
     BidPlaced,
     CardsDealt,
     CardsPassed,
+    ContractTossedIn,
     DealerSelected,
     Game,
     GameEvent,
@@ -21,7 +22,12 @@ from pinochle.domain.game import (
     TrumpNamed,
 )
 from pinochle.domain.player import Player
-from pinochle.domain.scoring import WINNING_SCORE, resolve_round, score_tricks
+from pinochle.domain.scoring import (
+    WINNING_SCORE,
+    resolve_round,
+    resolve_toss_in,
+    score_tricks,
+)
 from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.ports.admin_port import AdminPort
 from pinochle.ports.game_state_port import GameStatePort
@@ -30,8 +36,9 @@ from pinochle.ports.player_action_port import PlayerActionPort
 from pinochle.ports.scheduler_port import SchedulerPort
 from pinochle.services.round import Round, RoundPhase
 
-# How long the exposed meld stays on the table before trick play begins.
-MELD_DISPLAY_SECONDS = 8.0
+# How long a completed trick stays on the table before it is swept to the
+# winner.  Server-owned, per RT-8, so all four clients see the same thing.
+TRICK_CLEAR_SECONDS = 1.5
 
 
 @dataclass
@@ -167,14 +174,17 @@ class GameService(AdminPort, PlayerActionPort):
     def _score_round(self, game: Game) -> None:
         """Score the completed round, emit events, and advance game state."""
         round_state = game.current_round
-        player_team = self._player_team_map(game)
-        tricks = round_state.tricks
-        last_winner = tricks[-1].winner()
-
-        trick_scores = score_tricks(tricks, last_winner, player_team)
         meld_scores = self._meld_scores(game, round_state)
         bid_team_id = game.team_id_for_player(round_state.bid_winner)
-        net = resolve_round(trick_scores, meld_scores, bid_team_id, round_state.contract)
+
+        if round_state.tossed_in:
+            net = resolve_toss_in(meld_scores, bid_team_id, round_state.contract)
+        else:
+            tricks = round_state.tricks
+            trick_scores = score_tricks(
+                tricks, tricks[-1].winner(), self._player_team_map(game))
+            net = resolve_round(
+                trick_scores, meld_scores, bid_team_id, round_state.contract)
 
         for team_id, points in net.items():
             game.add_score(team_id, points)
@@ -353,14 +363,6 @@ class GameService(AdminPort, PlayerActionPort):
 
         self._load_save(game_id, _pass_cards)
 
-        # Started only after the save above has completed: the callback opens
-        # its own load-mutate-save cycle, which must not nest inside this one.
-        if exchange_complete:
-            self._scheduler.call_later(
-                MELD_DISPLAY_SECONDS,
-                lambda: self._begin_trick_play(game_id),
-            )
-
     @staticmethod
     def _emit_meld_exposed(game: Game) -> None:
         """Announce every player's recorded meld to the table."""
@@ -373,25 +375,53 @@ class GameService(AdminPort, PlayerActionPort):
                 total=round_state.meld_total(pid),
             ))
 
-    def _begin_trick_play(self, game_id: str) -> None:
-        """End the meld display and move the round into trick-taking."""
-        self._load_save(game_id, lambda g: g.current_round.advance_to_playing())
+    def begin_play(self, game_id: str, player_id: str) -> None:
+        """Start trick play once the auction winner has read the exposed meld."""
+        self._load_save(game_id, lambda g: g.current_round.begin_play(player_id))
+
+    def toss_in(self, game_id: str, player_id: str) -> None:
+        """Concede the contract without playing it out, and score the round."""
+        def _toss_in(g: Game) -> None:
+            """Give up the contract and settle the round immediately."""
+            g.current_round.toss_in(player_id)
+            g.emit(ContractTossedIn(game_id=g.id, player_id=player_id))
+            self._score_round(g)
+
+        self._load_save(game_id, _toss_in)
 
     def play_card(self, game_id: str, player_id: str, card: Card) -> None:
-        """Play a card into the current trick and score the round if needed."""
+        """Play a card into the current trick, holding a completed one on the table."""
+        trick_complete = False
+
         def _play_card(g: Game) -> None:
-            """Apply a trick play and handle trick-complete side effects."""
+            """Apply a trick play and announce a completed trick."""
+            nonlocal trick_complete
             winner_id = g.current_round.play_card(player_id, card)
             if winner_id is None:
                 return
-
-            last_trick = g.current_round.tricks[-1]
             g.emit(TrickCompleted(
                 game_id=g.id,
                 winner_player_id=winner_id,
-                cards_played=last_trick.cards,
+                cards_played=g.current_round.current_trick_cards,
             ))
+            trick_complete = True
+
+        self._load_save(game_id, _play_card)
+
+        # Started only after the save above, so the callback's own
+        # load-mutate-save cycle does not nest inside this one.
+        if trick_complete:
+            self._scheduler.call_later(
+                TRICK_CLEAR_SECONDS,
+                lambda: self._clear_trick(game_id),
+            )
+
+    def _clear_trick(self, game_id: str) -> None:
+        """Sweep the completed trick to its winner and score the round if it ended."""
+        def _clear(g: Game) -> None:
+            """Collect the trick and settle the round once the hands are empty."""
+            g.current_round.clear_trick()
             if g.current_round.phase == RoundPhase.SCORING:
                 self._score_round(g)
 
-        self._load_save(game_id, _play_card)
+        self._load_save(game_id, _clear)

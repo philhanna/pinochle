@@ -23,8 +23,9 @@ class RoundPhase(Enum):
     - ``ABANDONED``: The round ended before play, leaving all scores unchanged.
     - ``TRUMP``: The bid winner is declaring the trump suit.
     - ``PASSING``: The bid winner and partner exchange four cards each.
-    - ``MELDING``: Each player's meld is exposed and held on screen. No player
-      acts during this phase; it ends on a server-owned timer.
+    - ``MELDING``: Every player's meld is exposed and stays on the table until
+      the auction winner has seen it and decides whether to play the contract
+      or toss it in.
     - ``PLAYING``: Trick-taking is in progress.
     - ``SCORING``: The round has ended and scores are being tallied.
     - ``COMPLETE``: The round is fully resolved.
@@ -74,6 +75,7 @@ class Round:
         self._tricks: list[Trick] = []
         self._current_trick: Trick | None = None
         self._next_leader: str | None = None
+        self._pending_winner: str | None = None
 
         # Passing state: who has already sent their four cards.
         self._passed_cards: dict[str, list[Card]] = {}
@@ -81,6 +83,7 @@ class Round:
         # Meld, captured once at the end of PASSING and never recomputed,
         # because the cards leave the hands during trick play.
         self._meld: dict[str, list[MeldUnit]] = {}
+        self._tossed_in: bool = False
 
     # ------------------------------------------------------------------
     # Phase: DEALING
@@ -200,12 +203,34 @@ class Round:
     # Phase: MELDING
     # ------------------------------------------------------------------
 
-    def advance_to_playing(self) -> None:
-        """End the meld display and begin trick-taking."""
-        if self.phase != RoundPhase.MELDING:
-            raise ValueError(f"Cannot advance to playing from phase {self.phase}.")
+    def begin_play(self, player_id: str) -> None:
+        """End the meld display and lead off, at the auction winner's word.
+
+        Nothing is on a timer: play starts when the player who has to lead
+        says they have seen the table.
+        """
+        self._require_auction_winner(player_id)
         self.phase = RoundPhase.PLAYING
         self._next_leader = self._bid_winner
+
+    def toss_in(self, player_id: str) -> None:
+        """Concede the contract without playing it out.
+
+        Having seen the meld and the sixteen cards they had to choose from,
+        the auction winner may judge the contract unmakeable and give it up.
+        Their team loses the bid; the opponents keep their meld, and no trick
+        points are scored by anyone because no trick is played.
+        """
+        self._require_auction_winner(player_id)
+        self._tossed_in = True
+        self.phase = RoundPhase.SCORING
+
+    def _require_auction_winner(self, player_id: str) -> None:
+        """Reject anyone but the auction winner acting on the exposed meld."""
+        if self.phase != RoundPhase.MELDING:
+            raise ValueError(f"Meld is not on the table in phase {self.phase}.")
+        if player_id != self._bid_winner:
+            raise ValueError("Only the auction winner may play or toss in.")
 
     # ------------------------------------------------------------------
     # Phase: PLAYING
@@ -215,6 +240,8 @@ class Round:
         """Play a card. Returns winner player_id when trick completes, else None."""
         if self.phase != RoundPhase.PLAYING:
             raise ValueError(f"Cannot play in phase {self.phase}.")
+        if self._pending_winner is not None:
+            raise ValueError("The completed trick has not been cleared yet.")
         if player_id != self.current_player:
             raise ValueError(f"It is {self.current_player}'s turn to play.")
         if card not in self._hands[player_id]:
@@ -228,16 +255,24 @@ class Round:
         self._current_trick.play(player_id, card)
         self._hands[player_id].remove(card)
 
-        if self._current_trick.is_complete:
-            winner_id = self._current_trick.winner()
-            self._tricks.append(self._current_trick)
-            self._current_trick = None
-            self._next_leader = winner_id
-            if all(len(h) == 0 for h in self._hands.values()):
-                self.phase = RoundPhase.SCORING
-            return winner_id
+        if not self._current_trick.is_complete:
+            return None
 
-        return None
+        # The four cards stay on the table until the trick is cleared, so
+        # every player gets to see them before the next lead (RT-8, RT-9).
+        self._pending_winner = self._current_trick.winner()
+        return self._pending_winner
+
+    def clear_trick(self) -> None:
+        """Collect the completed trick and hand the lead to whoever won it."""
+        if self._pending_winner is None:
+            raise ValueError("No completed trick is waiting to be cleared.")
+        self._tricks.append(self._current_trick)
+        self._current_trick = None
+        self._next_leader = self._pending_winner
+        self._pending_winner = None
+        if all(len(hand) == 0 for hand in self._hands.values()):
+            self.phase = RoundPhase.SCORING
 
     # ------------------------------------------------------------------
     # Accessors
@@ -258,6 +293,8 @@ class Round:
             return self._bid_winner
         if self.phase == RoundPhase.PASSING:
             return self._next_passer()
+        if self.phase == RoundPhase.MELDING:
+            return self._bid_winner
         if self.phase == RoundPhase.PLAYING:
             return self._next_to_play()
         return None
@@ -273,6 +310,8 @@ class Round:
 
     def _next_to_play(self) -> str | None:
         """Return the player due to play into the current trick."""
+        if self._pending_winner is not None:
+            return None
         if self._current_trick is None:
             return self._next_leader
         idx = self.player_order.index(self._next_leader)
@@ -308,6 +347,21 @@ class Round:
     def bid_winner(self) -> str | None:
         """Return the player who won the bidding."""
         return self._bid_winner
+
+    @property
+    def trick_pending(self) -> bool:
+        """Return whether a completed trick is still lying on the table."""
+        return self._pending_winner is not None
+
+    @property
+    def current_trick_cards(self) -> list[Card]:
+        """Return the cards played into the trick in progress, in play order."""
+        return list(self._current_trick.cards) if self._current_trick else []
+
+    @property
+    def tossed_in(self) -> bool:
+        """Return whether the auction winner conceded instead of playing."""
+        return self._tossed_in
 
     @property
     def contract(self) -> int | None:

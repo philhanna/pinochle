@@ -42,6 +42,30 @@ def score_tricks(tricks: list[Trick], last_trick_winner_id: str, player_team: di
     return team_scores
 
 
+def resolve_toss_in(
+    meld_scores: dict[str, int],
+    bid_team_id: str,
+    contract: int,
+) -> dict[str, int]:
+    """Return net points when the bidding team concedes before playing a trick.
+
+    Conceding costs the bidding team the contract and nothing more — unlike
+    going set after playing it out, which costs the contract *and* their meld.
+    Tossing in therefore caps the damage, and is worth doing once a hand is
+    plainly unmakeable.  The opponents keep their meld; no trick points exist
+    for either side, because no trick was played.
+
+    Args:
+        meld_scores: team_id -> meld recorded after the pass.
+        bid_team_id: The team that won the bid and gave it up.
+        contract: The bid amount being conceded.
+    """
+    return {
+        team_id: -contract if team_id == bid_team_id else meld
+        for team_id, meld in meld_scores.items()
+    }
+
+
 def resolve_round(
     trick_scores: dict[str, int],
     meld_scores: dict[str, int],

@@ -106,3 +106,30 @@ class PlayerActionPort(ABC):
             player_id: The lone bidder being offered the choice.
             accept: ``True`` to take the contract, ``False`` to decline it.
         """
+
+    @abstractmethod
+    def begin_play(self, game_id: str, player_id: str) -> None:
+        """Start trick play once the auction winner has read the exposed meld.
+
+        The meld display is not on a timer: it stays on the table until the
+        player who must lead the first trick says they have seen it.
+
+        Args:
+            game_id: Unique identifier of the game session.
+            player_id: The auction winner, who leads the first trick.
+        """
+
+    @abstractmethod
+    def toss_in(self, game_id: str, player_id: str) -> None:
+        """Concede the contract instead of playing it out.
+
+        Offered to the auction winner alongside ``begin_play``, once the pass
+        is done and all four melds are exposed.  Their team loses the contract
+        amount and the opponents keep their meld; no trick points are scored,
+        because no trick is played.  Conceding costs less than going set after
+        playing on, which also forfeits the bidding team's meld.
+
+        Args:
+            game_id: Unique identifier of the game session.
+            player_id: The auction winner giving up the contract.
+        """

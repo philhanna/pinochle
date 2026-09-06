@@ -89,14 +89,42 @@ def test_cannot_play_before_meld_display_ends():
         round_state.play_card("E", card)
 
 
-def test_advance_to_playing_gives_lead_to_auction_winner():
+def test_begin_play_gives_lead_to_auction_winner():
     """Ending the meld display starts trick play with the bid winner leading."""
     round_state = round_at_passing()
     complete_exchange(round_state)
-    round_state.advance_to_playing()
+    round_state.begin_play("E")
     assert round_state.phase == RoundPhase.PLAYING
     card = list(round_state.hand("E"))[0]
     assert round_state.play_card("E", card) is None
+
+
+def test_only_the_auction_winner_ends_the_meld_display():
+    """Nobody else can start play on the auction winner's behalf."""
+    round_state = round_at_passing()
+    complete_exchange(round_state)
+    with pytest.raises(ValueError):
+        round_state.begin_play("W")
+    with pytest.raises(ValueError):
+        round_state.toss_in("N")
+
+
+def test_tossing_in_skips_play_and_goes_straight_to_scoring():
+    """Conceding ends the round without a card being played."""
+    round_state = round_at_passing()
+    complete_exchange(round_state)
+    round_state.toss_in("E")
+    assert round_state.phase == RoundPhase.SCORING
+    assert round_state.tossed_in is True
+    assert round_state.tricks == []
+
+
+def test_a_played_out_round_is_not_marked_tossed_in():
+    """Choosing to play leaves the concession flag clear."""
+    round_state = round_at_passing()
+    complete_exchange(round_state)
+    round_state.begin_play("E")
+    assert round_state.tossed_in is False
 
 
 # ---------------------------------------------------------------------------
@@ -191,9 +219,9 @@ def test_current_player_through_the_phases():
     assert round_state.current_player == "E"           # PASSING, winner returns
 
     round_state.pass_cards("E", list(round_state.hand("E"))[:4])
-    assert round_state.current_player is None          # MELDING is untimed by players
+    assert round_state.current_player == "E"           # MELDING, winner decides
 
-    round_state.advance_to_playing()
+    round_state.begin_play("E")
     assert round_state.current_player == "E"           # PLAYING, winner leads
 
 
@@ -201,20 +229,31 @@ def test_current_player_walks_clockwise_within_a_trick():
     """Each card played hands the turn to the next seat."""
     round_state = round_at_passing()
     complete_exchange(round_state)
-    round_state.advance_to_playing()
+    round_state.begin_play("E")
 
     expected = ["E", "S", "W", "N"]
     for player_id in expected:
         assert round_state.current_player == player_id
         round_state.play_card(player_id, round_state.legal_plays(player_id)[0])
-    assert round_state.current_player is not None      # winner leads the next
+
+    # The completed trick sits on the table; nobody is on the clock until it
+    # is swept, and the next lead is refused meanwhile.
+    assert round_state.trick_pending is True
+    assert round_state.current_player is None
+    with pytest.raises(ValueError):
+        round_state.play_card("E", list(round_state.hand("E"))[0])
+
+    round_state.clear_trick()
+    assert round_state.trick_pending is False
+    assert round_state.current_player in expected
+    assert len(round_state.tricks) == 1
 
 
 def test_play_out_of_turn_is_rejected():
     """A player may not play before the turn reaches them."""
     round_state = round_at_passing()
     complete_exchange(round_state)
-    round_state.advance_to_playing()
+    round_state.begin_play("E")
     with pytest.raises(ValueError):
         round_state.play_card("S", round_state.legal_plays("S")[0])
 
@@ -227,7 +266,7 @@ def test_illegal_play_is_rejected():
     """
     round_state = round_at_passing(Suit.SPADES)
     complete_exchange(round_state)
-    round_state.advance_to_playing()
+    round_state.begin_play("E")
 
     lead = round_state.legal_plays("E")[0]
     round_state.play_card("E", lead)
