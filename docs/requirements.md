@@ -72,6 +72,10 @@ ranking or statistics, chat, and mobile-native clients.
   North.
 - **FR-4** The four players shall form two partnerships of players seated
   opposite one another: North+South ("NS") and East+West ("EW").
+- **FR-4a** Partnership membership shall be derived from the seat, never stored
+  alongside it. The team identifiers `NS` and `EW` are fixed by the seating and
+  are not configurable; a team's *name* is. It shall be impossible to represent
+  a player seated North who belongs to East/West. `[OQ-32, resolved]`
 - **FR-5** Each player shall have a stable identifier and a human-readable
   display name.
 
@@ -129,6 +133,13 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
   card from it.
 - **FR-12** Each card may be selected by at most one player; the four drawn
   cards shall be four distinct physical cards from the same deck.
+- **FR-11a** The spread shall be modelled as 48 addressable positions over one
+  shuffled deck. A player draws by naming a position, and receives the card
+  that lies there. A position already taken shall be rejected. This is what
+  makes FR-12 hold by construction rather than by a uniqueness check.
+  `[OQ-31, resolved]`
+- **FR-11b** A computer player shall draw by choosing an untaken position at
+  random. Its choice shall be made through the same call a human client uses.
 - **FR-13** The player drawing the highest card shall become the dealer for the
   first round.
 - **FR-14** If two or more players tie for the highest card, the entire
@@ -409,6 +420,19 @@ round: DEALING → BIDDING ─┬─────────────→ TRUM
   with per-player and per-team totals.
 - **UI-14** A persistent scoreboard shall show both teams' cumulative scores,
   the current contract, the auction winner, and the trump suit.
+- **UI-14a** The scoreboard shall additionally retain, for the whole round, the
+  bid history and each team's meld total — the latter remaining visible after
+  the exposed meld has been cleared from the table. These were public
+  information when they occurred, so keeping them on screen restores what a
+  player at a physical table would have seen and remembered. `[OQ-29, resolved]`
+- **UI-14b** The last completed trick shall be viewable on demand for the
+  duration of the following trick, mirroring the courtesy of asking to see the
+  last trick before it is turned. Tricks before that one shall not be
+  reviewable.
+- **UI-14c** The interface shall **not** display a running total of card points
+  taken during a round. Counting the cards as they fall is a genuine part of
+  playing well, and a live total would remove it. Trick points shall appear
+  only in the round summary of FR-66, after play is over.
 - **UI-15** A completed trick shall remain visible for a fixed, configurable
   interval — approximately 1.5 seconds by default — and shall then be cleared
   automatically to the winner. Clearing shall not require any player action.
@@ -616,6 +640,13 @@ rule-based computer strategy.
   (RT-9), and must be visible in a reconnect snapshot (RT-10). The same applies
   to the MELDING hold, which `advance_to_playing()` currently expects a caller
   to end immediately.
+- **D-14** `Player.team_id` is settable independently of `Player.position`,
+  allowing a North player on the East/West team (violates FR-4a). It should be
+  removed and derived, taking the `_NS` / `_EW` constants in `GameService` with
+  it.
+- **D-15** `draw_for_deal` takes no position argument, so a player cannot
+  choose a card from the spread (FR-11a). It also builds a new `Deck` per call
+  rather than drawing from one shared spread — the same root cause as D-4.
 
 ---
 
@@ -625,9 +656,8 @@ Each item states the ambiguity, the options, and the decision or a recommended
 default. Resolved items are kept in place, marked ✅ with the date, so that this
 section doubles as a decision record.
 
-**Twenty-eight of the twenty-nine were settled on 2026-09-06.** Only **OQ-29**
-(reviewing the play so far) remains open, and it does not block any of the
-work in §9. OQ-28 is a deliberate deferral rather than an open question.
+**All thirty-two were settled on 2026-09-06.** OQ-28 is a deliberate deferral
+rather than a decision. Nothing in this section blocks the work in §9.
 
 ### Rules
 
@@ -796,13 +826,47 @@ event. The client holds no timing logic. See RT-8 through RT-11 and ARC-9.
   forces the client to buffer animations. That concern disappears here: the
   server does not run ahead, so there is nothing to buffer.
 
-**OQ-29 — Should there be a way to review the play so far?** Not raised in
-`prompt.md` and not decided. A player who looks away loses the trick after
-UI-15's 1.5 seconds, and there is no record of earlier tricks, the bid history
-after bidding closes, or the meld once it is cleared from the table. *Options:*
-nothing; a last-trick recall; a full round history panel. *Recommended:* at
-minimum keep the bid history, contract, and both teams' meld totals on screen
-for the whole round, since those are cheap and consulted constantly.
+**OQ-29 — Should there be a way to review the play so far?** ✅ **Resolved
+2026-09-06: persistent public context, last-trick recall, and nothing more.**
+See UI-14a, UI-14b, UI-14c.
+
+The principle is to restore what a player at a physical table would have, and
+no more. Three categories fall out of it:
+
+- *Was public and stays available:* the contract, the auction winner, trump,
+  the bid history, and each team's meld total. All were announced or laid on
+  the table in front of everyone. Keeping them on screen costs nothing and
+  players consult them constantly.
+- *Was briefly available by convention:* the last trick. Asking to see it
+  before it is turned is normal courtesy, and it also compensates for UI-15's
+  1.5-second window, which is unforgiving if a player looks away. Earlier
+  tricks are not reviewable — they are face-down on the table.
+- *Was never available:* a running count of card points taken. Counting as the
+  cards fall is a real skill, and displaying the total would quietly delete it.
+  This is the one place the decision makes the game harder than it could be,
+  deliberately. The totals appear in the round summary (FR-66) once play ends.
+
+**OQ-31 — Is the dealer-selection draw worth building as an interaction?** ✅
+**Resolved 2026-09-06: yes, keep it.** FR-11 is a stated requirement from
+`prompt.md`, and "it is a little work for one moment per game" is not enough to
+override it. Two things make it cheap: it needs only click, not drag (UI-8), so
+it reuses the simplest affordance; and it is the first thing a player ever does,
+in a position where nothing is at stake — which makes it the natural place to
+teach the click-a-card gesture before it matters. Modelling the spread as 48
+addressable positions over one deck (FR-11a) also makes FR-12's distinctness
+hold by construction instead of by a retry loop.
+*Note:* under FR-14 a tie restarts the whole draw, so this interaction can
+repeat. It should stay quick.
+
+**OQ-32 — Should `Player` carry a `team_id`?** ✅ **Resolved 2026-09-06: no,
+derive it from the seat.** FR-4 makes partnership a pure function of position,
+so storing it separately creates a state — North on the East/West team — that
+is meaningless but constructible. See FR-4a.
+*Consequence:* `Player.team_id` is removed (D-14) and
+`Game.team_id_for_player` becomes a seat lookup. `Team` keeps its identity
+because a team has a *name*, which is genuinely per-game data; what it loses is
+a configurable id. This also removes the `_NS` / `_EW` string constants that
+`GameService` currently carries.
 
 **OQ-19 — How fast should computer players move?** ✅ **Resolved 2026-09-06:
 about one second, configurable, reducible to zero for tests.** See FR-75c.
