@@ -6,8 +6,11 @@ from pinochle.domain.cards.suit import Suit
 
 
 @dataclass
-class CardPlayed:
+class TrickPlay:
     """Records one card played into a trick, pairing the card with its player.
+
+    Internal to ``Trick``.  Distinct from the ``CardPlayed`` domain event in
+    ``pinochle.domain.game``, which announces the same act to the table.
 
     Attributes:
         player_id: The player who played the card.
@@ -31,7 +34,7 @@ class Trick:
     def __init__(self, lead_player_id: str, trump: Suit):
         """Start a new trick with the leader and trump suit."""
         self.trump = trump
-        self._plays: list[CardPlayed] = []
+        self._plays: list[TrickPlay] = []
         self._lead_player_id = lead_player_id
 
     @property
@@ -45,7 +48,7 @@ class Trick:
         """Append one played card to the trick in play order."""
         if len(self._plays) >= 4:
             raise ValueError("Trick already has four cards.")
-        self._plays.append(CardPlayed(player_id=player_id, card=card))
+        self._plays.append(TrickPlay(player_id=player_id, card=card))
 
     @property
     def is_complete(self) -> bool:

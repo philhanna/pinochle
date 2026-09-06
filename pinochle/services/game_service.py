@@ -7,28 +7,39 @@ from pinochle.domain.cards.deck import Deck
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.game import (
     BidPlaced,
+    CardPlayed,
     CardsDealt,
     CardsPassed,
+    ContractOffered,
     ContractTossedIn,
     DealerSelected,
+    DealerSelectionStarted,
+    DrawMade,
+    DrawTied,
     Game,
+    GameConfigured,
     GameEvent,
     GamePhase,
     GameOver,
     MeldExposed,
+    PlayBegun,
     RoundAbandoned,
     RoundScored,
+    RoundStarted,
+    TrickCleared,
     TrickCompleted,
     TrumpNamed,
 )
 from pinochle.domain.player import Player
 from pinochle.domain.scoring import (
+    LAST_TRICK_BONUS,
     WINNING_SCORE,
     resolve_round,
     resolve_toss_in,
-    score_tricks,
+    score_card_points,
 )
 from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
+from pinochle.domain.team_round_score import TeamRoundScore
 from pinochle.ports.admin_port import AdminPort
 from pinochle.ports.game_state_port import GameStatePort
 from pinochle.ports.notification_port import NotificationPort
@@ -135,6 +146,11 @@ class GameService(AdminPort, PlayerActionPort):
         )
         round_state.deal()
         game.begin_round(round_state)
+        game.emit(RoundStarted(
+            game_id=game.id,
+            round_number=game.round_number,
+            dealer_player_id=game.dealer_id,
+        ))
 
         for pid in game.player_order:
             game.emit(CardsDealt(
@@ -176,31 +192,106 @@ class GameService(AdminPort, PlayerActionPort):
         round_state = game.current_round
         meld_scores = self._meld_scores(game, round_state)
         bid_team_id = game.team_id_for_player(round_state.bid_winner)
+        card_points, bonus = self._trick_points(game, round_state)
 
         if round_state.tossed_in:
             net = resolve_toss_in(meld_scores, bid_team_id, round_state.contract)
         else:
-            tricks = round_state.tricks
-            trick_scores = score_tricks(
-                tricks, tricks[-1].winner(), self._player_team_map(game))
+            trick_scores = {
+                team_id: card_points.get(team_id, 0) + bonus.get(team_id, 0)
+                for team_id in game.teams
+            }
             net = resolve_round(
                 trick_scores, meld_scores, bid_team_id, round_state.contract)
 
         for team_id, points in net.items():
             game.add_score(team_id, points)
 
-        ns_score = game.teams.get(NS_TEAM_ID, Team(NS_TEAM_ID, "N/S")).cumulative_score
-        ew_score = game.teams.get(EW_TEAM_ID, Team(EW_TEAM_ID, "E/W")).cumulative_score
-        game.emit(RoundScored(game_id=game.id, ns_score=ns_score, ew_score=ew_score))
+        game.emit(self._round_scored(
+            game,
+            round_state,
+            bid_team_id=bid_team_id,
+            meld_scores=meld_scores,
+            card_points=card_points,
+            bonus=bonus,
+            net=net,
+        ))
 
         winner = self._check_winner(game, round_state.bid_winner)
         if winner:
             game.set_finished()
-            game.emit(GameOver(game_id=game.id, winning_team_id=winner))
+            game.emit(GameOver(
+                game_id=game.id,
+                winning_team_id=winner,
+                ns_score=self._team_score(game, NS_TEAM_ID),
+                ew_score=self._team_score(game, EW_TEAM_ID),
+            ))
             return
 
         game.rotate_dealer()
         self._start_round(game)
+
+    def _trick_points(
+        self, game: Game, round_state: Round
+    ) -> tuple[dict[str, int], dict[str, int]]:
+        """Return each team's captured card points and last-trick bonus.
+
+        The two are kept apart because FR-66 reports them as separate figures.
+        A tossed-in round played no trick at all (FR-50c), so both are empty.
+        """
+        if round_state.tossed_in:
+            return {}, {}
+        tricks = round_state.tricks
+        team_map = self._player_team_map(game)
+        last_team = team_map[tricks[-1].winner()]
+        return (
+            score_card_points(tricks, team_map),
+            {last_team: LAST_TRICK_BONUS},
+        )
+
+    @staticmethod
+    def _round_scored(
+        game: Game,
+        round_state: Round,
+        *,
+        bid_team_id: str,
+        meld_scores: dict[str, int],
+        card_points: dict[str, int],
+        bonus: dict[str, int],
+        net: dict[str, int],
+    ) -> RoundScored:
+        """Build the round summary FR-66 requires be shown to both teams."""
+        lines = {
+            team_id: TeamRoundScore(
+                team_id=team_id,
+                meld=meld_scores.get(team_id, 0),
+                card_points=card_points.get(team_id, 0),
+                last_trick_bonus=bonus.get(team_id, 0),
+                round_total=(meld_scores.get(team_id, 0)
+                             + card_points.get(team_id, 0)
+                             + bonus.get(team_id, 0)),
+                points_applied=net.get(team_id, 0),
+                cumulative_score=team.cumulative_score,
+            )
+            for team_id, team in game.teams.items()
+        }
+        return RoundScored(
+            game_id=game.id,
+            round_number=game.round_number,
+            bid_team_id=bid_team_id,
+            bid_winner_player_id=round_state.bid_winner,
+            contract=round_state.contract,
+            made_contract=(not round_state.tossed_in
+                           and lines[bid_team_id].round_total >= round_state.contract),
+            tossed_in=round_state.tossed_in,
+            teams=list(lines.values()),
+        )
+
+    @staticmethod
+    def _team_score(game: Game, team_id: str) -> int:
+        """Return a team's cumulative score, or zero if it was never registered."""
+        team = game.teams.get(team_id)
+        return team.cumulative_score if team else 0
 
     # ------------------------------------------------------------------
     # AdminPort
@@ -233,9 +324,28 @@ class GameService(AdminPort, PlayerActionPort):
         self._load_save(game_id, _assign)
 
     def start_game(self, game_id: str) -> None:
-        """Enter dealer selection and reset any pending draw state."""
-        self._load_save(game_id, lambda g: g.start_dealer_selection())
+        """Enter dealer selection, laying out the first face-down spread.
+
+        The spread is laid before the events are published, so that
+        ``DealerSelectionStarted`` can state how many positions it offers.
+        """
         self._reset_spread(game_id)
+
+        def _start(g: Game) -> None:
+            """Close setup and announce the fixed table and the spread."""
+            g.start_dealer_selection()
+            g.emit(GameConfigured(
+                game_id=g.id,
+                players=[g.players[pid] for pid in g.player_order],
+                teams=list(g.teams.values()),
+                winning_score=WINNING_SCORE,
+            ))
+            g.emit(DealerSelectionStarted(
+                game_id=g.id,
+                spread_size=self.spread_size(g.id),
+            ))
+
+        self._load_save(game_id, _start)
 
     # ------------------------------------------------------------------
     # PlayerActionPort
@@ -257,6 +367,12 @@ class GameService(AdminPort, PlayerActionPort):
 
         spread.drawn[player_id] = position
         card = spread.cards[position]
+        self._load_save(game_id, lambda g: g.emit(DrawMade(
+            game_id=g.id,
+            player_id=player_id,
+            position=position,
+            card=card,
+        )))
 
         game = self._state.load(game_id)
         if len(spread.drawn) == len(game.players):
@@ -266,10 +382,21 @@ class GameService(AdminPort, PlayerActionPort):
 
     def _resolve_dealer_selection(self, game_id: str, spread: "_DealerSpread") -> None:
         """Settle a completed round of draws, redealing the spread on a tie."""
-        winner = self._resolve_draw(spread.cards_drawn())
+        drawn = spread.cards_drawn()
+        winner = self._resolve_draw(drawn)
         if winner is None:
             # FR-14: a tie restarts the whole draw, all four players included.
             self._reset_spread(game_id)
+
+            def _announce_tie(g: Game) -> None:
+                """Show the tied draw, then the spread replacing it."""
+                g.emit(DrawTied(game_id=g.id, cards=drawn))
+                g.emit(DealerSelectionStarted(
+                    game_id=g.id,
+                    spread_size=self.spread_size(g.id),
+                ))
+
+            self._load_save(game_id, _announce_tie)
             return
 
         self._spreads.pop(game_id, None)
@@ -314,6 +441,13 @@ class GameService(AdminPort, PlayerActionPort):
             g.emit(BidPlaced(game_id=g.id, player_id=player_id, amount=amount))
             if g.current_round.phase == RoundPhase.ABANDONED:
                 self._abandon_round(g, declined_by=None)
+            elif g.current_round.phase == RoundPhase.CONFIRMING:
+                # FR-32: the other three learn why the auction has paused.
+                g.emit(ContractOffered(
+                    game_id=g.id,
+                    player_id=g.current_round.bid_winner,
+                    amount=g.current_round.contract,
+                ))
 
         self._load_save(game_id, _place_bid)
 
@@ -377,7 +511,12 @@ class GameService(AdminPort, PlayerActionPort):
 
     def begin_play(self, game_id: str, player_id: str) -> None:
         """Start trick play once the auction winner has read the exposed meld."""
-        self._load_save(game_id, lambda g: g.current_round.begin_play(player_id))
+        def _begin_play(g: Game) -> None:
+            """End the meld display and announce the opening lead."""
+            g.current_round.begin_play(player_id)
+            g.emit(PlayBegun(game_id=g.id, leader_player_id=player_id))
+
+        self._load_save(game_id, _begin_play)
 
     def toss_in(self, game_id: str, player_id: str) -> None:
         """Concede the contract without playing it out, and score the round."""
@@ -397,6 +536,7 @@ class GameService(AdminPort, PlayerActionPort):
             """Apply a trick play and announce a completed trick."""
             nonlocal trick_complete
             winner_id = g.current_round.play_card(player_id, card)
+            g.emit(CardPlayed(game_id=g.id, player_id=player_id, card=card))
             if winner_id is None:
                 return
             g.emit(TrickCompleted(
@@ -420,8 +560,15 @@ class GameService(AdminPort, PlayerActionPort):
         """Sweep the completed trick to its winner and score the round if it ended."""
         def _clear(g: Game) -> None:
             """Collect the trick and settle the round once the hands are empty."""
-            g.current_round.clear_trick()
-            if g.current_round.phase == RoundPhase.SCORING:
+            round_state = g.current_round
+            winner_id = round_state.clear_trick()
+            round_over = round_state.phase == RoundPhase.SCORING
+            g.emit(TrickCleared(
+                game_id=g.id,
+                winner_player_id=winner_id,
+                next_leader_player_id=None if round_over else winner_id,
+            ))
+            if round_over:
                 self._score_round(g)
 
         self._load_save(game_id, _clear)

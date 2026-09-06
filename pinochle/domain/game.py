@@ -10,6 +10,7 @@ from pinochle.domain.cards.suit import Suit
 from pinochle.domain.meld import MeldUnit
 from pinochle.domain.player import Player
 from pinochle.domain.team import Team
+from pinochle.domain.team_round_score import TeamRoundScore
 
 if TYPE_CHECKING:
     from pinochle.services.round import Round
@@ -18,6 +19,81 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 # Domain Events
 # ---------------------------------------------------------------------------
+
+@dataclass
+class GameConfigured:
+    """Emitted when setup closes and the table is fixed for the whole game.
+
+    Carries everything a client needs to draw the table before a single card
+    exists: who is sitting where, under what name, whether each seat is human
+    or computer, and what the partnerships are called.  Seats never change
+    afterwards (FR-2a), so this event is published once.
+
+    Attributes:
+        game_id: The game being configured.
+        players: All four players, in clockwise seat order from North.
+        teams: The two partnerships, whose ids are fixed by the seating.
+        winning_score: The cumulative score that ends the game (FR-67).
+    """
+
+    game_id: str
+    players: list[Player]
+    teams: list[Team]
+    winning_score: int
+
+
+@dataclass
+class DealerSelectionStarted:
+    """Emitted when a face-down spread is laid out for the dealer draw.
+
+    Published once when the game starts, and again after every tie, because a
+    tie replaces the spread wholesale rather than re-drawing within it (FR-14).
+
+    Attributes:
+        game_id: The game in which the spread was laid out.
+        spread_size: How many addressable positions the spread offers (FR-11a).
+    """
+
+    game_id: str
+    spread_size: int
+
+
+@dataclass
+class DrawMade:
+    """Emitted when one player turns a card in the dealer-selection spread.
+
+    Public, because FR-15 requires each drawn card be revealed to everyone —
+    the drawing player learns it by the same route as the three watching.
+
+    Attributes:
+        game_id: The game in which the draw was made.
+        player_id: The player who drew.
+        position: The spread position taken, which no one else may now take.
+        card: The card lying at that position.
+    """
+
+    game_id: str
+    player_id: str
+    position: int
+    card: Card
+
+
+@dataclass
+class DrawTied:
+    """Emitted when two or more players draw the highest rank.
+
+    The whole selection is repeated with a fresh spread and all four players
+    drawing again (FR-14), so this event is always followed by another
+    ``DealerSelectionStarted``.
+
+    Attributes:
+        game_id: The game in which the draw was tied.
+        cards: The card each player drew in the round being discarded.
+    """
+
+    game_id: str
+    cards: dict[str, Card]
+
 
 @dataclass
 class DealerSelected:
@@ -29,6 +105,24 @@ class DealerSelected:
     """
 
     game_id: str
+    dealer_player_id: str
+
+
+@dataclass
+class RoundStarted:
+    """Emitted when a fresh round has been dealt and bidding is about to open.
+
+    Precedes the per-player ``CardsDealt`` events, so a client can reset the
+    table before the new hand arrives.
+
+    Attributes:
+        game_id: The game in which the round began.
+        round_number: The round's ordinal, counting from one.
+        dealer_player_id: Who dealt it.
+    """
+
+    game_id: str
+    round_number: int
     dealer_player_id: str
 
 
@@ -63,6 +157,24 @@ class BidPlaced:
     game_id: str
     player_id: str
     amount: int | None
+
+
+@dataclass
+class ContractOffered:
+    """Emitted when a lone bidder is offered the chance to decline (FR-32).
+
+    Public, so that the other three players know why the auction has paused
+    rather than moving on to trump.
+
+    Attributes:
+        game_id: The game in which the contract was offered.
+        player_id: The lone bidder holding the decision.
+        amount: The bid they would be held to.
+    """
+
+    game_id: str
+    player_id: str
+    amount: int
 
 
 @dataclass
@@ -137,6 +249,23 @@ class MeldExposed:
 
 
 @dataclass
+class PlayBegun:
+    """Emitted when the auction winner ends the meld display and leads off.
+
+    The MELDING phase is untimed and only the auction winner may end it
+    (FR-50a), so this event is what clears the exposed meld from every client
+    at the same moment.
+
+    Attributes:
+        game_id: The game in which play began.
+        leader_player_id: The auction winner, who leads the first trick.
+    """
+
+    game_id: str
+    leader_player_id: str
+
+
+@dataclass
 class ContractTossedIn:
     """Emitted when the auction winner concedes rather than play the contract.
 
@@ -147,6 +276,43 @@ class ContractTossedIn:
 
     game_id: str
     player_id: str
+
+
+@dataclass
+class SeatThinking:
+    """Emitted when a computer seat's move delay begins (FR-75c, RT-7).
+
+    Opens a timed pause that the matching action event closes, so that clients
+    can show the seat as thinking without running a clock of their own (RT-10).
+    Published by the computer driver rather than by the round, since the delay
+    is an application concern and not a rule of the game.
+
+    Attributes:
+        game_id: The game in which the seat is thinking.
+        player_id: The computer seat on the clock.
+    """
+
+    game_id: str
+    player_id: str
+
+
+@dataclass
+class CardPlayed:
+    """Emitted as each card is played, before the trick is complete.
+
+    FR-57 requires a played card become visible to all four players as soon as
+    it is played, so this is published on every play rather than only when the
+    fourth card falls.
+
+    Attributes:
+        game_id: The game in which the card was played.
+        player_id: The player who played it.
+        card: The card played.
+    """
+
+    game_id: str
+    player_id: str
+    card: Card
 
 
 @dataclass
@@ -165,18 +331,55 @@ class TrickCompleted:
 
 
 @dataclass
-class RoundScored:
-    """Emitted after a round's trick and meld points have been tallied and applied.
+class TrickCleared:
+    """Emitted when a completed trick is swept from the table to its winner.
+
+    Closes the trick-clear pause that ``TrickCompleted`` opened (UI-15).  The
+    pause is counted by the server, so this event — not a clock in the client —
+    is what returns the table to play (RT-8, RT-10).
 
     Attributes:
-        game_id: The game in which scoring occurred.
-        ns_score: The North/South team's updated cumulative score.
-        ew_score: The East/West team's updated cumulative score.
+        game_id: The game in which the trick was cleared.
+        winner_player_id: The player who collected the four cards.
+        next_leader_player_id: Who leads the next trick, which is always the
+            winner (FR-56), or ``None`` when that was the twelfth trick and the
+            round is over.
     """
 
     game_id: str
-    ns_score: int
-    ew_score: int
+    winner_player_id: str
+    next_leader_player_id: str | None
+
+
+@dataclass
+class RoundScored:
+    """Emitted after a round's trick and meld points have been tallied and applied.
+
+    Carries the full breakdown FR-66 requires be displayed: for each team its
+    meld, captured card points, last-trick bonus, round total, and new
+    cumulative score, together with whether the auction-winning team made the
+    contract or went set.
+
+    Attributes:
+        game_id: The game in which scoring occurred.
+        round_number: The round that was scored.
+        bid_team_id: The team that won the auction.
+        bid_winner_player_id: The player who won it.
+        contract: The amount that team had to meet.
+        made_contract: Whether they met it.  ``False`` for a tossed-in round,
+            in which the contract was never played for.
+        tossed_in: Whether the auction winner conceded rather than play (FR-50b).
+        teams: One line of arithmetic per team.
+    """
+
+    game_id: str
+    round_number: int
+    bid_team_id: str
+    bid_winner_player_id: str
+    contract: int
+    made_contract: bool
+    tossed_in: bool
+    teams: list[TeamRoundScore]
 
 
 @dataclass
@@ -186,16 +389,22 @@ class GameOver:
     Attributes:
         game_id: The game that has ended.
         winning_team_id: The id of the team that won the game.
+        ns_score: The North/South team's final cumulative score.
+        ew_score: The East/West team's final cumulative score.
     """
 
     game_id: str
     winning_team_id: str
+    ns_score: int
+    ew_score: int
 
 
 GameEvent = (
-    DealerSelected | CardsDealt | BidPlaced | RoundAbandoned | TrumpNamed
-    | CardsPassed | MeldExposed | ContractTossedIn | TrickCompleted
-    | RoundScored | GameOver
+    GameConfigured | DealerSelectionStarted | DrawMade | DrawTied
+    | DealerSelected | RoundStarted | CardsDealt | BidPlaced | ContractOffered
+    | RoundAbandoned | TrumpNamed | CardsPassed | MeldExposed | PlayBegun
+    | ContractTossedIn | SeatThinking | CardPlayed | TrickCompleted
+    | TrickCleared | RoundScored | GameOver
 )
 
 
@@ -236,6 +445,7 @@ class Game:
         self._players: dict[str, Player] = {}
         self._player_order: list[str] = []
         self._dealer_id: str | None = None
+        self._round_number = 0
         self._current_round: Round | None = None
         self._events: list[GameEvent] = []
 
@@ -280,8 +490,9 @@ class Game:
         self._dealer_id = dealer_id
 
     def begin_round(self, round_state: "Round") -> None:
-        """Attach the active round state and enter round play."""
+        """Attach the active round state, count the round, and enter round play."""
         self._current_round = round_state
+        self._round_number += 1
         self.phase = GamePhase.IN_ROUND
 
     def add_score(self, team_id: str, points: int) -> None:
@@ -343,6 +554,15 @@ class Game:
     def dealer_id(self) -> str | None:
         """Return the current dealer, if one has been selected."""
         return self._dealer_id
+
+    @property
+    def round_number(self) -> int:
+        """Return how many rounds have been dealt, counting from one.
+
+        An abandoned round (FR-31, FR-32) consumes a number like any other:
+        it was dealt, bid, and thrown in, and the players saw it happen.
+        """
+        return self._round_number
 
     @property
     def current_round(self) -> "Round" | None:

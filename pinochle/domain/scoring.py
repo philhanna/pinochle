@@ -30,15 +30,27 @@ def score_tricks(tricks: list[Trick], last_trick_winner_id: str, player_team: di
         last_trick_winner_id: Player who won the final trick.
         player_team: Mapping of player_id -> team_id.
     """
-    team_scores: dict[str, int] = {}
-    for trick in tricks:
-        winner = trick.winner()
-        team = player_team[winner]
-        team_scores[team] = team_scores.get(team, 0) + score_cards(trick.cards)
-
+    team_scores = score_card_points(tricks, player_team)
     last_team = player_team[last_trick_winner_id]
     team_scores[last_team] = team_scores.get(last_team, 0) + LAST_TRICK_BONUS
+    return team_scores
 
+
+def score_card_points(tricks: list[Trick], player_team: dict[str, str]) -> dict[str, int]:
+    """Return a mapping of team_id -> captured card points, without the bonus.
+
+    Kept separate from ``score_tricks`` because the round summary of FR-66
+    reports the captured card points and the last-trick bonus as two figures,
+    while scoring the round only needs their sum.
+
+    Args:
+        tricks: All completed tricks in a round.
+        player_team: Mapping of player_id -> team_id.
+    """
+    team_scores: dict[str, int] = {}
+    for trick in tricks:
+        team = player_team[trick.winner()]
+        team_scores[team] = team_scores.get(team, 0) + score_cards(trick.cards)
     return team_scores
 
 

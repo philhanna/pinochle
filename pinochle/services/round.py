@@ -263,8 +263,12 @@ class Round:
         self._pending_winner = self._current_trick.winner()
         return self._pending_winner
 
-    def clear_trick(self) -> None:
-        """Collect the completed trick and hand the lead to whoever won it."""
+    def clear_trick(self) -> str:
+        """Collect the completed trick and hand the lead to whoever won it.
+
+        Returns the winner, so that the caller can announce the sweep without
+        having to have remembered who was owed it.
+        """
         if self._pending_winner is None:
             raise ValueError("No completed trick is waiting to be cleared.")
         self._tricks.append(self._current_trick)
@@ -273,6 +277,7 @@ class Round:
         self._pending_winner = None
         if all(len(hand) == 0 for hand in self._hands.values()):
             self.phase = RoundPhase.SCORING
+        return self._next_leader
 
     # ------------------------------------------------------------------
     # Accessors
