@@ -103,8 +103,9 @@ ranking or statistics, chat, and mobile-native clients.
   actions and the player's event stream shall be authorized by it, and the
   server shall serve a given player's hand only to the holder of that seat's
   token.
-- **FR-10b** A join link shall remain usable for the life of the game, so that
-  a player who closes their browser can return to their seat (see RT-12).
+- **FR-10b** All four players shall join before play begins. A client that has
+  joined follows the game entirely from the event stream, so there is nothing
+  to catch up on and no need to rebuild state from scratch (see RT-5).
 - **FR-10c** A seat token may drive several concurrent client connections. All
   of them shall show that seat's view and shall receive the same events, and
   any of them may act for the seat. Opening a seat in a second browser shall
@@ -487,10 +488,11 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   dealt (per player, privately), bid placed, trump named, cards passed (to the
   passing team only), meld exposed, card played, trick completed, round scored,
   game over.
-- **RT-5** A client that loses its connection and reconnects, using its
-  original join link, shall receive a full snapshot of the current game state
-  from its own seat's point of view, sufficient to render the table without
-  replaying earlier events. Play resumes where it stopped. `[OQ-18, resolved]`
+- **RT-5** Reconnection is out of scope for this release. A client builds its
+  view from the event stream it has been receiving since it joined; the server
+  shall not construct a point-in-time snapshot of a game in progress, and a
+  client that loses its stream cannot rebuild one. `[OQ-18, revised
+  2026-09-06]`
 - **RT-6** Computer players' actions shall be produced by the server and
   published through the same event stream as human actions, so that clients
   need not distinguish between them.
@@ -506,18 +508,17 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   advance past the pause shall be rejected exactly as any other out-of-phase
   action (NFR-4); the next leader shall not be able to play before the
   completed trick has been cleared.
-- **RT-10** The snapshot sent to a reconnecting client (RT-5) shall convey any
-  pause in progress, including what is being displayed during it — the
-  completed trick, or the exposed meld — so that a client reconnecting mid-pause
-  does not render the state that follows it.
+- **RT-10** A timed pause shall be delimited by events — one marking its start
+  and one its end — rather than inferred by the client from a clock. This keeps
+  the client's rule simple: render what the last event said.
 - **RT-11** Because all four clients are driven from one clock, they shall
   display the same phase at the same time, to within network latency. No client
   shall be able to run ahead of or behind the others.
-- **RT-12** When a human player is disconnected, play shall block at that seat
-  and the other players shall be told the seat is waiting. The game shall not
-  be abandoned, no timeout shall act on its own, and no other player or process
-  shall act for that seat. Play resumes when that player returns through their
-  join link and receives the snapshot of RT-5. `[OQ-18, revised 2026-09-06]`
+- **RT-12** A human player who loses their connection cannot rejoin, and
+  nothing acts for their seat (FR-2a). Play blocks there permanently and the
+  game cannot be completed. The remaining players shall be told the seat is
+  gone, so they abandon the game deliberately rather than waiting on a seat
+  that will never act. `[OQ-18, revised 2026-09-06]`
 
 ---
 
@@ -604,8 +605,6 @@ rule-based computer strategy.
    drives them.
 5. No orchestration for computer players — nothing invokes the strategy.
 6. No seat tokens or join links (FR-10, FR-10a, FR-10c).
-7. No state snapshot for reconnecting clients (RT-5), and no per-seat view
-   filtering to build one from.
 9. `SchedulerPort` (ARC-9) exists with an `ImmediateScheduler` that collapses
    every delay to zero, and the trick clear (UI-15) is wired to it. Still
    missing: the asyncio adapter that honours a real delay, the fake with a
@@ -671,8 +670,7 @@ rules. The entries are kept as a record of what was wrong and why.
 - ✅ **D-13 — fixed.** `play_card` moved straight from a completed trick to the
   next, so the four cards never sat on the table. A completed trick is now held
   until `clear_trick` sweeps it; during the hold nobody is on the clock and a
-  premature lead is refused (RT-8, RT-9). Still outstanding: RT-10 requires the
-  hold to appear in a reconnect snapshot, which has no implementation yet.
+  premature lead is refused (RT-8, RT-9).
 - ✅ **D-14 — fixed.** `Player.team_id` was settable independently of the seat,
   making a North player on East/West constructible. Partnership is now derived
   from `Position`, the ids are constants in `team.py`, and `assign_teams`
@@ -683,7 +681,7 @@ rules. The entries are kept as a record of what was wrong and why.
   server-driven phases. `BiddingRound` gained the turn pointer this needed and
   now enforces turn order, which its docstring had always claimed but never
   did. `Round.play_card` rejects an out-of-turn play in every seat, not only
-  the lead (UI-7, RT-10, NFR-4).
+  the lead (UI-7, NFR-4).
 
 ---
 
@@ -700,7 +698,8 @@ rather than a decision. Nothing in this section blocks the work in §9.
 
 **OQ-1 — How do human players reach their seat?** ✅ **Resolved 2026-09-06:
 per-seat join links.** Game creation mints an opaque token per human seat; the
-administrator distributes the links. See FR-10, FR-10a, FR-10b.
+administrator distributes the links, and all four players join before play
+begins. See FR-10, FR-10a, FR-10b.
 A token may drive several concurrent connections; they all share the seat and
 any of them may act for it. See FR-10c.
 
@@ -817,17 +816,20 @@ to the viewport is acceptable; tablet and phone are not requirements but should
 not be gratuitously precluded. See UI-17.
 
 **OQ-18 — What is the reconnection and disconnection policy?** ✅ **Revised
-2026-09-06: the game simply waits.** Originally resolved as "the game waits and
-the administrator may substitute a computer player"; substitution is now out of
-scope for the first release. A disconnected seat blocks play until that player
-returns through their join link, at which point they receive a full state
-snapshot. Nothing acts on their behalf, and no timeout intervenes. See RT-12,
-FR-2a, RT-5.
-*Consequence:* an absent player can stall a game indefinitely, with no recourse
-short of abandoning it. That is an acceptable trade for a first release among
-people who know each other, and it removes a substantial amount of machinery —
-mutable seat control, a mid-decision handover rule, and an administrative
-surface to trigger it.
+twice on 2026-09-06, ending at: there is none.** First substitution went, then
+reconnection. A player who loses their connection cannot rejoin and nothing
+acts for their seat, so the game cannot be finished. See RT-5, RT-12, FR-2a.
+
+*Consequence, stated plainly:* any one of four browsers closing — a crash, a
+laptop lid, a flaky network — ends the game for all four. There is no recovery
+path. That is a real limitation, not a rough edge, and it should be the first
+thing revisited after the client works.
+
+*What it buys:* the server never needs to answer "what does this seat see right
+now?", which is a harder question than it looks. It would have to reconstruct a
+hand, the exposed meld, a trick possibly mid-clear, the bid history, and the
+turn — all filtered per seat. Dropping it removes that whole surface, and with
+it the risk of a snapshot leaking what the event stream is careful not to.
 
 **OQ-26 — Is a computer substitution reversible?** ✅ **Moot as of 2026-09-06.**
 Substitution itself is out of scope for the first release (FR-2a), so there is
@@ -869,8 +871,8 @@ event. The client holds no timing logic. See RT-8 through RT-11 and ARC-9.
 - The application layer needs a scheduler port (ARC-9) so that the domain can
   defer work without importing `asyncio`, and so tests can advance a virtual
   clock rather than sleeping (ARC-10).
-- The reconnect snapshot must be able to express "paused, showing this trick"
-  (RT-10), or a client reconnecting during a pause renders the wrong thing.
+- A pause needs a start and an end event, so the client never infers one from
+  a clock of its own (RT-10).
 - The argument for client-owned trick clearing was that a server-driven clear
   forces the client to buffer animations. That concern disappears here: the
   server does not run ahead, so there is nothing to buffer.
@@ -951,8 +953,9 @@ both be single-game structures, which simplifies them considerably.
 **OQ-23 — Which Python web framework and push mechanism?** ✅ **Resolved
 2026-09-06: FastAPI with Server-Sent Events.** Player actions go up as HTTP
 requests; events come down a per-player SSE stream. See ARC-7. The browser's
-built-in SSE reconnection covers much of RT-5, though the snapshot-on-reconnect
-question (OQ-18) still stands.
+built-in SSE reconnection will re-establish a dropped stream, but that only
+resumes delivery — it does not replay what was missed, and RT-5 puts recovery
+out of scope regardless.
 
 **OQ-24 — Which client stack?** ✅ **Resolved 2026-09-06: TypeScript, no
 framework.** Compiled with `tsc`, served as static assets, no bundler. See
