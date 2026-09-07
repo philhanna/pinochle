@@ -4,11 +4,14 @@ This guide explains what Docker does for Pinochle and how to operate the
 container without requiring prior Docker experience. For the underlying design
 decisions, see [Docker in the system design](design.md#10-docker).
 
-> **Implementation status:** the Dockerfile, Compose file, and browser front end
-> described here are part of the planned web application and are not yet present
-> in this repository. The commands in this guide will work after
-> `docker/Dockerfile`, `docker/compose.yaml`, and `frontend/` have been
-> implemented.
+> **Implementation status:** `docker/Dockerfile` and `docker/compose.yaml`
+> exist and build a working image, but the browser front end (`frontend/`)
+> does not yet — that is a separate, later piece of work. The image today
+> serves the HTTP API and the SSE streams; `/`, `/join/{id}`, and `/admin`
+> return a `404` instead of a page until the front end lands. Everything in
+> this guide about building, running, configuring, and deploying the
+> container is accurate and usable now — administer a game and play it
+> through the API (or a script) rather than a browser in the meantime.
 
 ## What Docker provides
 
@@ -21,29 +24,24 @@ policy, and health check for that container.
 Pinochle uses one image and one container:
 
 ```text
-Browser ── http://host:8000 ──> host port 8000
+API client ── http://host:8000 ──> host port 8000
                                       │
                                       v
                             Pinochle container
                             ├─ FastAPI HTTP API
-                            ├─ Server-Sent Events
-                            └─ compiled front end and card artwork
+                            └─ Server-Sent Events
 ```
 
 There is no database container, Node container, or persistent data volume.
 
 ## How the image is built
 
-The Dockerfile uses two build stages:
-
-1. A temporary Node stage installs the front-end build tools and compiles the
-   TypeScript in `frontend/src/` into JavaScript.
-2. A Python runtime stage installs the `pinochle` package and copies in
-   `frontend/public/` and the compiled JavaScript.
-
-The temporary Node stage is discarded. The final image contains Python, the
-server, the compiled browser application, and all browser assets. Card artwork
-lives only in `frontend/public/cards/`; it is not packaged as Python data.
+The image is currently a single stage: it installs the `pinochle` Python
+package and nothing else. Design.md §10 describes a second, temporary Node
+stage that compiles `frontend/src/` and copies the result in alongside
+`frontend/public/`; that stage is added once `frontend/` exists, as a small,
+additive change to the Dockerfile rather than a rewrite — every command in
+this guide stays the same either way.
 
 The server runs as an unprivileged user. Uvicorn listens on port 8000 inside the
 container, and Compose maps that to port 8000 on the host.
@@ -101,11 +99,14 @@ The first build takes longer because Docker must download base images and
 install dependencies. Later builds reuse cached layers when their inputs have
 not changed.
 
-Open these addresses after the container starts:
+Check these addresses after the container starts:
 
-- Player table: <http://localhost:8000/>
-- Administrator console: <http://localhost:8000/admin>
-- Health check: <http://localhost:8000/healthz>
+- Health check: <http://localhost:8000/healthz> — should return `{"status":"ok"}`
+- Player table: <http://localhost:8000/> and administrator console:
+  <http://localhost:8000/admin> — return `404` until the front end (`frontend/`)
+  exists; until then, administer and play a game through the API directly,
+  e.g. `curl -X POST http://localhost:8000/api/admin/games -H "X-Admin-Token: $PINOCHLE_ADMIN_TOKEN" ...`
+  (see `docs/design.md` §5 for the full HTTP surface).
 
 The `8000:8000` mapping in `compose.yaml` means “send traffic received on host
 port 8000 to container port 8000.” Change the first number, for example to
@@ -311,8 +312,10 @@ Verify from a computer other than the VPS:
 curl https://pinochle.example.com/healthz
 ```
 
-Then open `https://pinochle.example.com/admin` in a browser and confirm that
-generated player links use the same public HTTPS hostname.
+Then create a game through the API and confirm the generated player join
+links use the same public HTTPS hostname (`PINOCHLE_PUBLIC_BASE_URL`) — see
+`docs/design.md` §5.2. Once the front end exists, this step becomes opening
+`https://pinochle.example.com/admin` in a browser instead.
 
 ### 4. Deploy updates
 
@@ -337,9 +340,9 @@ though game data does not.
 
 ## Common problems
 
-**The command says that `docker/compose.yaml` does not exist.** The Docker
-deployment described by the design has not yet been implemented in the checked
-out revision.
+**`/` or `/admin` returns 404.** Expected for now: the browser front end
+(`frontend/`) has not been built yet. The API and SSE endpoints under `/api/`
+and `/healthz` are unaffected.
 
 **Port 8000 is already allocated.** Stop the process using it or change the host
 side of the mapping to another port, such as `8080:8000`.

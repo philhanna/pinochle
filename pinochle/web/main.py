@@ -1,4 +1,6 @@
 # pinochle.web.main
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -18,7 +20,7 @@ def create_app(container: Container | None = None) -> FastAPI:
     and reads configuration from the environment (§10.4).
     """
     container = container or build_container()
-    app = FastAPI(title="Pinochle")
+    app = FastAPI(title="Pinochle", lifespan=_lifespan(container))
     app.state.container = container
 
     register_error_handlers(app)
@@ -56,6 +58,30 @@ def create_app(container: Container | None = None) -> FastAPI:
         return _serve_page(public_dir / "admin.html")
 
     return app
+
+
+def _lifespan(container: Container):
+    """Build the app's lifespan: configure logging once, at startup (§4.9).
+
+    A single ``pinochle`` logger tree at ``PINOCHLE_LOG_LEVEL``, so
+    ``action.accepted``/``action.rejected``/``event.published`` records
+    (NFR-9) actually reach ``docker compose logs`` instead of being dropped
+    by the default, unconfigured root logger.
+    """
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        logging.basicConfig(
+            level=container.settings.log_level,
+            format="%(asctime)s %(levelname)s %(name)s %(message)s",
+        )
+        if container.settings.admin_token_generated:
+            logging.getLogger("pinochle").warning(
+                "No PINOCHLE_ADMIN_TOKEN was set; generated one for this run: %s",
+                container.settings.admin_token,
+            )
+        yield
+
+    return lifespan
 
 
 def _serve_page(path: Path):

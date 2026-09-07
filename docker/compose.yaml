@@ -1,0 +1,23 @@
+services:
+  pinochle:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: pinochle:latest
+    container_name: pinochle
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      PINOCHLE_ADMIN_TOKEN: "${PINOCHLE_ADMIN_TOKEN:-}"
+      PINOCHLE_PUBLIC_BASE_URL: "${PINOCHLE_PUBLIC_BASE_URL:-http://localhost:8000}"
+      PINOCHLE_TRICK_CLEAR_SECONDS: "1.5"
+      PINOCHLE_COMPUTER_DELAY_SECONDS: "1.0"
+      PINOCHLE_LOG_LEVEL: "INFO"
+      PINOCHLE_SSE_KEEPALIVE_SECONDS: "15"
+      PINOCHLE_SSE_QUEUE_MAXSIZE: "256"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      retries: 3

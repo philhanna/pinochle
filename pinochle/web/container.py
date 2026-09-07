@@ -34,18 +34,22 @@ class Settings:
     sse_queue_maxsize: int = 256
     shuffle_seed: int | None = None
     log_level: str = "INFO"
+    admin_token_generated: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
         """Build settings from ``PINOCHLE_*`` environment variables.
 
-        ``PINOCHLE_ADMIN_TOKEN`` is generated and left for the caller to log
-        if it isn't set — an operator running one game for an evening reads
-        it from the container log rather than setting it explicitly.
+        ``PINOCHLE_ADMIN_TOKEN`` is generated when it isn't set —
+        ``admin_token_generated`` tells the caller to log it (§9.1: an
+        operator running one game for an evening reads it from the
+        container log rather than setting it explicitly).
         """
         seed = os.environ.get("PINOCHLE_SHUFFLE_SEED")
+        configured_token = os.environ.get("PINOCHLE_ADMIN_TOKEN")
         return cls(
-            admin_token=os.environ.get("PINOCHLE_ADMIN_TOKEN") or secrets.token_urlsafe(16),
+            admin_token=configured_token or secrets.token_urlsafe(16),
+            admin_token_generated=not configured_token,
             public_base_url=os.environ.get("PINOCHLE_PUBLIC_BASE_URL", "http://localhost:8000"),
             trick_clear_seconds=float(os.environ.get("PINOCHLE_TRICK_CLEAR_SECONDS", "1.5")),
             computer_delay_seconds=float(os.environ.get("PINOCHLE_COMPUTER_DELAY_SECONDS", "1.0")),
