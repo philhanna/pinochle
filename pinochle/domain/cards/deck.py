@@ -29,9 +29,13 @@ class Deck:
             for _ in range(2)
         ]
 
-    def shuffle(self) -> None:
-        """Randomize the order of the remaining cards."""
-        random.shuffle(self._cards)
+    def shuffle(self, rng: random.Random | None = None) -> None:
+        """Randomize the order of the remaining cards.
+
+        Accepts an optional seeded ``Random`` (NFR-7), so a caller can make a
+        deal reproducible; defaults to the module-level generator.
+        """
+        (rng or random).shuffle(self._cards)
 
     def deal(self, count: int) -> list[Card]:
         """Remove and return `count` cards from the top of the deck."""

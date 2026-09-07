@@ -1,6 +1,4 @@
 # tests.strategies.test_computer_player_strategy
-import pytest
-
 from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
@@ -24,20 +22,6 @@ def test_choose_trump_picks_most_common_suit():
     assert ComputerPlayerStrategy.choose_trump(hand) == Suit.SPADES
 
 
-def test_choose_cards_to_pass_returns_lowest():
-    """Passing strategy should return the lowest-ranked cards."""
-    hand = make_hand([
-        (Rank.ACE, Suit.SPADES),
-        (Rank.NINE, Suit.HEARTS),
-        (Rank.JACK, Suit.DIAMONDS),
-        (Rank.QUEEN, Suit.CLUBS),
-        (Rank.TEN, Suit.SPADES),
-    ])
-    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, count=4)
-    assert Rank.ACE not in {c.rank for c in passed}
-    assert len(passed) == 4
-
-
 def test_choose_play_picks_highest():
     """Play selection should choose the highest-ranked legal card."""
     legal = make_hand([
@@ -46,3 +30,126 @@ def test_choose_play_picks_highest():
         (Rank.ACE, Suit.HEARTS),
     ])
     assert ComputerPlayerStrategy.choose_play(legal) == Card(Rank.ACE, Suit.HEARTS)
+
+
+# ---------------------------------------------------------------------------
+# choose_bid (FR-75a)
+# ---------------------------------------------------------------------------
+
+def test_choose_bid_opens_at_the_minimum_when_the_hand_supports_it():
+    """A hand with plenty of meld and aces should open at 250."""
+    hand = make_hand([
+        (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
+        (Rank.ACE, Suit.SPADES), (Rank.ACE, Suit.HEARTS),
+        (Rank.ACE, Suit.DIAMONDS), (Rank.ACE, Suit.CLUBS),
+        (Rank.NINE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
+        (Rank.JACK, Suit.SPADES), (Rank.NINE, Suit.HEARTS),
+        (Rank.NINE, Suit.DIAMONDS), (Rank.NINE, Suit.CLUBS),
+    ])
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=0) == 250
+
+
+def test_choose_bid_passes_on_a_weak_hand():
+    """A hand with no meld and no strength should not open the bidding."""
+    hand = make_hand([
+        (Rank.NINE, Suit.SPADES), (Rank.NINE, Suit.HEARTS),
+        (Rank.NINE, Suit.DIAMONDS), (Rank.NINE, Suit.CLUBS),
+        (Rank.JACK, Suit.HEARTS), (Rank.JACK, Suit.CLUBS),
+        (Rank.TEN, Suit.HEARTS), (Rank.TEN, Suit.CLUBS),
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.CLUBS),
+        (Rank.TEN, Suit.DIAMONDS), (Rank.JACK, Suit.SPADES),
+    ])
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=0) is None
+
+
+def test_choose_bid_raises_by_one_increment_not_straight_to_the_estimate():
+    """Bidding stops one raise past the current high, not at the ceiling."""
+    hand = make_hand([
+        (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
+        (Rank.ACE, Suit.SPADES), (Rank.ACE, Suit.HEARTS),
+        (Rank.ACE, Suit.DIAMONDS), (Rank.ACE, Suit.CLUBS),
+        (Rank.NINE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
+        (Rank.JACK, Suit.SPADES), (Rank.NINE, Suit.HEARTS),
+        (Rank.NINE, Suit.DIAMONDS), (Rank.NINE, Suit.CLUBS),
+    ])
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=250) == 260
+
+
+def test_choose_bid_passes_once_the_current_high_exceeds_the_estimate():
+    """A modest hand should stop raising once outbid past its worth."""
+    hand = make_hand([
+        (Rank.NINE, Suit.SPADES), (Rank.NINE, Suit.HEARTS),
+        (Rank.NINE, Suit.DIAMONDS), (Rank.NINE, Suit.CLUBS),
+        (Rank.JACK, Suit.HEARTS), (Rank.JACK, Suit.CLUBS),
+        (Rank.TEN, Suit.HEARTS), (Rank.TEN, Suit.CLUBS),
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.CLUBS),
+        (Rank.TEN, Suit.DIAMONDS), (Rank.JACK, Suit.SPADES),
+    ])
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=250) is None
+
+
+# ---------------------------------------------------------------------------
+# choose_cards_to_pass (FR-75b)
+# ---------------------------------------------------------------------------
+
+def test_choose_cards_to_pass_prefers_trump_and_aces():
+    """Passing should favor trump and aces over plain low cards."""
+    hand = make_hand([
+        (Rank.ACE, Suit.HEARTS), (Rank.KING, Suit.SPADES),
+        (Rank.TEN, Suit.SPADES), (Rank.JACK, Suit.CLUBS),
+        (Rank.NINE, Suit.DIAMONDS), (Rank.QUEEN, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=3)
+    assert set(passed) == {
+        Card(Rank.ACE, Suit.HEARTS),   # an ace, wherever it lies
+        Card(Rank.TEN, Suit.SPADES),   # trump
+        Card(Rank.KING, Suit.SPADES),  # trump
+    }
+
+
+def test_choose_cards_to_pass_keeps_a_marriage():
+    """A king/queen pair of one suit should not be broken up to pass."""
+    hand = make_hand([
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.HEARTS),  # marriage, not trump
+        (Rank.ACE, Suit.SPADES), (Rank.NINE, Suit.SPADES),
+        (Rank.TEN, Suit.SPADES), (Rank.JACK, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=4)
+    assert Card(Rank.KING, Suit.HEARTS) not in passed
+    assert Card(Rank.QUEEN, Suit.HEARTS) not in passed
+
+
+def test_choose_cards_to_pass_keeps_pinochle():
+    """Queen of spades + jack of diamonds should not be broken up to pass."""
+    hand = make_hand([
+        (Rank.QUEEN, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+        (Rank.ACE, Suit.HEARTS), (Rank.NINE, Suit.CLUBS),
+        (Rank.TEN, Suit.CLUBS), (Rank.JACK, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.CLUBS, count=4)
+    assert Card(Rank.QUEEN, Suit.SPADES) not in passed
+    assert Card(Rank.JACK, Suit.DIAMONDS) not in passed
+
+
+def test_choose_cards_to_pass_always_returns_exactly_count():
+    """FR-42/FR-73: even an extremely meld-rich hand must pass exactly `count`."""
+    hand = make_hand([
+        # Two marriages, pinochle, and a trump nine: heavily protected.
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.HEARTS),
+        (Rank.KING, Suit.CLUBS), (Rank.QUEEN, Suit.CLUBS),
+        (Rank.QUEEN, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+        (Rank.NINE, Suit.SPADES),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=4)
+    assert len(passed) == 4
+
+
+def test_choose_cards_to_pass_falls_back_to_low_filler_when_no_support_remains():
+    """Without trump or aces available, the lowest remaining cards are passed."""
+    hand = make_hand([
+        (Rank.NINE, Suit.HEARTS), (Rank.JACK, Suit.HEARTS),
+        (Rank.TEN, Suit.HEARTS), (Rank.KING, Suit.DIAMONDS),
+        (Rank.QUEEN, Suit.CLUBS), (Rank.NINE, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=2)
+    assert set(passed) == {Card(Rank.NINE, Suit.HEARTS), Card(Rank.NINE, Suit.CLUBS)}

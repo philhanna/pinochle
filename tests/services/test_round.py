@@ -4,6 +4,7 @@ import pytest
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.errors import IllegalActionError, NotYourTurnError, WrongPhaseError
 from pinochle.domain.meld import detect_meld
 from pinochle.services.round import Round, RoundPhase
 
@@ -85,7 +86,7 @@ def test_cannot_play_before_meld_display_ends():
     round_state = round_at_passing()
     complete_exchange(round_state)
     card = list(round_state.hand("E"))[0]
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongPhaseError):
         round_state.play_card("E", card)
 
 
@@ -103,9 +104,9 @@ def test_only_the_auction_winner_ends_the_meld_display():
     """Nobody else can start play on the auction winner's behalf."""
     round_state = round_at_passing()
     complete_exchange(round_state)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         round_state.begin_play("W")
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         round_state.toss_in("N")
 
 
@@ -187,7 +188,7 @@ def test_only_the_lone_bidder_may_confirm():
     round_state.place_bid("E", 250)
     for player_id in ("S", "W", "N"):
         round_state.place_bid(player_id, None)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         round_state.confirm_contract("W", accept=True)
 
 
@@ -240,7 +241,7 @@ def test_current_player_walks_clockwise_within_a_trick():
     # is swept, and the next lead is refused meanwhile.
     assert round_state.trick_pending is True
     assert round_state.current_player is None
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongPhaseError):
         round_state.play_card("E", list(round_state.hand("E"))[0])
 
     round_state.clear_trick()
@@ -254,7 +255,7 @@ def test_play_out_of_turn_is_rejected():
     round_state = round_at_passing()
     complete_exchange(round_state)
     round_state.begin_play("E")
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         round_state.play_card("S", round_state.legal_plays("S")[0])
 
 
@@ -278,5 +279,5 @@ def test_illegal_play_is_rejected():
     hand.add([Card(Rank.NINE, lead.suit), discard])
 
     assert discard not in round_state.legal_plays("S")
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         round_state.play_card("S", discard)

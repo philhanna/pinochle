@@ -10,7 +10,14 @@ readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "Phil Hanna" }]
 requires-python = ">=3.12"
-dependencies = ["pytest", "pytest-mock"]
+dependencies = [
+    "pytest",
+    "pytest-mock",
+    "pytest-asyncio",
+    "fastapi",
+    "uvicorn[standard]",
+    "httpx",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -19,3 +26,4 @@ include = ["pinochle*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+asyncio_mode = "auto"

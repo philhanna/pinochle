@@ -7,6 +7,7 @@ new implementations.
 """
 import pytest
 
+from pinochle.domain.errors import UnknownGameError
 from pinochle.domain.game import Game
 from pinochle.ports.game_state_port import GameStatePort
 
@@ -20,8 +21,8 @@ def run_contract(store: GameStatePort) -> None:
     assert loaded.id == "g1"
 
     store.delete("g1")
-    with pytest.raises(KeyError):
+    with pytest.raises(UnknownGameError):
         store.load("g1")
 
-    with pytest.raises(KeyError):
+    with pytest.raises(UnknownGameError):
         store.delete("g1")

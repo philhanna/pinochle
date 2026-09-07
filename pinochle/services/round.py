@@ -1,13 +1,15 @@
 # pinochle.services.round
+import random
 from enum import Enum, auto
 
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.deck import Deck
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.errors import IllegalActionError, NotYourTurnError, WrongPhaseError
 from pinochle.domain.hand import Hand
-from pinochle.domain.bid import BiddingRound
+from pinochle.domain.bid import BidEntry, BiddingRound
 from pinochle.domain.meld import MeldUnit, detect_meld
-from pinochle.domain.trick import Trick
+from pinochle.domain.trick import Trick, TrickPlay
 
 
 class RoundPhase(Enum):
@@ -89,11 +91,14 @@ class Round:
     # Phase: DEALING
     # ------------------------------------------------------------------
 
-    def deal(self) -> None:
-        """Shuffle and deal 12 cards to each player."""
+    def deal(self, rng: random.Random | None = None) -> None:
+        """Shuffle and deal 12 cards to each player.
+
+        ``rng``, if given, makes the shuffle reproducible (NFR-7).
+        """
         if self.phase != RoundPhase.DEALING:
-            raise ValueError(f"Cannot deal in phase {self.phase}.")
-        self._deck.shuffle()
+            raise WrongPhaseError(f"Cannot deal in phase {self.phase}.")
+        self._deck.shuffle(rng)
         dealer_idx = self.player_order.index(self.dealer_id)
         # Deal starts to the left of the dealer, 3 cards at a time
         order = self.player_order[(dealer_idx + 1) % 4:] + self.player_order[:(dealer_idx + 1) % 4]
@@ -112,7 +117,7 @@ class Round:
     def place_bid(self, player_id: str, amount: int | None) -> None:
         """Submit a bid or pass during the bidding phase."""
         if self.phase != RoundPhase.BIDDING:
-            raise ValueError(f"Cannot bid in phase {self.phase}.")
+            raise WrongPhaseError(f"Cannot bid in phase {self.phase}.")
         self._bidding.place_bid(player_id, amount)
         if not self._bidding.is_over:
             return
@@ -135,9 +140,9 @@ class Round:
     def confirm_contract(self, player_id: str, accept: bool) -> None:
         """Take or decline a contract won without anyone bidding against you."""
         if self.phase != RoundPhase.CONFIRMING:
-            raise ValueError(f"Cannot confirm a contract in phase {self.phase}.")
+            raise WrongPhaseError(f"Cannot confirm a contract in phase {self.phase}.")
         if player_id != self._bid_winner:
-            raise ValueError("Only the lone bidder may accept or decline.")
+            raise NotYourTurnError("Only the lone bidder may accept or decline.")
         if accept:
             self.phase = RoundPhase.TRUMP
             return
@@ -152,9 +157,9 @@ class Round:
     def name_trump(self, player_id: str, suit: Suit) -> None:
         """Set the trump suit after bidding completes."""
         if self.phase != RoundPhase.TRUMP:
-            raise ValueError(f"Cannot name trump in phase {self.phase}.")
+            raise WrongPhaseError(f"Cannot name trump in phase {self.phase}.")
         if player_id != self._bid_winner:
-            raise ValueError("Only the bid winner names trump.")
+            raise NotYourTurnError("Only the bid winner names trump.")
         self._trump = suit
         self.phase = RoundPhase.PASSING
 
@@ -175,14 +180,14 @@ class Round:
         informed one — they are holding sixteen cards when they make it.
         """
         if self.phase != RoundPhase.PASSING:
-            raise ValueError(f"Cannot pass cards in phase {self.phase}.")
+            raise WrongPhaseError(f"Cannot pass cards in phase {self.phase}.")
         if player_id != self.current_player:
-            raise ValueError(f"It is {self.current_player}'s turn to pass.")
+            raise NotYourTurnError(f"It is {self.current_player}'s turn to pass.")
         if len(cards) != self.PASS_COUNT:
-            raise ValueError(f"Must pass exactly {self.PASS_COUNT} cards.")
+            raise IllegalActionError(f"Must pass exactly {self.PASS_COUNT} cards.")
         for card in cards:
             if card not in self._hands[player_id]:
-                raise ValueError(f"{player_id} does not hold {card}.")
+                raise IllegalActionError(f"{player_id} does not hold {card}.")
 
         self._hands[player_id].remove_many(cards)
         self._hands[self.partner_of(player_id)].add(cards)
@@ -228,9 +233,9 @@ class Round:
     def _require_auction_winner(self, player_id: str) -> None:
         """Reject anyone but the auction winner acting on the exposed meld."""
         if self.phase != RoundPhase.MELDING:
-            raise ValueError(f"Meld is not on the table in phase {self.phase}.")
+            raise WrongPhaseError(f"Meld is not on the table in phase {self.phase}.")
         if player_id != self._bid_winner:
-            raise ValueError("Only the auction winner may play or toss in.")
+            raise NotYourTurnError("Only the auction winner may play or toss in.")
 
     # ------------------------------------------------------------------
     # Phase: PLAYING
@@ -239,15 +244,15 @@ class Round:
     def play_card(self, player_id: str, card: Card) -> str | None:
         """Play a card. Returns winner player_id when trick completes, else None."""
         if self.phase != RoundPhase.PLAYING:
-            raise ValueError(f"Cannot play in phase {self.phase}.")
+            raise WrongPhaseError(f"Cannot play in phase {self.phase}.")
         if self._pending_winner is not None:
-            raise ValueError("The completed trick has not been cleared yet.")
+            raise WrongPhaseError("The completed trick has not been cleared yet.")
         if player_id != self.current_player:
-            raise ValueError(f"It is {self.current_player}'s turn to play.")
+            raise NotYourTurnError(f"It is {self.current_player}'s turn to play.")
         if card not in self._hands[player_id]:
-            raise ValueError(f"{player_id} does not hold {card}.")
+            raise IllegalActionError(f"{player_id} does not hold {card}.")
         if card not in self.legal_plays(player_id):
-            raise ValueError(f"{card} is not a legal play for {player_id}.")
+            raise IllegalActionError(f"{card} is not a legal play for {player_id}.")
 
         if self._current_trick is None:
             self._current_trick = Trick(lead_player_id=player_id, trump=self._trump)
@@ -270,7 +275,7 @@ class Round:
         having to have remembered who was owed it.
         """
         if self._pending_winner is None:
-            raise ValueError("No completed trick is waiting to be cleared.")
+            raise WrongPhaseError("No completed trick is waiting to be cleared.")
         self._tricks.append(self._current_trick)
         self._current_trick = None
         self._next_leader = self._pending_winner
@@ -338,6 +343,14 @@ class Round:
         """Return the meld points recorded for ``player_id`` after the pass."""
         return sum(unit.points for unit in self._meld.get(player_id, []))
 
+    def all_meld(self) -> dict[str, list[MeldUnit]]:
+        """Return every player's recorded meld, keyed by player id.
+
+        Meld is public once exposed (FR-44), so unlike ``hand()`` this is
+        not limited to one seat's own.
+        """
+        return {player_id: list(units) for player_id, units in self._meld.items()}
+
     @property
     def tricks(self) -> list[Trick]:
         """Return a copy of the completed tricks so far."""
@@ -364,6 +377,11 @@ class Round:
         return list(self._current_trick.cards) if self._current_trick else []
 
     @property
+    def current_trick_plays(self) -> list[TrickPlay]:
+        """Return the (player_id, card) pairs played so far, in play order."""
+        return self._current_trick.plays if self._current_trick else []
+
+    @property
     def tossed_in(self) -> bool:
         """Return whether the auction winner conceded instead of playing."""
         return self._tossed_in
@@ -372,3 +390,13 @@ class Round:
     def contract(self) -> int | None:
         """Return the winning bid amount for the round."""
         return self._contract
+
+    @property
+    def current_high_bid(self) -> int:
+        """Return the current high bid standing during the auction."""
+        return self._bidding.current_high
+
+    @property
+    def bid_history(self) -> list[BidEntry]:
+        """Return every bid and pass made so far, in the order submitted."""
+        return self._bidding.history

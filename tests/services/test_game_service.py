@@ -1,17 +1,19 @@
 # tests.services.test_game_service
 import pytest
 
+from pinochle.adapters.fake_scheduler import FakeScheduler
 from pinochle.adapters.immediate_scheduler import ImmediateScheduler
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.print_notification import PrintNotification
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.errors import IllegalActionError, WrongPhaseError
 from pinochle.domain.game import GamePhase
 from pinochle.services.round import Round, RoundPhase
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import Team
-from pinochle.services.game_service import GameService
+from pinochle.services.game_service import TRICK_CLEAR_SECONDS, GameService
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +86,29 @@ def test_assign_teams_rejects_configurable_ids():
     """Team ids are fixed by the seating and may not be renamed."""
     service, _ = make_service()
     game_id = service.create_game()
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         service.assign_teams(game_id, Team("US", "Us"), Team("THEM", "Them"))
+
+
+def test_note_seat_thinking_broadcasts_without_a_turn_prompt(capsys):
+    """RT-7/RT-10: seat_thinking goes out; no redundant turn_prompt follows it."""
+    service, state = make_service()
+    game_id = _advance_to_bidding(service, state)
+    capsys.readouterr()
+
+    service.note_seat_thinking(game_id, "E")
+
+    output = capsys.readouterr().out
+    assert "SeatThinking" in output
+    assert "TurnPrompt" not in output
+
+
+def test_abandon_game_marks_it_finished():
+    """RT-12: an abandoned game must not accept further play."""
+    service, state = make_service()
+    game_id = setup_game(service)
+    service.abandon_game(game_id)
+    assert state.load(game_id).phase == GamePhase.FINISHED
 
 
 def test_start_game_enters_dealer_selection():
@@ -124,7 +147,7 @@ def test_a_position_cannot_be_taken_twice():
     service, _ = make_service()
     game_id = setup_game(service)
     service.draw_for_deal(game_id, "N", 3)
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         service.draw_for_deal(game_id, "E", 3)
 
 
@@ -133,7 +156,7 @@ def test_a_player_cannot_draw_twice():
     service, _ = make_service()
     game_id = setup_game(service)
     service.draw_for_deal(game_id, "N", 0)
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         service.draw_for_deal(game_id, "N", 1)
 
 
@@ -142,7 +165,7 @@ def test_position_outside_the_spread_is_rejected():
     service, _ = make_service()
     game_id = setup_game(service)
     assert service.spread_size(game_id) == 48
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         service.draw_for_deal(game_id, "N", 48)
 
 
@@ -251,6 +274,33 @@ def test_completed_exchange_reaches_trick_play():
     assert round_state.play_card("E", list(round_state.hand("E"))[0]) is None
 
 
+def test_trick_clear_pause_rejects_a_new_lead_until_cleared(capsys):
+    """RT-8/RT-9: a completed trick blocks play until the server clears it (ARC-10)."""
+    state = InMemoryGameState()
+    notifier = PrintNotification()
+    scheduler = FakeScheduler()
+    service = GameService(state, notifier, scheduler)
+
+    game_id = _advance_to_passing(service, state)
+    round_state = state.load(game_id).current_round
+    _complete_exchange(service, game_id, round_state)
+    service.begin_play(game_id, "E")
+
+    for _ in range(4):
+        player_id = round_state.current_player
+        service.play_card(game_id, player_id, round_state.legal_plays(player_id)[0])
+
+    assert round_state.trick_pending is True
+    capsys.readouterr()  # discard everything printed so far
+    with pytest.raises(WrongPhaseError):
+        service.play_card(game_id, "N", list(round_state.hand("N"))[0])
+    assert "TrickCleared" not in capsys.readouterr().out
+
+    scheduler.advance(TRICK_CLEAR_SECONDS)
+    assert round_state.trick_pending is False
+    assert "TrickCleared" in capsys.readouterr().out
+
+
 def test_meld_reaches_scoring_after_hands_are_emptied():
     """Team meld totals must not collapse to zero once trick play is over."""
     service, state = make_service()
@@ -265,6 +315,41 @@ def test_meld_reaches_scoring_after_hands_are_emptied():
         hand.remove_many(list(hand))
 
     assert GameService._meld_scores(game, round_state) == expected
+
+
+def _deal_via_dealer_selection(service: GameService, state: InMemoryGameState) -> str:
+    """Seat a game and drive it through dealer selection into a dealt round."""
+    game_id = setup_game(service)
+    for position, pid in enumerate(["N", "E", "S", "W"]):
+        service.draw_for_deal(game_id, pid, position)
+    while state.load(game_id).current_round is None:
+        taken = service.positions_taken(game_id)
+        free = (i for i in range(service.spread_size(game_id)) if i not in taken)
+        for pid in ["N", "E", "S", "W"]:
+            service.draw_for_deal(game_id, pid, next(free))
+    return game_id
+
+
+def test_seeded_rng_makes_the_deal_reproducible():
+    """NFR-7: two services seeded alike deal identical hands."""
+    from random import Random
+
+    def make_seeded_service():
+        state = InMemoryGameState()
+        service = GameService(
+            state, PrintNotification(), ImmediateScheduler(), rng=Random(7),
+        )
+        return service, state
+
+    service_a, state_a = make_seeded_service()
+    game_a = _deal_via_dealer_selection(service_a, state_a)
+
+    service_b, state_b = make_seeded_service()
+    game_b = _deal_via_dealer_selection(service_b, state_b)
+
+    hand_a = state_a.load(game_a).current_round.hand("N")
+    hand_b = state_b.load(game_b).current_round.hand("N")
+    assert list(hand_a) == list(hand_b)
 
 
 def test_resolve_draw_unique_winner():

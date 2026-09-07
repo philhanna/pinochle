@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING
 
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.errors import IllegalActionError, SetupError, WrongPhaseError
 from pinochle.domain.meld import MeldUnit
 from pinochle.domain.player import Player
 from pinochle.domain.team import Team
 from pinochle.domain.team_round_score import TeamRoundScore
+from pinochle.domain.trick import TrickPlay
 
 if TYPE_CHECKING:
     from pinochle.services.round import Round
@@ -152,11 +154,13 @@ class BidPlaced:
         game_id: The game in which the bid occurred.
         player_id: The player who bid or passed.
         amount: The bid value, or ``None`` if the player passed.
+        current_high: The high bid standing after this action.
     """
 
     game_id: str
     player_id: str
     amount: int | None
+    current_high: int
 
 
 @dataclass
@@ -322,12 +326,12 @@ class TrickCompleted:
     Attributes:
         game_id: The game in which the trick was completed.
         winner_player_id: The player who won the trick and will lead the next.
-        cards_played: The four cards played, in the order they were played.
+        plays: The four (player_id, card) pairs, in the order they were played.
     """
 
     game_id: str
     winner_player_id: str
-    cards_played: list[Card]
+    plays: list[TrickPlay]
 
 
 @dataclass
@@ -383,6 +387,31 @@ class RoundScored:
 
 
 @dataclass
+class TurnPrompt:
+    """Emitted to the acting seat whenever the current player changes.
+
+    Regenerated, not resumed, at each change: the client is *told* what is
+    legal rather than deriving it (ARC-2, UI-9), so this carries the
+    phase-specific options from design.md §6.5's tagged union — the minimum
+    bid while bidding, the legal cards while playing, and so on.  Addressed
+    to one seat, so it is never broadcast.
+
+    Attributes:
+        game_id: The game the prompt belongs to.
+        player_id: The seat being prompted.
+        phase: The round phase the options belong to.
+        options: The phase-specific fields, e.g. ``{"minimum_bid": 260,
+            "may_pass": True}`` while bidding, or ``{"legal_plays": [...]}``
+            while playing.
+    """
+
+    game_id: str
+    player_id: str
+    phase: str
+    options: dict
+
+
+@dataclass
 class GameOver:
     """Emitted when a team's cumulative score reaches or exceeds the winning threshold.
 
@@ -404,7 +433,7 @@ GameEvent = (
     | DealerSelected | RoundStarted | CardsDealt | BidPlaced | ContractOffered
     | RoundAbandoned | TrumpNamed | CardsPassed | MeldExposed | PlayBegun
     | ContractTossedIn | SeatThinking | CardPlayed | TrickCompleted
-    | TrickCleared | RoundScored | GameOver
+    | TrickCleared | TurnPrompt | RoundScored | GameOver
 )
 
 
@@ -456,13 +485,13 @@ class Game:
     def add_team(self, team: Team) -> None:
         """Register a team while the game is still being configured."""
         if self.phase != GamePhase.SETUP:
-            raise ValueError("Can only add teams during setup.")
+            raise WrongPhaseError("Can only add teams during setup.")
         self._teams[team.id] = team
 
     def add_player(self, player: Player) -> None:
         """Register a player and refresh the seat-ordered turn list."""
         if self.phase != GamePhase.SETUP:
-            raise ValueError("Can only add players during setup.")
+            raise WrongPhaseError("Can only add players during setup.")
         self._players[player.id] = player
         self._player_order = sorted(
             self._players.keys(),
@@ -472,9 +501,9 @@ class Game:
     def start_dealer_selection(self) -> None:
         """Validate setup completeness and move into dealer selection."""
         if len(self._players) != 4:
-            raise ValueError("Need exactly four players.")
+            raise SetupError("Need exactly four players.")
         if len(self._teams) != 2:
-            raise ValueError("Need exactly two teams.")
+            raise SetupError("Need exactly two teams.")
         self.phase = GamePhase.DEALER_SELECTION
 
     # ------------------------------------------------------------------
@@ -484,9 +513,9 @@ class Game:
     def set_dealer(self, dealer_id: str) -> None:
         """Record the player who will deal the next round."""
         if self.phase != GamePhase.DEALER_SELECTION:
-            raise ValueError("Not in dealer-selection phase.")
+            raise WrongPhaseError("Not in dealer-selection phase.")
         if dealer_id not in self._players:
-            raise ValueError(f"Unknown player: {dealer_id}")
+            raise IllegalActionError(f"Unknown player: {dealer_id}")
         self._dealer_id = dealer_id
 
     def begin_round(self, round_state: "Round") -> None:

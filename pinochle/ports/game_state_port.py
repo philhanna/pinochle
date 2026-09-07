@@ -21,12 +21,12 @@ class GameStatePort(ABC):
     def load(self, game_id: str) -> Game:
         """Load and return the game with the given ID.
 
-        Raises KeyError if game_id is not found.
+        Raises UnknownGameError if game_id is not found.
         """
 
     @abstractmethod
     def delete(self, game_id: str) -> None:
         """Remove a game from storage.
 
-        Raises KeyError if game_id is not found.
+        Raises UnknownGameError if game_id is not found.
         """

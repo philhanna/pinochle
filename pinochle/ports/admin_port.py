@@ -28,3 +28,7 @@ class AdminPort(ABC):
     @abstractmethod
     def start_game(self, game_id: str) -> None:
         """Shuffle the deck and begin dealer selection."""
+
+    @abstractmethod
+    def abandon_game(self, game_id: str) -> None:
+        """Mark a game finished before it could be completed normally (RT-12)."""

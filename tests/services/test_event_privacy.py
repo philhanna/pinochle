@@ -79,7 +79,7 @@ def test_public_events_are_broadcast():
     service, notifier = make_service()
     dispatch(
         service,
-        BidPlaced(game_id="g1", player_id="E", amount=250),
+        BidPlaced(game_id="g1", player_id="E", amount=250, current_high=250),
         MeldExposed(game_id="g1", player_id="E", units=[], total=0),
     )
     assert notifier.notified == []
@@ -89,7 +89,7 @@ def test_public_events_are_broadcast():
 def test_dispatch_drains_the_event_queue():
     """Dispatched events are cleared, so a later dispatch re-sends nothing."""
     service, notifier = make_service()
-    game = dispatch(service, BidPlaced(game_id="g1", player_id="E", amount=250))
+    game = dispatch(service, BidPlaced(game_id="g1", player_id="E", amount=250, current_high=250))
     notifier.broadcast_events.clear()
     service._dispatch(game)
     assert notifier.broadcast_events == []

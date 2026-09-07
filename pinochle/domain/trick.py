@@ -60,6 +60,11 @@ class Trick:
         """Return the cards in play order for the trick."""
         return [p.card for p in self._plays]
 
+    @property
+    def plays(self) -> list[TrickPlay]:
+        """Return the (player_id, card) pairs in play order for the trick."""
+        return list(self._plays)
+
     def winner(self) -> str:
         """Return the player_id of the trick winner.
 

@@ -1,4 +1,6 @@
 # tests.domain.test_deck
+import random
+
 import pytest
 
 from pinochle.domain.cards import Card, Deck, Rank, Suit
@@ -49,3 +51,25 @@ def test_deal_raises_when_insufficient():
     deck = Deck()
     with pytest.raises(ValueError):
         deck.deal(49)
+
+
+def test_a_seeded_rng_makes_the_shuffle_reproducible():
+    """NFR-7: the same seed should always produce the same order."""
+    first = Deck()
+    first.shuffle(random.Random(7))
+
+    second = Deck()
+    second.shuffle(random.Random(7))
+
+    assert list(first) == list(second)
+
+
+def test_different_seeds_produce_different_orders():
+    """Sanity check that the seed actually drives the shuffle."""
+    first = Deck()
+    first.shuffle(random.Random(7))
+
+    second = Deck()
+    second.shuffle(random.Random(8))
+
+    assert list(first) != list(second)

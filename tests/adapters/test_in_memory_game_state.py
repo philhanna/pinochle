@@ -2,6 +2,7 @@
 import pytest
 
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
+from pinochle.domain.errors import UnknownGameError
 from pinochle.domain.game import Game
 from tests.ports.test_game_state_port import run_contract
 
@@ -21,7 +22,7 @@ def test_overwrite_existing_game():
 
 
 def test_load_missing_raises():
-    """Loading an unknown game id should raise ``KeyError``."""
+    """Loading an unknown game id should raise ``UnknownGameError``."""
     store = InMemoryGameState()
-    with pytest.raises(KeyError):
+    with pytest.raises(UnknownGameError):
         store.load("missing")

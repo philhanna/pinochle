@@ -24,6 +24,7 @@ from pinochle.domain.game import (
     RoundStarted,
     TrickCleared,
     TrickCompleted,
+    TurnPrompt,
 )
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.scoring import WINNING_SCORE
@@ -231,6 +232,57 @@ def test_inheriting_the_auction_is_not_a_lone_bid(table):
     assert round_state.phase == RoundPhase.TRUMP
     assert round_state.bid_winner == raiser
     assert notifier.of_type(ContractOffered) == []
+
+
+# ---------------------------------------------------------------------------
+# turn_prompt
+# ---------------------------------------------------------------------------
+
+def test_turn_prompt_is_sent_only_to_the_seat_on_the_clock(table):
+    """UI-9: the prompt is private, and regenerated for the new current player."""
+    service, state, notifier = table
+    game_id = deal(service, state)
+    round_state = state.load(game_id).current_round
+    opener = round_state.current_player
+
+    prompts = notifier.of_type(TurnPrompt)
+    assert len(prompts) == 1
+    assert prompts[0].player_id == opener
+    assert prompts[0].phase == "BIDDING"
+    assert prompts[0].options == {"minimum_bid": 250, "may_pass": True}
+    assert ("N", "E", "S", "W").count(opener) == 1  # sanity: exactly one seat
+
+
+def test_turn_prompt_raises_the_minimum_bid_after_a_bid(table):
+    """A subsequent prompt reflects the new high bid, not the opening one."""
+    service, state, notifier = table
+    game_id = deal(service, state)
+    round_state = state.load(game_id).current_round
+    opener = round_state.current_player
+    service.place_bid(game_id, opener, 250)
+
+    prompts = notifier.of_type(TurnPrompt)
+    assert prompts[-1].options["minimum_bid"] == 260
+
+
+def test_turn_prompt_carries_legal_plays_while_playing(table):
+    """UI-9, FR-53: the highlighted set and the legal set are the same computation."""
+    service, state, notifier = table
+    game_id, winner = expose_meld(service, state)
+    service.begin_play(game_id, winner)
+    round_state = state.load(game_id).current_round
+
+    prompt = notifier.of_type(TurnPrompt)[-1]
+    assert prompt.player_id == winner
+    assert prompt.phase == "PLAYING"
+    assert prompt.options["legal_plays"] == round_state.legal_plays(winner)
+
+
+def test_no_turn_prompt_during_dealer_selection(table):
+    """Dealer selection has no single acting seat, so nothing is prompted."""
+    service, state, notifier = table
+    start(service)
+    assert notifier.of_type(TurnPrompt) == []
 
 
 # ---------------------------------------------------------------------------

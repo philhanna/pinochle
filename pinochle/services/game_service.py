@@ -1,10 +1,13 @@
 # pinochle.services.game_service
 import uuid
 from dataclasses import dataclass, field
+from random import Random
 
+from pinochle.domain.bid import BID_INCREMENT, MINIMUM_BID
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.deck import Deck
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.errors import IllegalActionError
 from pinochle.domain.game import (
     BidPlaced,
     CardPlayed,
@@ -26,9 +29,11 @@ from pinochle.domain.game import (
     RoundAbandoned,
     RoundScored,
     RoundStarted,
+    SeatThinking,
     TrickCleared,
     TrickCompleted,
     TrumpNamed,
+    TurnPrompt,
 )
 from pinochle.domain.player import Player
 from pinochle.domain.scoring import (
@@ -92,11 +97,21 @@ class GameService(AdminPort, PlayerActionPort):
         state: GameStatePort,
         notifier: NotificationPort,
         scheduler: SchedulerPort,
+        *,
+        rng: Random | None = None,
+        trick_clear_seconds: float = TRICK_CLEAR_SECONDS,
     ):
-        """Wire the service to persistence, notification, and timing ports."""
+        """Wire the service to persistence, notification, and timing ports.
+
+        ``rng``, if given, seeds every shuffle (NFR-7).  ``trick_clear_seconds``
+        overrides how long a completed trick stays on the table, so it can be
+        driven from configuration (§10.4) rather than the module constant.
+        """
         self._state = state
         self._notifier = notifier
         self._scheduler = scheduler
+        self._rng = rng
+        self._trick_clear_seconds = trick_clear_seconds
         self._spreads: dict[str, _DealerSpread] = {}
 
     # ------------------------------------------------------------------
@@ -129,14 +144,63 @@ class GameService(AdminPort, PlayerActionPort):
             return [event.player_id]
         if isinstance(event, CardsPassed):
             return [event.from_player_id, event.to_player_id]
+        if isinstance(event, TurnPrompt):
+            return [event.player_id]
         return None
 
     def _load_save(self, game_id: str, fn) -> None:
         """Load a game, mutate it via ``fn``, dispatch events, and persist it."""
         game = self._state.load(game_id)
         fn(game)
+        prompt = self._build_turn_prompt(game)
+        if prompt is not None:
+            game.emit(prompt)
         self._dispatch(game)
         self._state.save(game)
+
+    @staticmethod
+    def _build_turn_prompt(game: Game) -> TurnPrompt | None:
+        """Build the private prompt for whoever is on the clock, if anyone is.
+
+        Only fires for the turn-based round phases: dealer selection has no
+        single acting seat (any undrawn player may draw at any time, and the
+        public ``DrawMade``/``DealerSelectionStarted`` events already carry
+        everything a client needs to know which positions remain open), so
+        it is deliberately left without a turn_prompt here.
+        """
+        if game.phase != GamePhase.IN_ROUND:
+            return None
+        round_state = game.current_round
+        player_id = round_state.current_player
+        if player_id is None:
+            return None
+
+        phase = round_state.phase
+        if phase == RoundPhase.BIDDING:
+            options = {
+                "minimum_bid": (
+                    round_state.current_high_bid + BID_INCREMENT
+                    if round_state.current_high_bid
+                    else MINIMUM_BID
+                ),
+                "may_pass": True,
+            }
+        elif phase == RoundPhase.CONFIRMING:
+            options = {"amount": round_state.contract}
+        elif phase == RoundPhase.TRUMP:
+            options = {}
+        elif phase == RoundPhase.PASSING:
+            options = {"count": Round.PASS_COUNT}
+        elif phase == RoundPhase.MELDING:
+            options = {"may_begin_play": True, "may_toss_in": True}
+        elif phase == RoundPhase.PLAYING:
+            options = {"legal_plays": list(round_state.legal_plays(player_id))}
+        else:
+            return None
+
+        return TurnPrompt(
+            game_id=game.id, player_id=player_id, phase=phase.name, options=options,
+        )
 
     def _start_round(self, game: Game) -> None:
         """Create, deal, and announce a fresh round for the current dealer."""
@@ -144,7 +208,7 @@ class GameService(AdminPort, PlayerActionPort):
             dealer_id=game.dealer_id,
             player_order=game.player_order,
         )
-        round_state.deal()
+        round_state.deal(self._rng)
         game.begin_round(round_state)
         game.emit(RoundStarted(
             game_id=game.id,
@@ -311,7 +375,7 @@ class GameService(AdminPort, PlayerActionPort):
     def assign_teams(self, game_id: str, ns: Team, ew: Team) -> None:
         """Attach the two partnerships, whose ids are fixed by the seating."""
         if (ns.id, ew.id) != (NS_TEAM_ID, EW_TEAM_ID):
-            raise ValueError(
+            raise IllegalActionError(
                 f"Team ids are fixed at {NS_TEAM_ID!r} and {EW_TEAM_ID!r}; "
                 f"got {ns.id!r} and {ew.id!r}."
             )
@@ -347,6 +411,26 @@ class GameService(AdminPort, PlayerActionPort):
 
         self._load_save(game_id, _start)
 
+    def note_seat_thinking(self, game_id: str, player_id: str) -> None:
+        """Announce that a computer seat's move delay has begun (RT-7, RT-10).
+
+        Deliberately bypasses ``_load_save``'s turn_prompt synthesis: the
+        current player hasn't changed yet, so re-sending their prompt would
+        only be noise on top of the ``seat_thinking`` broadcast itself.
+        """
+        game = self._state.load(game_id)
+        game.emit(SeatThinking(game_id=game.id, player_id=player_id))
+        self._dispatch(game)
+        self._state.save(game)
+
+    def abandon_game(self, game_id: str) -> None:
+        """Mark a game finished before it could be completed normally (RT-12).
+
+        Emits no domain event: the announcement and the reason are a
+        transport concern owned by the admin router, not the game (§14.3).
+        """
+        self._load_save(game_id, lambda g: g.set_finished())
+
     # ------------------------------------------------------------------
     # PlayerActionPort
     # ------------------------------------------------------------------
@@ -359,11 +443,11 @@ class GameService(AdminPort, PlayerActionPort):
         """
         spread = self._spreads[game_id]
         if not 0 <= position < len(spread.cards):
-            raise ValueError(f"Position {position} is not in the spread.")
+            raise IllegalActionError(f"Position {position} is not in the spread.")
         if player_id in spread.drawn:
-            raise ValueError(f"{player_id} has already drawn.")
+            raise IllegalActionError(f"{player_id} has already drawn.")
         if position in spread.drawn.values():
-            raise ValueError(f"Position {position} has already been taken.")
+            raise IllegalActionError(f"Position {position} has already been taken.")
 
         spread.drawn[player_id] = position
         card = spread.cards[position]
@@ -417,10 +501,21 @@ class GameService(AdminPort, PlayerActionPort):
         """Return the spread positions already claimed by a player."""
         return set(self._spreads[game_id].drawn.values())
 
+    def players_awaiting_draw(self, game_id: str) -> set[str]:
+        """Return the players who have not yet drawn from the current spread.
+
+        Dealer selection has no single "current player" — any of these may
+        draw at any time — so the computer driver uses this instead of a
+        turn to decide which computer seats still have a move to make.
+        """
+        spread = self._spreads[game_id]
+        game = self._state.load(game_id)
+        return set(game.players) - set(spread.drawn)
+
     def _reset_spread(self, game_id: str) -> None:
         """Lay out a freshly shuffled face-down spread with nothing taken."""
         deck = Deck()
-        deck.shuffle()
+        deck.shuffle(self._rng)
         self._spreads[game_id] = _DealerSpread(cards=list(deck))
 
     @staticmethod
@@ -438,7 +533,12 @@ class GameService(AdminPort, PlayerActionPort):
         def _place_bid(g: Game) -> None:
             """Apply a bid to the current round and emit ``BidPlaced``."""
             g.current_round.place_bid(player_id, amount)
-            g.emit(BidPlaced(game_id=g.id, player_id=player_id, amount=amount))
+            g.emit(BidPlaced(
+                game_id=g.id,
+                player_id=player_id,
+                amount=amount,
+                current_high=g.current_round.current_high_bid,
+            ))
             if g.current_round.phase == RoundPhase.ABANDONED:
                 self._abandon_round(g, declined_by=None)
             elif g.current_round.phase == RoundPhase.CONFIRMING:
@@ -542,7 +642,7 @@ class GameService(AdminPort, PlayerActionPort):
             g.emit(TrickCompleted(
                 game_id=g.id,
                 winner_player_id=winner_id,
-                cards_played=g.current_round.current_trick_cards,
+                plays=g.current_round.current_trick_plays,
             ))
             trick_complete = True
 
@@ -552,7 +652,7 @@ class GameService(AdminPort, PlayerActionPort):
         # load-mutate-save cycle does not nest inside this one.
         if trick_complete:
             self._scheduler.call_later(
-                TRICK_CLEAR_SECONDS,
+                self._trick_clear_seconds,
                 lambda: self._clear_trick(game_id),
             )
 

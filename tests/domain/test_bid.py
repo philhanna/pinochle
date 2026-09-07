@@ -2,6 +2,7 @@
 import pytest
 
 from pinochle.domain.bid import BiddingRound, is_valid_bid, MINIMUM_BID
+from pinochle.domain.errors import IllegalActionError, NotYourTurnError, WrongPhaseError
 
 
 PLAYERS = ["N", "E", "S", "W"]
@@ -116,7 +117,7 @@ def test_current_bidder_is_none_once_over():
 def test_bid_out_of_turn_is_rejected():
     """Bidding before your turn comes round must be refused."""
     b = BiddingRound(PLAYERS)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         b.place_bid("S", 250)
 
 
@@ -124,7 +125,7 @@ def test_out_of_turn_bid_leaves_state_untouched():
     """A rejected bid must not change the high bid or the turn."""
     b = BiddingRound(PLAYERS)
     b.place_bid("N", 250)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         b.place_bid("W", 300)
     assert b.current_high == 250
     assert b.current_bidder == "E"
@@ -133,7 +134,7 @@ def test_out_of_turn_bid_leaves_state_untouched():
 def test_bid_raises_on_invalid_amount():
     """An invalid numeric bid should raise ``ValueError``."""
     b = BiddingRound(PLAYERS)
-    with pytest.raises(ValueError):
+    with pytest.raises(IllegalActionError):
         b.place_bid("N", 245)
 
 
@@ -141,7 +142,7 @@ def test_bid_raises_after_pass():
     """A player who has passed should not be allowed to bid again."""
     b = BiddingRound(PLAYERS)
     b.place_bid("N", None)
-    with pytest.raises(ValueError):
+    with pytest.raises(NotYourTurnError):
         b.place_bid("N", 250)
 
 
@@ -152,5 +153,5 @@ def test_bid_raises_when_over():
     b.place_bid("E", None)
     b.place_bid("S", None)
     b.place_bid("W", None)
-    with pytest.raises(ValueError):
+    with pytest.raises(WrongPhaseError):
         b.place_bid("N", 260)

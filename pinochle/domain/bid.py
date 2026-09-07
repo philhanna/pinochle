@@ -1,6 +1,8 @@
 # pinochle.domain.bid
 from dataclasses import dataclass
 
+from pinochle.domain.errors import IllegalActionError, NotYourTurnError, WrongPhaseError
+
 MINIMUM_BID = 250
 BID_INCREMENT = 10
 
@@ -71,6 +73,11 @@ class BiddingRound:
         return [p for p in self._order if p not in self._passed]
 
     @property
+    def history(self) -> list[BidEntry]:
+        """Return every bid and pass made so far, in the order submitted."""
+        return list(self._history)
+
+    @property
     def is_over(self) -> bool:
         """Return ``True`` once no further bid can be made.
 
@@ -104,17 +111,17 @@ class BiddingRound:
         Raises ValueError for an out-of-turn or invalid bid.
         """
         if self.is_over:
-            raise ValueError("Bidding is already over.")
+            raise WrongPhaseError("Bidding is already over.")
         if player_id not in self.active_players:
-            raise ValueError(f"{player_id} is not an active bidder.")
+            raise NotYourTurnError(f"{player_id} is not an active bidder.")
         if player_id != self.current_bidder:
-            raise ValueError(f"It is {self.current_bidder}'s turn to bid.")
+            raise NotYourTurnError(f"It is {self.current_bidder}'s turn to bid.")
 
         if amount is None:
             self._passed.add(player_id)
         else:
             if not is_valid_bid(amount, self._current_high):
-                raise ValueError(
+                raise IllegalActionError(
                     f"Bid of {amount} is invalid (current high: {self._current_high})."
                 )
             self._current_high = amount
