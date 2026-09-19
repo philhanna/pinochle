@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+### Added
+- `docs/impl.md`: the sliced implementation plan for the remaining work (the
+  front end), with a review point and a manual check per slice, the decisions
+  locked before coding starts, and the single-desktop verification workflow
+
 ## [0.3.0] - 2026-09-07
 
 ### Added
