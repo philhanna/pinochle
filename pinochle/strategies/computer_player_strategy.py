@@ -15,6 +15,20 @@ _ACE_TRICK_VALUE = 15
 _LENGTH_TRICK_VALUE = 10
 _NORMAL_SUIT_LENGTH = 4
 
+# What a bidder assumes its partner brings to the contract (FR-75a).
+#
+# A contract is a promise about the partnership's score, not about one hand:
+# the bid team's total is both partners' meld plus the card points they take.
+# Valuing only its own twelve cards, a bidder cannot reach FR-27's floor of
+# 250 — measured over random deals, a hand's own meld plus its trick estimate
+# has a median of 60 and clears 250 less than 1% of the time, so the strategy
+# passed essentially always and rounds were abandoned under FR-31 instead of
+# played.
+#
+# A single flat allowance, deliberately: it is a placeholder to be tuned by
+# playing games, not a model of the partner's hand.
+_PARTNER_CONTRIBUTION = 130
+
 
 class ComputerPlayerStrategy:
     """Rule-based AI decision helpers.
@@ -51,12 +65,14 @@ class ComputerPlayerStrategy:
 
         FR-75a: for each candidate trump suit, estimate the hand's worth as
         its meld in that suit plus a trick estimate from aces held and
-        length in that suit; take the best suit's estimate.  Bidding one
+        length in that suit; take the best suit's estimate, and add what the
+        partner can be assumed to contribute (``_PARTNER_CONTRIBUTION``),
+        since the contract is scored against the partnership.  Bidding one
         increment at a time (rather than jumping straight to the estimate)
         lets the auction stop as soon as someone else's estimate is higher,
         exactly as a cautious human bidder would.
         """
-        estimate = max(
+        estimate = _PARTNER_CONTRIBUTION + max(
             total_meld(hand_cards, suit) + ComputerPlayerStrategy._trick_estimate(hand_cards, suit)
             for suit in Suit
         )

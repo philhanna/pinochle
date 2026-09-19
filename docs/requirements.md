@@ -522,10 +522,17 @@ timed. The only server-owned pause left is the trick clear (UI-15).
 - **FR-75** The decision logic shall be replaceable, so that strategies of
   different strength can be swapped in. The system shall ship exactly one
   strategy; selectable difficulty levels are out of scope for this release.
-- **FR-75a** The computer player shall bid on the basis of its detected meld
-  plus a conservative estimate of the trick points its hand can take, derived
-  from its aces and its length in the prospective trump suit. It shall pass
-  rather than bid beyond that estimate.
+- **FR-75a** The computer player shall bid on the basis of what its
+  *partnership* can score, since a contract is scored against both partners'
+  meld and the card points the partnership takes. Its valuation shall be its
+  own detected meld in the prospective trump suit, plus a conservative estimate
+  of the trick points **both hands together** can take, derived from its aces
+  and its length in that suit, plus an allowance for what its partner can be
+  assumed to contribute. It shall pass rather than bid beyond that valuation.
+  The allowance shall be a single figure that can be tuned by playing games,
+  not a model of the partner's hand: a computer player never sees its partner's
+  cards (FR-74). A valuation confined to its own twelve cards would be unable
+  to reach the FR-27 minimum of 250 and the player would pass unconditionally.
 - **FR-75b** When passing to a partner who won the auction, the computer player
   shall pass cards that support the contract — trump and aces — while retaining
   cards that complete its own meld. It shall not simply pass its lowest cards.

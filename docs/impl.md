@@ -302,25 +302,35 @@ in order on the admin stream. Not one `cards_dealt` or `cards_passed` frame
 appeared on that stream across all 309 deals, which is NFR-6 holding
 structurally rather than by filtering. A human seat's stream carried its own
 hand and nobody else's. The image builds, serves the compiled client, and runs
-a game; `make test` is green at 302 tests.
+a game; `make test` is green at 306 tests.
 
-### Open defects found at a review point
+### Fixed after a review point
 
-- **The computer player almost never bids (FR-75a).** In the all-computer game
-  above, every one of the 1,236 bids was a pass: 302 of 309 rounds were
-  abandoned under FR-31, and the only 7 rounds played were ones where the
-  dealer accepted a forced contract at the 250 minimum — and made it all seven
-  times.
+- **The computer player almost never bid (FR-75a).** Watching an all-computer
+  game showed every one of 1,236 bids was a pass: 302 of 309 rounds were
+  abandoned under FR-31, and the only 7 played were forced contracts the dealer
+  accepted at the 250 minimum.
 
-  `ComputerPlayerStrategy.choose_bid` values a hand as its own meld plus a
-  trick estimate from its own aces and length. That is one hand out of twelve
-  cards, but FR-27's floor of 250 is a contract for a *partnership*, scored
-  against both partners' meld plus the round's card points. A single hand
-  essentially never reaches 250 on that scale, so the estimate is compared
-  against a threshold it cannot meet and the strategy passes unconditionally.
+  `choose_bid` valued a hand as its own meld plus a trick estimate from its own
+  aces and length. But a contract is scored against the *partnership* — both
+  partners' meld plus the card points the side takes — and measured over 4,000
+  random deals a single hand's own valuation has a median of 60 and clears 250
+  less than 1% of the time. The threshold was unreachable by construction, so
+  the strategy passed unconditionally.
 
-  It is not a Phase A defect and nothing here depends on it, but it spoils
-  every later review point — watching a game means watching redeals — so it is
-  worth its own small slice before Phase C. The fix is to the valuation, not to
-  the bidding loop: a bidder needs some allowance for its partner's half of the
-  partnership.
+  Fixed by adding `_PARTNER_CONTRIBUTION`, a flat allowance for what the
+  partner brings, and by amending FR-75a to state that the valuation is a
+  partnership valuation. Measured over 16 complete games:
+
+  | | rounds/game | abandoned | contract made | mean contract |
+  |---|---|---|---|---|
+  | before | 212.2 | 96.8% | 96.3% | 250.7 |
+  | allowance 130 | 18.1 | 53.6% | 85.8% | 256.5 |
+
+  The allowance is a single tunable figure, not a model of the partner's hand,
+  and 130 is deliberately cautious: over half of rounds are still abandoned,
+  and the bidding side makes its contract 86% of the time, which is the
+  signature of bidding below the hand's worth. Raising it shortens games and
+  moves the made rate toward the 65-70% a keener bidder would show. That
+  tuning is left for later; the figures above are the baseline to tune
+  against.

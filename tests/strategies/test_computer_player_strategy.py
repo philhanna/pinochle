@@ -1,8 +1,10 @@
 # tests.strategies.test_computer_player_strategy
 from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
+from pinochle.domain.bid import MINIMUM_BID
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
+from pinochle.domain.meld import total_meld
 
 
 def make_hand(specs: list[tuple[Rank, Suit]]) -> list[Card]:
@@ -47,6 +49,47 @@ def test_choose_bid_opens_at_the_minimum_when_the_hand_supports_it():
         (Rank.NINE, Suit.DIAMONDS), (Rank.NINE, Suit.CLUBS),
     ])
     assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=0) == 250
+
+
+def test_choose_bid_opens_on_an_ordinary_good_hand():
+    """FR-75a: a hand a person would open on must be able to open at 250.
+
+    A royal marriage, a pinochle, a side marriage, the dix and an ace — good,
+    but nothing exceptional: no run, no arounds. The regression this pins is
+    that such a hand once passed, because a valuation confined to its own
+    twelve cards cannot reach FR-27's minimum however strong it is.
+    """
+    hand = make_hand([
+        (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
+        (Rank.ACE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
+        (Rank.NINE, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+        (Rank.ACE, Suit.HEARTS), (Rank.KING, Suit.DIAMONDS),
+        (Rank.QUEEN, Suit.DIAMONDS), (Rank.TEN, Suit.CLUBS),
+        (Rank.JACK, Suit.CLUBS), (Rank.NINE, Suit.CLUBS),
+    ])
+
+    # The hand on its own is worth well under the minimum: the partner's
+    # assumed contribution is what makes the contract reachable.
+    own_worth = max(
+        total_meld(hand, suit) + ComputerPlayerStrategy._trick_estimate(hand, suit)
+        for suit in Suit
+    )
+    assert own_worth < MINIMUM_BID
+
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=0) == MINIMUM_BID
+
+
+def test_choose_bid_stops_raising_an_ordinary_hand_eventually():
+    """The partner allowance must not make a hand bid without limit."""
+    hand = make_hand([
+        (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
+        (Rank.ACE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
+        (Rank.NINE, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+        (Rank.ACE, Suit.HEARTS), (Rank.KING, Suit.DIAMONDS),
+        (Rank.QUEEN, Suit.DIAMONDS), (Rank.TEN, Suit.CLUBS),
+        (Rank.JACK, Suit.CLUBS), (Rank.NINE, Suit.CLUBS),
+    ])
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=300) is None
 
 
 def test_choose_bid_passes_on_a_weak_hand():

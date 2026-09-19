@@ -34,10 +34,22 @@ The format is based on [Keep a Changelog].
   serve a stale `frontend/dist`
 - A missing front-end page now names the file and suggests `make build`, rather
   than reporting that the front end does not exist
+- FR-75a now states that a computer player's bid valuation is a *partnership*
+  valuation — its own meld, the trick points both hands together can take, and
+  an allowance for the partner's contribution — rather than a valuation of its
+  own hand alone, which no hand could ever bid on
 
 ### Fixed
 - A request for artwork that is well-formed but absent from disk is now a 404
   rather than an unhandled `FileNotFoundError` and a 500
+- The computer player now bids. It valued a hand as its own meld plus a trick
+  estimate from its own twelve cards, but a contract is scored against the
+  partnership, so the valuation could not reach the 250 minimum (FR-27) and the
+  strategy passed unconditionally: an all-computer game abandoned 302 of 309
+  rounds under FR-31 and took 212 rounds to finish. `choose_bid` now adds
+  `_PARTNER_CONTRIBUTION`, a flat allowance of 130 for what the partner brings,
+  which over 16 complete games cuts a game to 18 rounds with 54% abandoned.
+  The allowance is a single figure meant to be tuned by playing games
 
 ## [0.3.0] - 2026-09-07
 
