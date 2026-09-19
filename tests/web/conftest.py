@@ -1,4 +1,6 @@
 # tests.web.conftest
+from pathlib import Path
+
 import httpx
 import pytest
 
@@ -9,6 +11,10 @@ from pinochle.web.container import Container, Settings, build_container
 from pinochle.web.main import create_app
 
 ADMIN_TOKEN = "test-admin-token"
+
+# Absolute, so a test that asks for a served page finds the real files
+# whatever directory pytest was started from.
+FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 
 FOUR_HUMAN_SEATS = {
     "teams": {"ns": "Us", "ew": "Them"},
@@ -28,7 +34,12 @@ def container() -> Container:
     Tests advance the fake clock explicitly rather than waiting in real time
     (ARC-10).
     """
-    settings = Settings(admin_token=ADMIN_TOKEN, computer_delay_seconds=0, trick_clear_seconds=0)
+    settings = Settings(
+        admin_token=ADMIN_TOKEN,
+        computer_delay_seconds=0,
+        trick_clear_seconds=0,
+        frontend_dir=str(FRONTEND_DIR),
+    )
     return build_container(settings, scheduler=FakeScheduler())
 
 

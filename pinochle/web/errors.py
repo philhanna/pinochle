@@ -53,6 +53,11 @@ def register_error_handlers(app: FastAPI) -> None:
         """Report a malformed request body as a 422."""
         return _envelope(422, "invalid_request", str(exc))
 
+    @app.exception_handler(FileNotFoundError)
+    async def _handle_missing_asset(request: Request, exc: FileNotFoundError) -> JSONResponse:
+        """Report a well-formed request for artwork that isn't on disk as a 404."""
+        return _envelope(404, "not_found", str(exc))
+
     @app.exception_handler(ValueError)
     async def _handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
         """Report an unparseable card/suit code as a 422 (design.md §5.5)."""

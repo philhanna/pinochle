@@ -43,3 +43,14 @@ def test_back_path_exists():
     from pathlib import Path
     assert Path(images.get_back_path(fmt="svg")).exists()
     assert Path(images.get_back_path(fmt="png")).exists()
+
+
+def test_get_back_path_serves_a_named_back():
+    """UI-5: the caller may choose a back without knowing the adapter."""
+    assert SvgCardImage().get_back_path(name="red").endswith("red.svg")
+
+
+def test_get_back_path_defaults_when_no_name_is_given():
+    """``None`` means the implementation's own default back."""
+    images = SvgCardImage()
+    assert images.get_back_path() == images.get_back_path(name=None)

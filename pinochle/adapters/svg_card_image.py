@@ -40,9 +40,9 @@ class SvgCardImage(CardImagePort):
             raise FileNotFoundError(f"Card image not found: {path}")
         return str(path)
 
-    def get_back_path(self, fmt: str = "svg", name: str = _DEFAULT_BACK) -> str:
+    def get_back_path(self, fmt: str = "svg", name: str | None = None) -> str:
         """Return the asset path for a named card back image."""
-        filename = f"{name}.{fmt}"
+        filename = f"{name or _DEFAULT_BACK}.{fmt}"
 
         if fmt == "png":
             path = _RESOURCES / "backs" / "png_96_dpi" / filename

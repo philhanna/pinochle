@@ -124,7 +124,12 @@ The `turn` header accompanies *every* frame:
   "paused": null, "round_number": 3 }
 ```
 
-The 22 game event types, in the order a round produces them:
+A stream opens with one frame the domain knows nothing about,
+`stream_started`, built by the stream router itself: it carries this seat's
+position, player id, name, and a `partial` flag saying whether it joined a
+round already in progress. It is how a client learns which seat it is.
+
+Then the 22 game event types, in the order a round produces them:
 
 | Phase | Events |
 |---|---|
@@ -138,8 +143,18 @@ The 22 game event types, in the order a round produces them:
 | End | `round_scored`, `game_over` |
 
 Three further types — `seat_lost`, `seat_rejoined`, `game_abandoned` — are
-published by the transport rather than the domain. **The client does not handle
-them in this plan** (§6).
+also published by the transport rather than the domain. **The client does not
+handle them in this plan** (§6). With `stream_started`, that makes 26 names in
+all; `EventSource` has no wildcard listener and every frame is named on its
+`event:` line, so a client must subscribe to each name individually and a name
+it omits is a frame it silently never receives.
+
+**`seq` is monotonic but not contiguous on a player's stream.** Numbers are
+assigned per game, and the frames addressed to other seats consume them, so a
+seat sees gaps — a deal shows as `round_started` at 14 and this seat's
+`cards_dealt` at 17, the missing 15, 16 and 18 being the other three hands
+(RT-1, NFR-6). The reducer must treat a gap as normal and never wait for a
+missing number.
 
 ---
 
@@ -157,8 +172,13 @@ starts with "create a game, copy four tokens, open four windows."
   `PINOCHLE_COMPUTER_DELAY_SECONDS`.
 - `scripts/seed.py` — creates a game with a given human/computer mix, starts
   it, prints the four join URLs ready to paste.
-- `Makefile` — `make dev`, `make seed`, `make seed-watch` (four computers, zero
-  delay), `make test`, `make docker`.
+- `Makefile` — `make dev`, `make seed`, `make seed-watch` (four computers),
+  `make test`, `make docker`, `make build`, `make watch`.
+
+  The pauses are server settings, not per-game ones, so watching a game at
+  full speed means starting the server with `make dev-fast`
+  (`PINOCHLE_COMPUTER_DELAY_SECONDS=0`, `PINOCHLE_TRICK_CLEAR_SECONDS=0`) and
+  then seeding into it.
 
 About eighty lines in total; it pays for itself by C2.
 
@@ -181,7 +201,7 @@ log shows a complete all-computer game reaching `game_over`.
   WORKDIR /build
   COPY frontend/package.json frontend/tsconfig.json ./
   COPY frontend/src ./src
-  RUN npx -y typescript@5 tsc
+  RUN npx -y -p typescript@5 tsc
   # …then in the runtime stage:
   COPY frontend/public ./frontend/public
   COPY --from=frontend /build/dist ./frontend/dist
@@ -267,3 +287,40 @@ supersedes.
 | Real network latency, and RT-11 lockstep under it | Chrome DevTools throttling, or `sudo tc qdisc add dev lo root netem delay 120ms` against bare `uvicorn` — inside Docker this needs `NET_ADMIN`, so run it outside the container. Do this once, at C2 |
 | Four genuinely separate client machines | `uvicorn --host 0.0.0.0` and the desktop's LAN address lets a phone or second laptop take a seat. Not required by UI-17, but a free check that nothing depends on same-origin luck |
 | TLS termination and proxy buffering of SSE | Cannot be tested locally in a meaningful way; deferred with the rest of deployment |
+
+## 8. Progress
+
+### Done
+
+- **A0** — `Makefile`, `scripts/dev.sh`, `scripts/seed.py`.
+- **A1** — `frontend/` (TypeScript, ES modules, no bundler), the raw-frame log
+  page, the card-artwork routes, and the Dockerfile's Node stage.
+
+Verified: a complete all-computer game (309 rounds to a 1500-point win) ran on
+the host in about six seconds with pauses at zero, and its 4,037 frames arrived
+in order on the admin stream. Not one `cards_dealt` or `cards_passed` frame
+appeared on that stream across all 309 deals, which is NFR-6 holding
+structurally rather than by filtering. A human seat's stream carried its own
+hand and nobody else's. The image builds, serves the compiled client, and runs
+a game; `make test` is green at 302 tests.
+
+### Open defects found at a review point
+
+- **The computer player almost never bids (FR-75a).** In the all-computer game
+  above, every one of the 1,236 bids was a pass: 302 of 309 rounds were
+  abandoned under FR-31, and the only 7 rounds played were ones where the
+  dealer accepted a forced contract at the 250 minimum — and made it all seven
+  times.
+
+  `ComputerPlayerStrategy.choose_bid` values a hand as its own meld plus a
+  trick estimate from its own aces and length. That is one hand out of twelve
+  cards, but FR-27's floor of 250 is a contract for a *partnership*, scored
+  against both partners' meld plus the round's card points. A single hand
+  essentially never reaches 250 on that scale, so the estimate is compared
+  against a threshold it cannot meet and the strategy passes unconditionally.
+
+  It is not a Phase A defect and nothing here depends on it, but it spoils
+  every later review point — watching a game means watching redeals — so it is
+  worth its own small slice before Phase C. The fix is to the valuation, not to
+  the bidding loop: a bidder needs some allowance for its partner's half of the
+  partnership.

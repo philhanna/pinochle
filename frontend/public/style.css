@@ -1,0 +1,125 @@
+/* Phase A styling only: enough to read a stream of frames on a tiled window.
+   The felt table, the fanned hands and the trick area are C1 and C2 — none of
+   this survives into them. */
+
+:root {
+  color-scheme: light dark;
+  --ink: #16281c;
+  --dim: #5b6b60;
+  --rule: #cfd8d2;
+  --ground: #f6f8f6;
+  --panel: #ffffff;
+  --accent: #1d6f42;
+  --alarm: #a3302a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e6ece8;
+    --dim: #9faea5;
+    --rule: #2c3a31;
+    --ground: #121814;
+    --panel: #1a211c;
+    --accent: #59b37c;
+    --alarm: #e0796f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 1rem;
+  background: var(--ground);
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+header { margin-bottom: 0.75rem; }
+
+h1 {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+}
+
+.phase-note {
+  margin: 0.25rem 0 0;
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.status {
+  position: sticky;
+  top: 0;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--dim);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.copy {
+  margin: 0.5rem 0;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.frames {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frame {
+  display: grid;
+  grid-template-columns: minmax(14rem, max-content) 1fr;
+  gap: 0.75rem;
+  padding: 0.25rem 0.65rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.frame .name {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.frame .payload {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: var(--dim);
+  overflow-x: auto;
+}
+
+/* The private frames, flagged so it is obvious at a glance that a seat is
+   being told something the other three are not (RT-1, NFR-6). */
+.frame.cards_dealt .name,
+.frame.cards_passed .name { color: var(--alarm); }
+
+.note {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.85rem;
+}
+
+.note.error { color: var(--alarm); }
+.note.info { color: var(--dim); }
+
+@media (max-width: 640px) {
+  .frame { grid-template-columns: 1fr; gap: 0.15rem; }
+}

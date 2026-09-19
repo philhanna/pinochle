@@ -9,6 +9,35 @@ The format is based on [Keep a Changelog].
 - `docs/impl.md`: the sliced implementation plan for the remaining work (the
   front end), with a review point and a manual check per slice, the decisions
   locked before coding starts, and the single-desktop verification workflow
+- `Makefile`, `scripts/dev.sh`, `scripts/seed.py`: the development loop
+  (impl.md slice A0). `make dev` runs the server on localhost with a fixed
+  admin token; `make seed` creates a game, prints the join links, and starts it
+  once the human seats have opened their streams (FR-10b); `make seed-watch`
+  runs an all-computer table
+- `frontend/`: the browser client's own tree — TypeScript compiled by `tsc` to
+  ES modules the browser loads directly, with no bundler and no runtime
+  dependency (ARC-8). Phase A's page is a raw event log: the wire contract is
+  reviewable before any presentation code exists. The seat token is held in the
+  URL and `sessionStorage`, never `localStorage`, so four seats can be four
+  tabs of one browser
+- `pinochle/web/routers/cards.py`: card artwork over HTTP (UI-16), addressed by
+  the same two-character wire code the event stream uses — `/cards/faces/TS`
+  for the ten of spades, `/cards/backs/blue` for a back, either in SVG or PNG,
+  cached immutably. Previously `CardImagePort` could resolve artwork on disk but
+  nothing served it
+- `CardImagePort` in the container's object graph, wired to `SvgCardImage`
+
+### Changed
+- `docker/Dockerfile` is now a two-stage build: a Node stage compiles
+  `frontend/src`, and the Python runtime image copies the result. The client is
+  compiled in the image rather than copied from the host, so the image can never
+  serve a stale `frontend/dist`
+- A missing front-end page now names the file and suggests `make build`, rather
+  than reporting that the front end does not exist
+
+### Fixed
+- A request for artwork that is well-formed but absent from disk is now a 404
+  rather than an unhandled `FileNotFoundError` and a 500
 
 ## [0.3.0] - 2026-09-07
 

@@ -23,5 +23,13 @@ class CardImagePort(ABC):
         """
 
     @abstractmethod
-    def get_back_path(self, fmt: str = "svg") -> str:
-        """Return a filesystem path for the card back image."""
+    def get_back_path(self, fmt: str = "svg", name: str | None = None) -> str:
+        """Return a filesystem path for a card back image.
+
+        Args:
+            fmt: File format — "svg" or "png".
+            name: Which back to use, or ``None`` for the implementation's
+                own default.  Named here rather than left to the concrete
+                adapter because a caller that serves a chosen back (UI-5)
+                would otherwise have to know which adapter it holds.
+        """

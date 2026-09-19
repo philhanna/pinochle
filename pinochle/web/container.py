@@ -10,7 +10,9 @@ from pinochle.adapters.in_memory_game_state import InMemoryGameState
 from pinochle.adapters.in_memory_seat_tokens import InMemorySeatTokens
 from pinochle.adapters.logging_notification import LoggingNotification
 from pinochle.adapters.sse_notification import SseNotification
+from pinochle.adapters.svg_card_image import SvgCardImage
 from pinochle.ports.admin_port import AdminPort
+from pinochle.ports.card_image_port import CardImagePort
 from pinochle.ports.game_state_port import GameStatePort
 from pinochle.ports.notification_port import NotificationPort
 from pinochle.ports.player_action_port import PlayerActionPort
@@ -73,6 +75,7 @@ class Container:
     notifier: NotificationPort
     tokens: SeatTokenPort
     scheduler: SchedulerPort
+    cards: CardImagePort
 
 
 def build_container(
@@ -114,4 +117,5 @@ def build_container(
         notifier=notifier,
         tokens=tokens,
         scheduler=scheduler,
+        cards=SvgCardImage(),
     )

@@ -18,3 +18,7 @@ def run_contract(images: CardImagePort) -> None:
 
     back_svg = images.get_back_path(fmt="svg")
     assert isinstance(back_svg, str) and len(back_svg) > 0
+
+    # An unnamed back must resolve to the implementation's own default, so a
+    # caller can serve a back without knowing which adapter it holds (UI-5).
+    assert images.get_back_path(fmt="svg", name=None) == back_svg

@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from pinochle.web.container import Container, build_container
 from pinochle.web.errors import register_error_handlers
-from pinochle.web.routers import admin, player, stream
+from pinochle.web.routers import admin, cards, player, stream
 
 
 def create_app(container: Container | None = None) -> FastAPI:
@@ -27,11 +27,13 @@ def create_app(container: Container | None = None) -> FastAPI:
     app.include_router(admin.router)
     app.include_router(player.router)
     app.include_router(stream.router)
+    app.include_router(cards.router)
 
     public_dir = Path(container.settings.frontend_dir) / "public"
     dist_dir = Path(container.settings.frontend_dir) / "dist"
-    # Mounted now even though frontend/ doesn't exist yet, so the front end
-    # (design.md's next milestone) only has to add files, not routes.
+    # public/ holds the hand-written HTML and CSS; dist/ holds the modules
+    # tsc compiles from frontend/src (ARC-8 — no bundler, so the browser
+    # loads them as ES modules exactly as emitted).
     if public_dir.is_dir():
         app.mount("/assets", StaticFiles(directory=public_dir), name="assets")
     if dist_dir.is_dir():
@@ -89,7 +91,10 @@ def _serve_page(path: Path):
     if not path.is_file():
         return JSONResponse(
             status_code=404,
-            content={"error": {"code": "not_found", "message": "The front end has not been built yet."}},
+            content={"error": {"code": "not_found", "message": (
+                f"{path.name} is missing. Run `make build`, or check "
+                "PINOCHLE_FRONTEND_DIR."
+            )}},
         )
     return FileResponse(path)
 
