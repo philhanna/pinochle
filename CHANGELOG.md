@@ -25,6 +25,27 @@ The format is based on [Keep a Changelog].
   start the game, abandon it, and watch the public event stream live. An
   all-computer table issues no join links, so the console's stream view is the
   only way to watch one
+- The table itself (impl.md slices C1-C6): a green felt surface with the
+  viewing player's seat at the bottom, the partner across and the opponents to
+  either side (UI-1, UI-2); the partnerships distinguished and the acting seat
+  marked (UI-3, UI-7); this seat's hand face-up and fanned in the order of
+  FR-23, the other three as fans of backs at their true size (UI-4, UI-5); the
+  trick with each card nearer the seat that played it (UI-6); the last
+  completed trick on demand (UI-14b); a persistent scoreboard carrying the
+  contract, the auction winner, trump, the bid history and each team's meld
+  total for the whole round (UI-14, UI-14a); exposed meld per seat and per team
+  (UI-13); the round summary and the game-over panel (FR-66, FR-71)
+- Card input by drag or by click, the two being exactly equivalent (UI-8).
+  Legal cards are distinguished from illegal ones and an illegal one cannot be
+  submitted (UI-9) — legality is whatever the server's turn prompt listed, and
+  no rule is decided in the browser (ARC-2)
+- Controls for every phase a seat acts in: bid entry constrained to multiples of
+  ten at or above the minimum, or pass (UI-10); accept or decline a lone
+  bidder's contract (FR-32); the trump picker (UI-11); choose exactly four cards
+  and confirm the pass, with the received cards shown to the receiving team only
+  (UI-12); play the contract out or toss it in (FR-50a, FR-50b)
+- The face-down dealer-selection spread, drawn from by clicking a position
+  (FR-11, FR-11a)
 - `frontend/src/state.ts`: the client's whole model of the game (impl.md slice
   B1). RT-5 puts no snapshot on the server, so this reducer is not a cache of
   something authoritative elsewhere — it is the only model the browser has.
@@ -64,6 +85,9 @@ The format is based on [Keep a Changelog].
   forwarded URL cannot create, start or abandon a game
 
 ### Fixed
+- The client offered a card during the trick-clear pause, which the server
+  rejects as out-of-phase (RT-9): a pause is a state the game occupies, not a
+  presentation effect, so no play is offered while one runs
 - A seeded game was not reproducible (NFR-7). The computers' dealer-selection
   draw used the unseeded global `random`, and the driver scheduled the waiting
   seats straight from a `set`, whose iteration order depends on string hashing

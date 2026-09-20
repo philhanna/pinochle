@@ -306,13 +306,13 @@ supersedes.
   on its own router so that only it does: every command still requires the
   header, and a forwarded URL cannot create, start or abandon a game.
 
-Verified: a complete all-computer game (309 rounds to a 1500-point win) ran on
-the host in about six seconds with pauses at zero, and its 4,037 frames arrived
-in order on the admin stream. Not one `cards_dealt` or `cards_passed` frame
+Verified: a complete all-computer game ran on the host in about six seconds
+with pauses at zero, and its 4,037 frames arrived in order on the admin
+stream. Not one `cards_dealt` or `cards_passed` frame
 appeared on that stream across all 309 deals, which is NFR-6 holding
 structurally rather than by filtering. A human seat's stream carried its own
 hand and nobody else's. The image builds, serves the compiled client, and runs
-a game; `make test` is green at 317 server tests and 47 client tests.
+a game; `make test` is green at 318 server tests and 79 client tests.
 
 - **B1** — the client state model, headless: `frontend/src/state.ts` (the
   reducer) and `frontend/src/cards.ts` (card codes and hand order), with 47
@@ -337,6 +337,36 @@ a game; `make test` is green at 317 server tests and 47 client tests.
     dealer, and the dealer decides which twelve cards of the shuffle each seat
     receives, a seeded shuffle alone reproduced nothing. Found by re-recording
     the fixture and getting a different game.
+
+- **C1–C6** — the table: felt and seats (UI-1…7, 17), the trick area and the
+  server-owned pause (UI-6, 15, RT-8…11), the last trick on demand (UI-14b),
+  card input by click and by drag (UI-8, 9), the bidding, trump, passing and
+  meld controls (UI-10…13), the scoreboard with retained bid history and meld
+  totals (UI-14, 14a), the round summary and the game-over panel (FR-66, 71).
+
+  They landed as one change rather than six because the modules interlock: the
+  panels read the same prompt the hand does, and both draw from the same
+  placement logic. The slices remain the right way to *review* it, and each is
+  listed in §5 with its own manual check.
+
+  **A3, the debug action panel, was skipped as superseded.** Its purpose was to
+  prove the action surface before any presentation existed; the surface was
+  proved instead by driving every endpoint over HTTP (A1 and A2's checks, and a
+  scripted play-through of two complete rounds), so building a throwaway form
+  per action and then deleting it in C7 would have been waste.
+
+  What the code holds to, and where:
+
+  * No rule is decided in the browser (ARC-2). Legality is whatever the turn
+    prompt listed; `layout.ts` never inspects a card's rank or suit to decide
+    whether it may be played.
+  * No client timer affects what is displayed (RT-8). A pause is read from the
+    turn header, and while one runs no card is offered — the server rejects a
+    play during the trick-clear pause as out-of-phase (RT-9), so offering one
+    would only earn a refusal.
+  * The layout is one fixed size scaled to the window (UI-17), which is what
+    lets four windows tiled on a single monitor each show a whole table. The
+    factor is set from script because CSS cannot divide a length by a length.
 
 ### Fixed after a review point
 
@@ -379,3 +409,34 @@ a game; `make test` is green at 317 server tests and 47 client tests.
   counts only aces in the prospective trump suit, though an off-suit ace still
   takes a trick. A sweep counting them at 10 apiece reached 6.9% abandoned with
   69.8% made — better on both axes than any flat allowance tried here.
+
+
+## 9. What a machine cannot check here
+
+The table itself was never looked at while it was written: this environment has
+no browser. Everything that could be tested without one was — the reducer, the
+seat placement, the legality rule, every line of text the table puts on screen,
+all replayed against a recorded game — and the rest was verified as far as HTTP
+reaches: every asset the page loads returns 200 from both the dev server and the
+image, and a script drove a human seat through two complete rounds by making
+exactly the requests the table's controls make, in the order they make them.
+
+What that leaves genuinely unchecked is the appearance and the gestures:
+
+1. **Four windows, tiled 2×2** on one monitor, one seat each, plus the console
+   in a fifth. Everything should be legible at quarter-screen; if it is not,
+   the stage is one fixed size and `--stage-width`/`--stage-height` in
+   `table.css` are the two numbers to change.
+2. **The seating.** Your own seat at the bottom, your partner across, and the
+   seat that plays after you on your left. That last one is an interpretation
+   of UI-1's "true clockwise relationship" and is the thing most worth a second
+   pair of eyes; `placement()` in `layout.ts` is the one place to change it,
+   and `test/layout.test.js` says what it currently claims.
+3. **Drag and drop**, which no test here exercises. Click is wired to the same
+   call, so if a drag misbehaves the game is still playable.
+4. **Chrome and Firefox both** (UI-17). The client uses no feature newer than
+   ES2022 modules and `EventSource`, but that is an argument, not a test.
+5. **The pace of it** — whether 1.5 seconds on a trick and one second on a
+   computer's move feel right. Both are environment variables
+   (`PINOCHLE_TRICK_CLEAR_SECONDS`, `PINOCHLE_COMPUTER_DELAY_SECONDS`), so this
+   is tuning rather than editing.

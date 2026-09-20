@@ -1,0 +1,384 @@
+/* The table (UI-1 … UI-17).
+   A fixed layout scaled to the viewport, which UI-17 permits instead of a
+   responsive one: the whole stage is one size and is scaled to fit, so four
+   windows tiled on one monitor each show a complete table. */
+
+:root {
+  --stage-width: 1180px;
+  --stage-height: 830px;
+  --felt: #17603a;
+  --felt-edge: #0d3f26;
+  --ink: #f2f6f3;
+  --dim: #b9c9bf;
+  --rule: rgba(255, 255, 255, 0.16);
+  --panel: rgba(8, 26, 17, 0.88);
+  --ns: #ffd479;
+  --ew: #8fd6ff;
+  --accent: #6ee7a0;
+  --alarm: #ff9b8f;
+  --card-w: 74px;
+  --card-h: 104px;
+  --card-w-small: 46px;
+  --card-h-small: 65px;
+}
+
+* { box-sizing: border-box; }
+
+body.table-page {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a1610;
+  color: var(--ink);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+/* One fixed-size stage, scaled to whatever the window is (UI-17).
+   The factor is set from script, in --stage-scale: CSS cannot divide a length
+   by a length, so the ratio a scale() needs cannot be computed here. */
+#stage {
+  position: relative;
+  width: var(--stage-width);
+  height: var(--stage-height);
+  flex: none;
+  transform: scale(var(--stage-scale, 1));
+  transform-origin: center center;
+}
+
+#felt {
+  position: absolute;
+  inset: 0;
+  border-radius: 46% / 34%;
+  background:
+    radial-gradient(ellipse at 50% 42%, #1d7a49 0%, var(--felt) 52%, var(--felt-edge) 100%);
+  box-shadow: inset 0 0 0 10px rgba(0, 0, 0, 0.28), 0 18px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Seats (UI-1, UI-3, UI-5, UI-7) ------------------------------------- */
+
+.seat {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.seat.top { top: 14px; left: 50%; transform: translateX(-50%); }
+.seat.left { left: 18px; top: 46%; transform: translateY(-50%); }
+.seat.right { right: 18px; top: 46%; transform: translateY(-50%); }
+
+/* This seat's own label lives in the stacked bar with its hand, not pinned to
+   the felt, so it cannot collide with a panel. */
+.seat.bottom { position: static; }
+
+.seat-name {
+  padding: 3px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* UI-3: the partnerships must be distinguishable at a glance. */
+.seat.team-ns .seat-name { color: var(--ns); border-color: rgba(255, 212, 121, 0.5); }
+.seat.team-ew .seat-name { color: var(--ew); border-color: rgba(143, 214, 255, 0.5); }
+
+/* UI-7: whose turn it is, shown to everyone. */
+.seat.acting .seat-name {
+  background: rgba(110, 231, 160, 0.22);
+  box-shadow: 0 0 0 2px var(--accent), 0 0 18px rgba(110, 231, 160, 0.5);
+}
+
+.seat.thinking .seat-name::after { content: " …"; }
+
+.seat.computer .seat-name { font-style: italic; }
+
+/* --- Fans of cards ------------------------------------------------------- */
+
+.fan { display: flex; }
+.fan .card { margin-right: calc(var(--card-w-small) * -0.62); }
+.fan .card:last-child { margin-right: 0; }
+
+.fan.vertical { flex-direction: column; }
+.fan.vertical .card { margin: 0 0 calc(var(--card-h-small) * -0.78) 0; }
+.fan.vertical .card:last-child { margin-bottom: 0; }
+
+.card {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  user-select: none;
+}
+
+.card.small, .fan .card { width: var(--card-w-small); height: var(--card-h-small); }
+
+.card.back { background: #1b3c8c; }
+
+/* --- The trick (UI-6, UI-15) -------------------------------------------- */
+
+#centre {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 640px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.trick {
+  position: relative;
+  width: 300px;
+  height: 260px;
+}
+
+/* Each card sits nearer the seat that played it, so all four stay
+   attributable rather than stacking in the middle. */
+.trick .played {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transition: opacity 180ms ease;
+}
+.trick .played.bottom { transform: translate(-50%, -14%); }
+.trick .played.top { transform: translate(-50%, -86%); }
+.trick .played.left { transform: translate(-96%, -50%) rotate(-6deg); }
+.trick .played.right { transform: translate(-4%, -50%) rotate(6deg); }
+
+.trick .played.winning { box-shadow: 0 0 0 3px var(--accent), 0 4px 14px rgba(0, 0, 0, 0.5); }
+
+/* While the server is counting the trick-clear pause, the table shows that it
+   is waiting rather than pretending to be idle (RT-9). */
+.trick.paused .played { opacity: 0.88; }
+
+/* --- The dealer-selection spread (FR-11a) ------------------------------- */
+
+.spread {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 3px;
+  width: 620px;
+}
+
+.spread .card {
+  width: 100%;
+  height: 52px;
+  border-radius: 3px;
+}
+
+.spread .card.drawable { cursor: pointer; }
+.spread .card.drawable:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.spread .card.turned { box-shadow: 0 0 0 2px var(--ns); }
+
+/* --- Meld, last trick, summaries ---------------------------------------- */
+
+.meld, .last-trick, .summary {
+  padding: 10px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  max-width: 620px;
+}
+
+.meld-row {
+  display: grid;
+  grid-template-columns: 7rem 1fr 3rem;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 0.85rem;
+}
+
+.meld-row.team {
+  border-top: 1px solid var(--rule);
+  margin-top: 4px;
+  padding-top: 4px;
+  font-weight: 600;
+}
+
+.meld-who { color: var(--dim); }
+.meld-total { text-align: right; }
+
+.last-trick h2, .summary h2 { margin: 0 0 8px; font-size: 0.95rem; }
+
+.tray { display: flex; gap: 8px; align-items: flex-end; }
+
+.last-trick-card { text-align: center; }
+.last-trick-card .who { display: block; font-size: 0.72rem; color: var(--dim); }
+.last-trick-card.winning .card { box-shadow: 0 0 0 2px var(--accent); }
+
+.summary table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+.summary th, .summary td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--rule);
+  text-align: right;
+}
+.summary th:first-child, .summary td:first-child { text-align: left; }
+.summary thead th { color: var(--dim); font-weight: 600; }
+.summary tr.bid-team td { color: var(--ns); font-weight: 600; }
+.summary.over h2 { color: var(--accent); }
+
+/* --- Scoreboard (UI-14, UI-14a) ----------------------------------------- */
+
+#scoreboard {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  width: 210px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  font-size: 0.82rem;
+}
+
+.score-row { display: flex; justify-content: space-between; gap: 8px; padding: 1px 0; }
+.score-label { color: var(--dim); }
+.score-value { text-align: right; }
+
+.score-heading {
+  margin: 8px 0 3px;
+  color: var(--dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  border-top: 1px solid var(--rule);
+  padding-top: 6px;
+}
+
+.bid-line { display: block; font-size: 0.78rem; }
+
+/* --- Status, panel, hand ------------------------------------------------ */
+
+/* The bottom of the screen: name, status, controls, hand — in that order,
+   stacked, so nothing overlaps whatever height the controls turn out to be.
+   The bar sits over the felt, as a hand of cards does on a real table. */
+#bottom-bar {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+
+#bottom-bar > * { pointer-events: auto; }
+
+#status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.status-line { font-size: 0.9rem; color: var(--ink); }
+
+.last-trick-toggle, #panel button {
+  padding: 3px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+#panel {
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.panel-box h2 { margin: 0 0 4px; font-size: 0.9rem; }
+.panel-hint { margin: 0 0 6px; color: var(--dim); font-size: 0.78rem; max-width: 30rem; }
+.panel-row { display: flex; gap: 6px; align-items: center; justify-content: center; }
+
+#panel button.primary { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+#panel button.danger { border-color: var(--alarm); color: var(--alarm); }
+#panel button.red { color: var(--alarm); }
+#panel button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.bid-amount {
+  width: 5.5rem;
+  padding: 3px 6px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--ink);
+  font: inherit;
+}
+.bid-amount.bad { border-color: var(--alarm); }
+
+#panel .tray { justify-content: center; margin-bottom: 6px; }
+#panel .card.slot {
+  border: 1px dashed var(--rule);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+/* The hand, fanned and face up (UI-4). */
+#hand {
+  display: flex;
+  justify-content: center;
+  height: calc(var(--card-h) + 14px);
+  align-items: flex-end;
+}
+
+#hand .card {
+  margin-right: calc(var(--card-w) * -0.34);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+#hand .card:last-child { margin-right: 0; }
+
+/* UI-9: legal and illegal must look different, and an illegal card cannot be
+   submitted — the click handler is simply not attached to one. */
+#hand .card.legal { cursor: grab; box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.5); }
+#hand .card.legal:hover { transform: translateY(-16px); }
+#hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
+
+#hand.choosing .card { cursor: pointer; }
+#hand .card.chosen { transform: translateY(-20px); box-shadow: 0 0 0 2px var(--ns); }
+#hand .card.lifted { opacity: 0.4; }
+
+/* Over the felt at the top, clear of every control. */
+#toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 12px;
+  z-index: 5;
+  border: 1px solid var(--alarm);
+  border-radius: 6px;
+  background: rgba(60, 12, 8, 0.95);
+  color: var(--alarm);
+  font-size: 0.85rem;
+  max-width: 34rem;
+}
+
+.no-seat {
+  max-width: 28rem;
+  margin: 4rem auto;
+  color: var(--dim);
+  text-align: center;
+}

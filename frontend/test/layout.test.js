@@ -1,0 +1,209 @@
+// Where seats and cards are placed, and what may be done with them.
+import { test } from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
+  spotOf, takenPositions, trickCards,
+} from "../dist/layout.js";
+import { applyEvent, initialState } from "../dist/state.js";
+
+const TURN = { phase: "PLAYING", current_player_id: "p-south", paused: null, round_number: 1 };
+
+function frame(type, payload, turn = TURN) {
+  return { seq: 1, type, turn, payload };
+}
+
+/** A state seated as `seat`, with the table configured. */
+function seated(seat = "SOUTH") {
+  const me = `p-${seat.toLowerCase()}`;
+  return [
+    frame("stream_started", {
+      seat, player_id: me, you: { name: "Me", type: "human" }, partial: false,
+    }),
+    frame("game_configured", {
+      seats: [
+        { player_id: "p-north", name: "North", type: "computer", seat: "NORTH" },
+        { player_id: "p-east", name: "East", type: "computer", seat: "EAST" },
+        { player_id: "p-south", name: "South", type: "human", seat: "SOUTH" },
+        { player_id: "p-west", name: "West", type: "computer", seat: "WEST" },
+      ],
+      teams: [{ team_id: "NS", name: "Us" }, { team_id: "EW", name: "Them" }],
+      winning_score: 2000,
+    }),
+  ].reduce(applyEvent, initialState());
+}
+
+// ---------------------------------------------------------------------------
+// Seat placement (UI-1)
+// ---------------------------------------------------------------------------
+
+test("the viewer sits at the bottom, whichever seat they hold", () => {
+  for (const seat of ["NORTH", "EAST", "SOUTH", "WEST"]) {
+    const spots = placement(seated(seat));
+    assert.equal(spots.bottom.seat, seat, `${seat} should be at the bottom`);
+  }
+});
+
+test("the seat that plays next sits to the left (UI-1)", () => {
+  // FR-3's turn order is clockwise N -> E -> S -> W, and at a table that means
+  // play passes to the player on your left.
+  const spots = placement(seated("SOUTH"));
+  assert.equal(spots.left.seat, "WEST");
+  assert.equal(spots.top.seat, "NORTH");
+  assert.equal(spots.right.seat, "EAST");
+});
+
+test("the partner always sits across", () => {
+  for (const seat of ["NORTH", "EAST", "SOUTH", "WEST"]) {
+    const spots = placement(seated(seat));
+    assert.equal(
+      spots.top.teamId, spots.bottom.teamId,
+      `${seat}'s partner should be across the table`,
+    );
+    assert.notEqual(spots.left.teamId, spots.bottom.teamId);
+    assert.notEqual(spots.right.teamId, spots.bottom.teamId);
+  }
+});
+
+test("the opponents sit left and right", () => {
+  const spots = placement(seated("EAST"));
+  assert.equal(spots.left.teamId, "NS");
+  assert.equal(spots.right.teamId, "NS");
+  assert.equal(spots.top.teamId, "EW");
+});
+
+test("an unseated client places nobody", () => {
+  const spots = placement(initialState());
+  assert.deepEqual(spots, { bottom: null, left: null, top: null, right: null });
+});
+
+test("spotOf finds where a seat is drawn", () => {
+  const state = seated("SOUTH");
+  assert.equal(spotOf(state, "p-south"), "bottom");
+  assert.equal(spotOf(state, "p-west"), "left");
+  assert.equal(spotOf(state, "p-nobody"), null);
+});
+
+// ---------------------------------------------------------------------------
+// The trick (UI-6)
+// ---------------------------------------------------------------------------
+
+test("each played card is tagged with the seat that played it (UI-6)", () => {
+  const state = [
+    frame("card_played", { player_id: "p-south", card: "AS" }),
+    frame("card_played", { player_id: "p-west", card: "9S" }),
+  ].reduce(applyEvent, seated("SOUTH"));
+
+  assert.deepEqual(trickCards(state), [
+    { playerId: "p-south", card: "AS", spot: "bottom" },
+    { playerId: "p-west", card: "9S", spot: "left" },
+  ]);
+});
+
+test("a card from a seat that is not at the table is dropped, not drawn wrongly", () => {
+  const state = applyEvent(seated(), frame("card_played", { player_id: "ghost", card: "AS" }));
+  assert.deepEqual(trickCards(state), []);
+});
+
+// ---------------------------------------------------------------------------
+// Legality (UI-9, ARC-2)
+// ---------------------------------------------------------------------------
+
+test("only the cards the server named are playable (UI-9)", () => {
+  const state = applyEvent(
+    seated(),
+    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS", "KS"] }),
+  );
+  assert.equal(isLegalPlay(state, "AS"), true);
+  assert.equal(isLegalPlay(state, "9C"), false);
+});
+
+test("nothing is playable when it is not this seat's turn", () => {
+  // No prompt means no turn: the client must not guess at legality (ARC-2).
+  assert.equal(isLegalPlay(seated(), "AS"), false);
+});
+
+test("a prompt for another phase makes no card playable", () => {
+  const state = applyEvent(
+    seated(), frame("turn_prompt", { phase: "PASSING", count: 4 }),
+  );
+  assert.equal(isLegalPlay(state, "AS"), false);
+  assert.equal(passCount(state), 4);
+});
+
+test("isMyTurn follows the turn header", () => {
+  assert.equal(isMyTurn(seated("SOUTH")), true);
+  assert.equal(isMyTurn(seated("NORTH")), false);
+});
+
+// ---------------------------------------------------------------------------
+// Drawing for the deal (FR-11, FR-11a)
+// ---------------------------------------------------------------------------
+
+test("a seat must draw until it has drawn", () => {
+  const selection = { phase: "DEALER_SELECTION", current_player_id: null, paused: null, round_number: 0 };
+  let state = applyEvent(seated(), frame("dealer_selection_started", {
+    spread_size: 48, taken: [],
+  }, selection));
+  assert.equal(mustDraw(state), true);
+
+  state = applyEvent(state, frame("draw_made", {
+    player_id: "p-west", position: 3, card: "AS",
+  }, selection));
+  assert.equal(mustDraw(state), true, "another seat's draw is not mine");
+
+  state = applyEvent(state, frame("draw_made", {
+    player_id: "p-south", position: 7, card: "KH",
+  }, selection));
+  assert.equal(mustDraw(state), false);
+  assert.deepEqual([...takenPositions(state)].sort((a, b) => a - b), [3, 7]);
+});
+
+test("nobody draws outside dealer selection", () => {
+  assert.equal(mustDraw(seated()), false);
+});
+
+// ---------------------------------------------------------------------------
+// Bidding (UI-10)
+// ---------------------------------------------------------------------------
+
+test("the minimum bid comes from the prompt, not from arithmetic here", () => {
+  const state = applyEvent(
+    seated(), frame("turn_prompt", { phase: "BIDDING", minimum_bid: 310, may_pass: true }),
+  );
+  assert.equal(minimumBid(state), 310);
+  assert.equal(minimumBid(seated()), null);
+});
+
+test("nothing is playable while the table is paused (RT-9)", () => {
+  // A pause is a state the game occupies: the server rejects a play made
+  // during one as out-of-phase ("The completed trick has not been cleared
+  // yet."), so the next leader must not be offered a card it cannot play.
+  const paused = {
+    phase: "PLAYING", current_player_id: "p-south", paused: "trick_clear", round_number: 1,
+  };
+  const state = [
+    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS", "KS"] }),
+    frame("trick_completed", { winner_player_id: "p-west", cards: [] }, paused),
+  ].reduce(applyEvent, seated());
+
+  assert.equal(state.prompt.legalPlays.includes("AS"), true, "the prompt still stands");
+  assert.equal(isLegalPlay(state, "AS"), false, "but the card is not offered");
+});
+
+test("a card becomes playable again once the pause ends", () => {
+  const running = {
+    phase: "PLAYING", current_player_id: "p-south", paused: null, round_number: 1,
+  };
+  const state = [
+    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS"] }),
+    frame("trick_completed", { winner_player_id: "p-west", cards: [] }, {
+      ...running, paused: "trick_clear",
+    }),
+    frame("trick_cleared", {
+      winner_player_id: "p-west", next_leader_player_id: "p-south",
+    }, running),
+  ].reduce(applyEvent, seated());
+  assert.equal(isLegalPlay(state, "AS"), true);
+});
