@@ -125,8 +125,9 @@ test("nothing is playable when it is not this seat's turn", () => {
 });
 
 test("a prompt for another phase makes no card playable", () => {
+  const passing = { phase: "PASSING", current_player_id: "p-south", paused: null, round_number: 1 };
   const state = applyEvent(
-    seated(), frame("turn_prompt", { phase: "PASSING", count: 4 }),
+    seated(), frame("turn_prompt", { phase: "PASSING", count: 4 }, passing),
   );
   assert.equal(isLegalPlay(state, "AS"), false);
   assert.equal(passCount(state), 4);
@@ -169,8 +170,9 @@ test("nobody draws outside dealer selection", () => {
 // ---------------------------------------------------------------------------
 
 test("the minimum bid comes from the prompt, not from arithmetic here", () => {
+  const bidding = { phase: "BIDDING", current_player_id: "p-south", paused: null, round_number: 1 };
   const state = applyEvent(
-    seated(), frame("turn_prompt", { phase: "BIDDING", minimum_bid: 310, may_pass: true }),
+    seated(), frame("turn_prompt", { phase: "BIDDING", minimum_bid: 310, may_pass: true }, bidding),
   );
   assert.equal(minimumBid(state), 310);
   assert.equal(minimumBid(seated()), null);

@@ -265,8 +265,9 @@ test("clearing a trick makes it the reviewable last trick (UI-14b)", () => {
 // ---------------------------------------------------------------------------
 
 test("turn_prompt carries what this seat may do, legal plays included", () => {
+  const playing = { phase: "PLAYING", current_player_id: "p-south", paused: null, round_number: 1 };
   const state = replay([
-    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS", "KS"] }),
+    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS", "KS"] }, playing),
   ], seated());
   assert.deepEqual(state.prompt, { phase: "PLAYING", legalPlays: ["AS", "KS"] });
 });
@@ -285,6 +286,32 @@ test("this seat's own play clears its prompt", () => {
     frame("card_played", { player_id: "p-south", card: "AS" }),
   ], seated());
   assert.equal(state.prompt, null);
+});
+
+test("a prompt is dropped once the header moves past its phase (NFR-4)", () => {
+  // The recorded case this guards: the auction winner keeps the turn
+  // straight through passing, melding and into play, so the current player
+  // never changes — only the phase does. Without watching the phase too, a
+  // client would go on offering "Pass 4 cards" controls after the server has
+  // moved on to melding, with nothing but a rejection to stop them being used.
+  const passing = { phase: "PASSING", current_player_id: "p-south", paused: null, round_number: 1 };
+  const melding = { phase: "MELDING", current_player_id: "p-south", paused: null, round_number: 1 };
+  const state = replay([
+    frame("turn_prompt", { phase: "PASSING", count: 4 }, passing),
+    frame("seat_thinking", { player_id: "p-south" }, melding),
+  ], seated());
+  assert.equal(state.prompt, null);
+});
+
+test("a live prompt survives frames that do not touch it", () => {
+  // The common case: unrelated frames — another seat thinking, and so on —
+  // must not be mistaken for the phase having moved on.
+  const playing = { phase: "PLAYING", current_player_id: "p-south", paused: null, round_number: 1 };
+  const state = replay([
+    frame("turn_prompt", { phase: "PLAYING", legal_plays: ["AS"] }, playing),
+    frame("seat_thinking", { player_id: "p-north" }, playing),
+  ], seated());
+  assert.deepEqual(state.prompt, { phase: "PLAYING", legalPlays: ["AS"] });
 });
 
 // ---------------------------------------------------------------------------

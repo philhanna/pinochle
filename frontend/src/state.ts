@@ -233,7 +233,29 @@ export function initialState(): GameState {
 export function applyEvent(state: GameState, frame: Frame): GameState {
   const next = { ...applyPayload(state, frame), ...fromHeader(frame.turn) };
   next.lastSeq = Math.max(state.lastSeq, frame.seq);
-  return next;
+  return withLivePrompt(next);
+}
+
+/**
+ * Drop a prompt the table has already moved past (§6.5, NFR-4).
+ *
+ * The server builds a prompt from the round's phase and the seat on the
+ * clock, and sends it to that seat alone; the turn header on every frame
+ * carries those same two facts. So a prompt is good only while the header
+ * still agrees with it, and one that disagrees has been overtaken — by the
+ * melding ending, by the turn passing, by a phase the server has already left.
+ *
+ * Without this the client goes on offering the controls for whatever it was
+ * last asked, and the only thing that stops a player using them is the server
+ * refusing the action (NFR-4), which is not where a client should leave it.
+ */
+function withLivePrompt(state: GameState): GameState {
+  const prompt = state.prompt;
+  if (prompt === null) {
+    return state;
+  }
+  const mine = state.me !== null && state.currentPlayerId === state.me.playerId;
+  return mine && prompt.phase === state.phase ? state : { ...state, prompt: null };
 }
 
 /** Apply the parts of a frame that depend on its type. */
