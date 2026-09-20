@@ -326,11 +326,12 @@ a game; `make test` is green at 306 tests.
   |---|---|---|---|---|
   | before | 212.2 | 96.8% | 96.3% | 250.7 |
   | allowance 130 | 18.1 | 53.6% | 85.8% | 256.5 |
+  | **allowance 160 (shipped)** | **13.2** | **25.0%** | **69.8%** | **262.7** |
 
-  The allowance is a single tunable figure, not a model of the partner's hand,
-  and 130 is deliberately cautious: over half of rounds are still abandoned,
-  and the bidding side makes its contract 86% of the time, which is the
-  signature of bidding below the hand's worth. Raising it shortens games and
-  moves the made rate toward the 65-70% a keener bidder would show. That
-  tuning is left for later; the figures above are the baseline to tune
-  against.
+  The allowance is a single tunable figure, not a model of the partner's hand.
+  The two settings show which way it moves: a low allowance bids under the
+  hand's worth, so rounds are thrown in rather than played and the side that
+  does bid almost always makes it. At 160 a game runs about thirteen rounds and
+  the bidding side makes its contract a little under 70% of the time, which is
+  the band a competent partnership shows. A quarter of rounds are still
+  abandoned; raising the figure further trades those for more sets.

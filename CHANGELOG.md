@@ -47,9 +47,10 @@ The format is based on [Keep a Changelog].
   partnership, so the valuation could not reach the 250 minimum (FR-27) and the
   strategy passed unconditionally: an all-computer game abandoned 302 of 309
   rounds under FR-31 and took 212 rounds to finish. `choose_bid` now adds
-  `_PARTNER_CONTRIBUTION`, a flat allowance of 130 for what the partner brings,
-  which over 16 complete games cuts a game to 18 rounds with 54% abandoned.
-  The allowance is a single figure meant to be tuned by playing games
+  `_PARTNER_CONTRIBUTION`, a flat allowance of 160 for what the partner brings,
+  which over 16 complete games cuts a game to 13 rounds with a quarter of them
+  abandoned and the bidding side making its contract just under 70% of the
+  time. The allowance is a single figure meant to be tuned by playing games
 
 ## [0.3.0] - 2026-09-07
 
