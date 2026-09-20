@@ -24,24 +24,29 @@ policy, and health check for that container.
 Pinochle uses one image and one container:
 
 ```text
-API client ── http://host:8000 ──> host port 8000
-                                      │
-                                      v
-                            Pinochle container
-                            ├─ FastAPI HTTP API
-                            └─ Server-Sent Events
+Browser ── http://host:8000 ──> host port 8000
+                                   │
+                                   v
+                         Pinochle container
+                         ├─ FastAPI HTTP API
+                         ├─ Server-Sent Events
+                         └─ the compiled client and card artwork
 ```
 
 There is no database container, Node container, or persistent data volume.
+Game state lives in memory only (NFR-8), so restarting the container loses a
+game in progress; there is nothing to back up and nothing to migrate.
 
 ## How the image is built
 
-The image is currently a single stage: it installs the `pinochle` Python
-package and nothing else. Design.md §10 describes a second, temporary Node
-stage that compiles `frontend/src/` and copies the result in alongside
-`frontend/public/`; that stage is added once `frontend/` exists, as a small,
-additive change to the Dockerfile rather than a rewrite — every command in
-this guide stays the same either way.
+The image is built in two stages. A Node stage compiles `frontend/src/` with
+`tsc`; the runtime stage installs the `pinochle` Python package and copies in
+the compiled modules alongside `frontend/public/`. Node is not in the finished
+image — only its output is.
+
+The client is compiled inside the image rather than copied from the host, which
+is why `.dockerignore` excludes `frontend/dist`: whatever is built locally
+cannot leak into a release and make the image disagree with the source.
 
 The server runs as an unprivileged user. Uvicorn listens on port 8000 inside the
 container, and Compose maps that to port 8000 on the host.
@@ -190,6 +195,15 @@ secret, expose only the required HTTP port, and set
 `PINOCHLE_PUBLIC_BASE_URL` to the externally reachable HTTPS URL.
 
 ## Deploy to a public VPS
+
+> **Unverified.** Everything above this line has been run: the image builds, the
+> container serves the game, and a full round has been played inside it. The
+> steps below — a VPS, a domain, TLS through a reverse proxy — have not, because
+> there is no host to run them on yet. Treat them as a plan to check rather than
+> a procedure known to work, and expect the TLS and proxy details in particular
+> to need adjusting. One thing worth knowing before you start: Server-Sent
+> Events break if a proxy buffers responses, which is what the
+> `X-Accel-Buffering: no` header and the Caddy configuration below are for.
 
 Use this topology when the development computer is not reachable from the
 internet:

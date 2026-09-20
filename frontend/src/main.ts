@@ -10,7 +10,9 @@ import { clearSelection } from "./hand.js";
 import { resetPanel } from "./panels.js";
 import { openStream, playerStreamUrl } from "./stream.js";
 import { applyEvent, initialState, type GameState } from "./state.js";
-import { hideLastTrick, renderTable, showError, type TableCallbacks } from "./table.js";
+import {
+  hideLastTrick, noteResort, renderTable, showError, type TableCallbacks,
+} from "./table.js";
 import { resolveSeat } from "./token.js";
 import type { Frame, Seat } from "./types.js";
 
@@ -107,6 +109,11 @@ function afterFrame(frame: Frame): void {
   if (frame.type === "round_started" || frame.type === "cards_passed") {
     clearSelection();
     resetPanel();
+  }
+  if (frame.type === "trump_named") {
+    // FR-23a: trump moves to the left of the hand, and that re-sort must be
+    // visible rather than instantaneous.
+    noteResort();
   }
 }
 

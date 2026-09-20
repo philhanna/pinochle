@@ -382,3 +382,44 @@ body.table-page {
   color: var(--dim);
   text-align: center;
 }
+
+/* What this seat passed or received — its team's business alone (UI-12). */
+.passed {
+  padding: 8px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.passed-row { display: flex; align-items: center; gap: 10px; padding: 2px 0; }
+.passed-label { color: var(--dim); font-size: 0.8rem; min-width: 7rem; }
+
+/* FR-23a: naming trump re-orders the hand, and the change must be visible
+   rather than the cards appearing to teleport into new places. */
+@keyframes resort {
+  0% { transform: translateY(10px); opacity: 0.35; }
+  60% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+#hand.resorted .card {
+  animation: resort 620ms ease-out;
+}
+
+/* Staggered left to right, so the eye follows the suits into their new order
+   instead of seeing one silent jump. */
+#hand.resorted .card:nth-child(2) { animation-delay: 30ms; }
+#hand.resorted .card:nth-child(3) { animation-delay: 60ms; }
+#hand.resorted .card:nth-child(4) { animation-delay: 90ms; }
+#hand.resorted .card:nth-child(5) { animation-delay: 120ms; }
+#hand.resorted .card:nth-child(6) { animation-delay: 150ms; }
+#hand.resorted .card:nth-child(7) { animation-delay: 180ms; }
+#hand.resorted .card:nth-child(8) { animation-delay: 210ms; }
+#hand.resorted .card:nth-child(9) { animation-delay: 240ms; }
+#hand.resorted .card:nth-child(10) { animation-delay: 270ms; }
+#hand.resorted .card:nth-child(11) { animation-delay: 300ms; }
+#hand.resorted .card:nth-child(12) { animation-delay: 330ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hand.resorted .card { animation: none; }
+}

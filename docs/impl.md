@@ -355,6 +355,19 @@ a game; `make test` is green at 318 server tests and 79 client tests.
   scripted play-through of two complete rounds), so building a throwaway form
   per action and then deleting it in C7 would have been waste.
 
+  Two requirements were only half met by the first pass and are now complete:
+  UI-12's received cards were merged into the hand where nothing distinguished
+  them, and FR-23a asks that the trump re-sort be *made visible* rather than
+  instantaneous — the hand is rebuilt rather than moved, so there is nothing for
+  a CSS transition to interpolate and the cards are pulsed into their new order
+  instead.
+
+- **C7** — the image carries the finished client (checked by fetching the
+  compiled modules and the stylesheet out of a running container), the
+  deployment guide no longer describes a Dockerfile that has since changed, and
+  its VPS section is marked unverified because there is still no host to verify
+  it on. There was no debug panel to remove, A3 having been skipped.
+
   What the code holds to, and where:
 
   * No rule is decided in the browser (ARC-2). Legality is whatever the turn

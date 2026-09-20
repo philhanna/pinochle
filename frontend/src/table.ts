@@ -6,7 +6,7 @@
 // the pointer.
 
 import { backUrl, faceUrl } from "./cards.js";
-import { backsFan, droppedCard, isDragging, renderHand } from "./hand.js";
+import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
 import {
   isPaused, mustDraw, placement, takenPositions, trickCards,
 } from "./layout.js";
@@ -38,7 +38,19 @@ export function renderTable(state: GameState, callbacks: TableCallbacks): void {
   // waits; dragend triggers the next redraw.
   if (hand !== null && !isDragging()) {
     renderHand(hand, state, callbacks);
+    if (pendingResort) {
+      pendingResort = false;
+      markResorted(hand);
+    }
   }
+}
+
+/** Set when trump is named, so the next redraw can show the hand re-sorting. */
+let pendingResort = false;
+
+/** Note that the hand has just been re-ordered by trump being named (FR-23a). */
+export function noteResort(): void {
+  pendingResort = true;
 }
 
 /** The three other seats, plus this one's own label (UI-1, UI-3, UI-5, UI-7). */
@@ -103,11 +115,16 @@ function renderCentre(state: GameState, callbacks: TableCallbacks): void {
     centre.replaceChildren(lastTrickPanel(state), trickLayer(state, callbacks));
     return;
   }
+  const pass = passPanel(state);
   if (state.prompt?.phase === "MELDING" || Object.keys(state.meld).length > 0) {
-    centre.replaceChildren(meldPanel(state), trickLayer(state, callbacks));
+    centre.replaceChildren(
+      ...(pass === null ? [] : [pass]), meldPanel(state), trickLayer(state, callbacks),
+    );
     return;
   }
-  centre.replaceChildren(trickLayer(state, callbacks));
+  centre.replaceChildren(
+    ...(pass === null ? [] : [pass]), trickLayer(state, callbacks),
+  );
 }
 
 /**
@@ -174,6 +191,50 @@ function spread(state: GameState, callbacks: TableCallbacks): HTMLElement {
     element.append(back);
   }
   return element;
+}
+
+/**
+ * What this seat passed or received, shown to its team alone (UI-12, RT-1).
+ *
+ * Received cards join the hand, where they are indistinguishable from the rest;
+ * a player needs to see which four arrived. Shown until the trick play starts,
+ * at which point it has been read and the table needs the room.
+ */
+function passPanel(state: GameState): HTMLElement | null {
+  const received = state.received;
+  const sent = state.sent;
+  if ((received === null && sent === null) || state.trick.length > 0) {
+    return null;
+  }
+
+  const panel = document.createElement("div");
+  panel.className = "passed";
+
+  if (received !== null) {
+    panel.append(cardRow(`From ${nameFor(state, received.fromPlayerId)}`, received.cards));
+  }
+  if (sent !== null) {
+    panel.append(cardRow(`To ${nameFor(state, sent.toPlayerId)}`, sent.cards));
+  }
+  return panel;
+}
+
+/** A labelled row of small card images. */
+function cardRow(label: string, cards: string[]): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "passed-row";
+  row.append(text("passed-label", label));
+  const tray = document.createElement("div");
+  tray.className = "tray";
+  for (const card of cards) {
+    const image = document.createElement("img");
+    image.className = "card small";
+    image.src = faceUrl(card);
+    image.alt = card;
+    tray.append(image);
+  }
+  row.append(tray);
+  return row;
 }
 
 /** Exposed meld, per seat and per team (UI-13). */

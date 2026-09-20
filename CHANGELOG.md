@@ -66,6 +66,10 @@ The format is based on [Keep a Changelog].
 - `CardImagePort` in the container's object graph, wired to `SvgCardImage`
 
 ### Changed
+- `README.md` now says what the project is and how to run it, and
+  `docs/docker-usage.md` describes the two-stage image it actually builds. The
+  VPS half of that guide is marked unverified: the image and container are
+  tested, a public host is not
 - `docker/Dockerfile` is now a two-stage build: a Node stage compiles
   `frontend/src`, and the Python runtime image copies the result. The client is
   compiled in the image rather than copied from the host, so the image can never

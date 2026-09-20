@@ -36,6 +36,23 @@ export function isDragging(): boolean {
   return dragging;
 }
 
+/**
+ * Mark the hand as just re-sorted, so the change is visible (FR-23a).
+ *
+ * Naming trump moves the trump suit to the left, and it is the only re-sort a
+ * hand undergoes in a round. The cards are rebuilt rather than moved, so a CSS
+ * transition has nothing to interpolate; a short pulse on the hand is what
+ * keeps the cards from appearing to teleport.
+ */
+export function markResorted(root: HTMLElement): void {
+  root.classList.remove("resorted");
+  // Reading a layout property restarts the animation rather than letting the
+  // class removal and re-addition collapse into no change at all.
+  void root.offsetWidth;
+  root.classList.add("resorted");
+  window.setTimeout(() => root.classList.remove("resorted"), 900);
+}
+
 /** Draw this seat's hand into `root` (UI-4). */
 export function renderHand(root: HTMLElement, state: GameState, callbacks: HandCallbacks): void {
   const passing = passCount(state) > 0;
