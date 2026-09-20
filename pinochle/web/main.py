@@ -36,9 +36,9 @@ def create_app(container: Container | None = None) -> FastAPI:
     # tsc compiles from frontend/src (ARC-8 — no bundler, so the browser
     # loads them as ES modules exactly as emitted).
     if public_dir.is_dir():
-        app.mount("/assets", StaticFiles(directory=public_dir), name="assets")
+        app.mount("/assets", _Revalidated(directory=public_dir), name="assets")
     if dist_dir.is_dir():
-        app.mount("/static", StaticFiles(directory=dist_dir), name="static")
+        app.mount("/static", _Revalidated(directory=dist_dir), name="static")
 
     @app.get("/healthz")
     async def healthz() -> dict:
@@ -87,6 +87,24 @@ def _lifespan(container: Container):
     return lifespan
 
 
+class _Revalidated(StaticFiles):
+    """Static files a browser must check with the server before reusing.
+
+    The page, the stylesheet and the modules are edited constantly and are
+    named without a content hash (ARC-8 — no bundler), so a browser left to
+    its own devices will happily go on showing yesterday's client.  ``no-cache``
+    does not forbid storing them; it requires the conditional request, which
+    the ETag then answers with a 304 and no body.  The artwork is the
+    opposite case and says so for itself (see routers/cards.py).
+    """
+
+    def file_response(self, *args, **kwargs):
+        """Serve the file as usual, with revalidation demanded of the client."""
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def _serve_page(path: Path):
     """Serve a static front-end page, or a friendly 404 before it exists."""
     if not path.is_file():
@@ -97,7 +115,9 @@ def _serve_page(path: Path):
                 "PINOCHLE_FRONTEND_DIR."
             )}},
         )
-    return FileResponse(path)
+    # Same reasoning as _Revalidated: the page names the stylesheet and the
+    # entry module, so a cached copy of it pins a cached copy of those too.
+    return FileResponse(path, headers={"Cache-Control": "no-cache"})
 
 
 app = create_app()

@@ -67,6 +67,50 @@ export function trickCards(state: GameState, plays: Play[] = state.trick): Trick
 }
 
 /**
+ * The tilt of each card in a fanned hand, in degrees off vertical (UI-4).
+ *
+ * The fan is drawn by rotation alone: every card sits on the same spot and is
+ * turned about a pivot below the hand — `--fan-pivot` in table.css — so the
+ * tilt is what carries each card sideways along the arc, exactly as the cards
+ * in a real hand splay from the fingers holding them. Spacing therefore is not
+ * set here; it falls out of the angle and the pivot, and the two files have to
+ * agree on the pivot for the overlap to come out right.
+ *
+ * The step is a constant, so a hand closes up as it is played out rather than
+ * re-spreading the survivors across a fixed arc. The cap only guards a count
+ * larger than a pinochle hand ever is.
+ */
+export function fanAngles(count: number): number[] {
+  if (count < 2) {
+    return count === 1 ? [0] : [];
+  }
+  const step = Math.min(STEP_DEGREES, MAX_ARC_DEGREES / (count - 1));
+  const middle = (count - 1) / 2;
+  return Array.from({ length: count }, (_, index) => (
+    Math.round((index - middle) * step * 100) / 100
+  ));
+}
+
+// How far below a card's top edge the fan pivots, in card heights. Matches
+// `--fan-pivot: 240%` in table.css.
+const PIVOT_DEPTH = 2.4;
+
+// How much of a card its neighbour leaves uncovered: enough for the corner
+// index, the rank and the suit, and no more (UI-4).
+const VISIBLE_FRACTION = 0.3;
+
+// The card artwork's proportions, from --card-w and --card-h in table.css.
+const CARD_ASPECT = 74 / 104;
+
+// At these angles the arc and its chord are within a pixel of each other, so
+// the step is just the distance wanted over the radius it is swung through.
+const STEP_DEGREES = (VISIBLE_FRACTION * CARD_ASPECT / PIVOT_DEPTH) * (180 / Math.PI);
+
+// Twelve cards at the step above come to 56 degrees, so this only ever binds
+// on a hand bigger than the game deals.
+const MAX_ARC_DEGREES = 60;
+
+/**
  * Whether `card` may be played right now (UI-9).
  *
  * The answer is the server's: legality comes from the turn prompt, never from

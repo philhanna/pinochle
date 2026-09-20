@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
+  fanAngles, isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
   spotOf, takenPositions, trickCards,
 } from "../dist/layout.js";
 import { applyEvent, initialState } from "../dist/state.js";
@@ -206,4 +206,37 @@ test("a card becomes playable again once the pause ends", () => {
     }, running),
   ].reduce(applyEvent, seated());
   assert.equal(isLegalPlay(state, "AS"), true);
+});
+
+test("a fanned hand is centred, evenly stepped, and turns left to right", () => {
+  const angles = fanAngles(12);
+  assert.equal(angles.length, 12);
+  assert.ok(angles[0] < 0 && angles[11] > 0, "the fan opens both ways from the middle");
+  assert.ok(
+    Math.abs(angles[0] + angles[11]) < 0.01,
+    "the outermost cards lean equally far, in opposite directions",
+  );
+
+  // The angles are rounded to two places before they reach the style
+  // attribute, so equal steps are equal to within that rounding.
+  const steps = angles.slice(1).map((angle, index) => angle - angles[index]);
+  for (const step of steps) {
+    assert.ok(Math.abs(step - steps[0]) < 0.03, "every card turns by the same step");
+  }
+  assert.ok(steps[0] > 0, "the fan turns clockwise, so the cards spread rightwards");
+});
+
+test("a fan closes up as the hand is played out, rather than re-spreading it", () => {
+  // A real hand narrows as cards leave it: the step stays put and the arc
+  // shrinks, so the remaining cards do not drift apart.
+  const twelve = fanAngles(12);
+  const four = fanAngles(4);
+  const step = (angles) => angles[1] - angles[0];
+  assert.ok(Math.abs(step(twelve) - step(four)) < 0.03);
+  assert.ok(four[3] - four[0] < twelve[11] - twelve[0]);
+});
+
+test("a fan of one card lies flat, and a fan of none is empty", () => {
+  assert.deepEqual(fanAngles(1), [0]);
+  assert.deepEqual(fanAngles(0), []);
 });

@@ -336,28 +336,57 @@ body.table-page {
   box-shadow: none;
 }
 
-/* The hand, fanned and face up (UI-4). */
+/* The hand, fanned and face up (UI-4).
+
+   Held as a hand is held: every card on the same spot, each turned a little
+   further about a pivot well below the fan, so the cards sweep out an arc and
+   lie across one another with only the corner index of each showing. The tilt
+   is the only thing script sets (--angle, from layout.ts's fanAngles); the
+   spacing follows from it and from the pivot below, which is why the two have
+   to agree on --fan-pivot.
+
+   The fan therefore has no width of its own to give the flex column, so the
+   box is sized here: tall enough for the centre card raised on hover and for
+   the outer cards, which the rotation carries below it. */
 #hand {
-  display: flex;
-  justify-content: center;
-  height: calc(var(--card-h) + 14px);
-  align-items: flex-end;
+  --fan-pivot: 240%;
+  position: relative;
+  width: 100%;
+  height: calc(var(--card-h) + 58px);
+  /* Only the cards themselves are hit: the box is as wide as the table and
+     would otherwise swallow clicks meant for the felt beneath it. */
+  pointer-events: none;
 }
 
+/* Nothing to hold before the deal, so the bar closes up rather than leaving a
+   fan-sized gap above the felt. */
+#hand:empty { height: 0; }
+
 #hand .card {
-  margin-right: calc(var(--card-w) * -0.34);
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  margin-left: calc(var(--card-w) / -2);
+  pointer-events: auto;
+  transform-origin: 50% var(--fan-pivot);
+  /* The lift comes after the turn, so a card rises out of the fan along its
+     own axis rather than straight up out of a neighbour's way. */
+  transform: rotate(var(--angle, 0deg)) translateY(var(--raise, 0px));
   transition: transform 120ms ease, box-shadow 120ms ease;
 }
-#hand .card:last-child { margin-right: 0; }
 
 /* UI-9: legal and illegal must look different, and an illegal card cannot be
    submitted — the click handler is simply not attached to one. */
 #hand .card.legal { cursor: grab; box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.5); }
-#hand .card.legal:hover { transform: translateY(-16px); }
+#hand .card.legal:hover { --raise: -18px; }
 #hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
 
+/* A card being pointed at or picked out comes clear of the ones over it,
+   which otherwise cover all but its corner. */
+#hand .card:hover, #hand .card.chosen { z-index: 40; }
+
 #hand.choosing .card { cursor: pointer; }
-#hand .card.chosen { transform: translateY(-20px); box-shadow: 0 0 0 2px var(--ns); }
+#hand .card.chosen { --raise: -22px; box-shadow: 0 0 0 2px var(--ns); }
 #hand .card.lifted { opacity: 0.4; }
 
 /* Over the felt at the top, clear of every control. */
@@ -397,9 +426,9 @@ body.table-page {
 /* FR-23a: naming trump re-orders the hand, and the change must be visible
    rather than the cards appearing to teleport into new places. */
 @keyframes resort {
-  0% { transform: translateY(10px); opacity: 0.35; }
-  60% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(0); opacity: 1; }
+  0% { transform: rotate(var(--angle, 0deg)) translateY(14px); opacity: 0.35; }
+  60% { transform: rotate(var(--angle, 0deg)) translateY(0); opacity: 1; }
+  100% { transform: rotate(var(--angle, 0deg)) translateY(0); opacity: 1; }
 }
 
 #hand.resorted .card {

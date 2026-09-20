@@ -48,6 +48,20 @@ async def test_the_stylesheets_are_served_from_the_public_mount(client):
         assert response.headers["content-type"].startswith("text/css")
 
 
+async def test_the_client_is_served_for_revalidation_rather_than_reuse(client):
+    """An edited stylesheet or module has to reach a browser that has the old one.
+
+    Nothing in the front end is named with a content hash (ARC-8 — no bundler),
+    so without this a browser is free to go on serving a cached client from its
+    own store and never ask.  The card artwork is the opposite case and is
+    cached hard on purpose (see test_cards_router).
+    """
+    for path in ("/", "/admin", "/assets/table.css", "/static/main.js"):
+        response = await client.get(path)
+        assert response.status_code == 200, path
+        assert response.headers["cache-control"] == "no-cache", path
+
+
 async def test_the_table_page_loads_the_table_stylesheet(client):
     """The console and the table are styled separately; neither drags in the other."""
     assert "/assets/table.css" in (await client.get("/")).text

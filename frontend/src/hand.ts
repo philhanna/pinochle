@@ -6,7 +6,7 @@
 // from the server's turn prompt, never from rules re-derived here (ARC-2).
 
 import { backUrl, faceUrl, type CardCode } from "./cards.js";
-import { isLegalPlay, passCount } from "./layout.js";
+import { fanAngles, isLegalPlay, passCount } from "./layout.js";
 import type { GameState } from "./state.js";
 
 /** What the hand does when a card is chosen. */
@@ -60,16 +60,18 @@ export function renderHand(root: HTMLElement, state: GameState, callbacks: HandC
     clearSelection();
   }
 
+  const angles = fanAngles(state.hand.length);
   root.replaceChildren(...state.hand.map((card, index) => (
-    cardElement(card, index, state, passing, callbacks)
+    cardElement(card, index, angles[index] ?? 0, state, passing, callbacks)
   )));
   root.classList.toggle("choosing", passing);
 }
 
-/** One card in the hand, with both gestures wired to it. */
+/** One card in the hand, tilted into the fan, with both gestures wired to it. */
 function cardElement(
   card: CardCode,
   index: number,
+  angle: number,
   state: GameState,
   passing: boolean,
   callbacks: HandCallbacks,
@@ -80,6 +82,11 @@ function cardElement(
   element.src = faceUrl(card);
   element.alt = card;
   element.draggable = playable || passing;
+
+  // The tilt is what places the card (see fanAngles); the stacking order is
+  // what leaves its corner index showing, each card over the one to its left.
+  element.style.setProperty("--angle", `${angle}deg`);
+  element.style.zIndex = String(index);
 
   // UI-9: legality is shown at all times during play, not only on hover, and
   // an illegal card is not merely unstyled — it cannot be submitted.
