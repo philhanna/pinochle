@@ -327,14 +327,21 @@ a game; `make test` is green at 306 tests.
   | before | 212.2 | 96.8% | 96.3% | 250.7 |
   | allowance 130 | 18.1 | 53.6% | 85.8% | 256.5 |
   | allowance 160 | 13.2 | 25.0% | 69.8% | 262.7 |
-  | **allowance 170 (shipped)** | **12.6** | **16.4%** | **69.6%** | **265.7** |
+  | allowance 170 | 12.6 | 16.4% | 69.6% | 265.7 |
+  | **allowance 180 (shipped)** | **13.4** | **9.8%** | **63.9%** | **270.9** |
 
   The allowance is a single tunable figure, not a model of the partner's hand,
-  and the progression shows which way it moves. A low allowance bids under the
-  hand's worth: rounds are thrown in rather than played, and the side that does
-  bid almost always makes it — 130's 85.8% is a symptom, not a strength. From
-  160 to 170 the made rate holds at just under 70%, the band a competent
-  partnership shows, while abandoned rounds fall from a quarter to a sixth, so
-  170 costs nothing for the ground it gains. Beyond it the trade reappears: a
-  sweep at 185 reached about 5% abandoned but pulled the made rate down toward
-  65%.
+  and the progression shows what it buys. A low allowance bids under the hand's
+  worth: rounds are thrown in rather than played, and the side that does bid
+  almost always makes it — 130's 85.8% is a symptom, not a strength. Up to 170
+  that is pure gain, the made rate holding just under 70% while abandoned
+  rounds fall from a half to a sixth. At 180 the trade has arrived: abandoned
+  rounds reach a tenth, but the made rate drops to 64% and rounds per game
+  stop falling, because rounds lost to a redeal are simply traded for rounds
+  lost going set. 170 is the measured optimum on this formula; 180 buys fewer
+  redeals with contracts.
+
+  The better next lever is the formula rather than the figure: `_trick_estimate`
+  counts only aces in the prospective trump suit, though an off-suit ace still
+  takes a trick. A sweep counting them at 10 apiece reached 6.9% abandoned with
+  69.8% made — better on both axes than any flat allowance tried here.

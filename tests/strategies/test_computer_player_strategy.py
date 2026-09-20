@@ -80,7 +80,12 @@ def test_choose_bid_opens_on_an_ordinary_good_hand():
 
 
 def test_choose_bid_stops_raising_an_ordinary_hand_eventually():
-    """The partner allowance must not make a hand bid without limit."""
+    """The partner allowance must not make a hand bid without limit.
+
+    Deliberately far above any plausible valuation rather than one increment
+    past this hand's: where the ceiling falls is a tuning decision, and a test
+    that pins it would fail every time the allowance is adjusted.
+    """
     hand = make_hand([
         (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
         (Rank.ACE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
@@ -89,7 +94,7 @@ def test_choose_bid_stops_raising_an_ordinary_hand_eventually():
         (Rank.QUEEN, Suit.DIAMONDS), (Rank.TEN, Suit.CLUBS),
         (Rank.JACK, Suit.CLUBS), (Rank.NINE, Suit.CLUBS),
     ])
-    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=300) is None
+    assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=1000) is None
 
 
 def test_choose_bid_passes_on_a_weak_hand():
