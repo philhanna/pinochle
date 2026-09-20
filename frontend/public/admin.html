@@ -10,13 +10,113 @@
 <header>
   <h1>Pinochle console</h1>
   <p class="phase-note">
-    Slice A2 builds this page: create a game, seat four players, show the join
-    links, start, abandon. Until then, drive the same endpoints from
-    <code>make seed</code>.
+    Create a game, hand out the join links, start it. An all-computer table
+    issues no links and can be watched here.
   </p>
 </header>
-<main id="app">
-  <p class="note info">Not built yet (docs/impl.md slice A2).</p>
+
+<main>
+  <p id="message" class="note info"></p>
+
+  <form id="setup">
+    <fieldset>
+      <legend>Teams</legend>
+      <label>North-South <input name="team-ns" value="North-South"></label>
+      <label>East-West <input name="team-ew" value="East-West"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Seats</legend>
+      <table class="setup-seats">
+        <thead>
+          <tr><th>Seat</th><th>Name</th><th>Played by</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">North</th>
+            <td><input name="name-NORTH" value="North"></td>
+            <td>
+              <select name="type-NORTH">
+                <option value="computer" selected>computer</option>
+                <option value="human">human</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">East</th>
+            <td><input name="name-EAST" value="East"></td>
+            <td>
+              <select name="type-EAST">
+                <option value="computer" selected>computer</option>
+                <option value="human">human</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">South</th>
+            <td><input name="name-SOUTH" value="South"></td>
+            <td>
+              <select name="type-SOUTH">
+                <option value="computer">computer</option>
+                <option value="human" selected>human</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">West</th>
+            <td><input name="name-WEST" value="West"></td>
+            <td>
+              <select name="type-WEST">
+                <option value="computer" selected>computer</option>
+                <option value="human">human</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </fieldset>
+
+    <fieldset>
+      <legend>Credential</legend>
+      <label>
+        Admin token
+        <input id="admin-token" name="admin-token" type="password"
+               autocomplete="off" placeholder="PINOCHLE_ADMIN_TOKEN">
+      </label>
+      <p class="hint">
+        Set by <code>PINOCHLE_ADMIN_TOKEN</code>; <code>make dev</code> uses
+        <code>dev</code>. If none was set, the server logged one at startup.
+        Held for this tab only.
+      </p>
+    </fieldset>
+
+    <button type="submit" class="primary">Create game</button>
+  </form>
+
+  <section id="game" hidden>
+    <h2>Seats</h2>
+    <table class="seats">
+      <thead>
+        <tr><th>Seat</th><th>Name</th><th>Played by</th><th>Status</th><th>Join link</th></tr>
+      </thead>
+      <tbody id="seats"></tbody>
+    </table>
+
+    <div class="actions">
+      <button type="button" id="start" class="primary">Start game</button>
+      <button type="button" id="refresh">Refresh status</button>
+      <button type="button" id="abandon" class="danger">Abandon</button>
+    </div>
+
+    <h2>Events</h2>
+    <p class="phase-note">
+      Public events only — a hand is never broadcast, so this stream
+      structurally cannot carry one.
+    </p>
+    <div id="events"></div>
+  </section>
 </main>
+
+<script type="module" src="/static/admin.js"></script>
 </body>
 </html>

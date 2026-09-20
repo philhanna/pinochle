@@ -295,6 +295,16 @@ supersedes.
 - **A0** — `Makefile`, `scripts/dev.sh`, `scripts/seed.py`.
 - **A1** — `frontend/` (TypeScript, ES modules, no bundler), the raw-frame log
   page, the card-artwork routes, and the Dockerfile's Node stage.
+- **A2** — the administrator's console: create a game with four named seats,
+  hand out the join links, watch who has joined, start, abandon, and a live
+  view of the public event stream.
+
+  One server change was needed for it. The administrator's SSE endpoint
+  required the `X-Admin-Token` header, which `EventSource` cannot set, and an
+  all-computer table issues no join links — so there was no way to watch one in
+  a browser at all. That endpoint now also accepts its token as `?t=`, and lives
+  on its own router so that only it does: every command still requires the
+  header, and a forwarded URL cannot create, start or abandon a game.
 
 Verified: a complete all-computer game (309 rounds to a 1500-point win) ran on
 the host in about six seconds with pauses at zero, and its 4,037 frames arrived
@@ -302,7 +312,7 @@ in order on the admin stream. Not one `cards_dealt` or `cards_passed` frame
 appeared on that stream across all 309 deals, which is NFR-6 holding
 structurally rather than by filtering. A human seat's stream carried its own
 hand and nobody else's. The image builds, serves the compiled client, and runs
-a game; `make test` is green at 306 tests.
+a game; `make test` is green at 313 tests.
 
 ### Fixed after a review point
 

@@ -1,7 +1,7 @@
 // Entry point for the player's page.
 
 import { createLog } from "./log.js";
-import { openStream } from "./stream.js";
+import { openStream, playerStreamUrl } from "./stream.js";
 import { resolveSeat } from "./token.js";
 
 main();
@@ -25,7 +25,7 @@ function main(): void {
   }
 
   const log = createLog(root);
-  openStream(seat, {
+  openStream(playerStreamUrl(seat), {
     onFrame: (frame) => log.append(frame),
     onError: (message) => log.note(message, "error"),
   });

@@ -1,6 +1,11 @@
 # tests.web.test_admin_router
 from pinochle.domain.game import GamePhase
-from tests.web.conftest import FOUR_HUMAN_SEATS, admin_headers, seat_players
+from tests.web.conftest import (
+    ADMIN_TOKEN,
+    FOUR_HUMAN_SEATS,
+    admin_headers,
+    seat_players,
+)
 
 
 async def test_create_game_requires_the_admin_token(client):
@@ -89,3 +94,44 @@ async def test_abandon_finishes_the_game_and_revokes_tokens(container, client):
     assert response.status_code == 204
     assert container.state.load(game_id).phase == GamePhase.FINISHED
     assert container.tokens.resolve(game_id, token) is None
+
+
+# ---------------------------------------------------------------------------
+# The administrator's stream token (§5.1, §6.2)
+# ---------------------------------------------------------------------------
+
+async def test_the_admin_stream_rejects_a_wrong_query_token(client):
+    """A bad token is a 403 whichever way it arrives."""
+    response = await client.post(
+        "/api/admin/games", json=FOUR_HUMAN_SEATS, headers=admin_headers(),
+    )
+    game_id = response.json()["game_id"]
+
+    result = await client.get(
+        f"/api/admin/games/{game_id}/stream", params={"t": "not-the-token"},
+    )
+    assert result.status_code == 403
+    assert result.json()["error"]["code"] == "forbidden_admin"
+
+
+async def test_the_admin_stream_rejects_a_missing_token(client):
+    """No credential at all is the same 403."""
+    response = await client.post(
+        "/api/admin/games", json=FOUR_HUMAN_SEATS, headers=admin_headers(),
+    )
+    game_id = response.json()["game_id"]
+
+    assert (await client.get(f"/api/admin/games/{game_id}/stream")).status_code == 403
+
+
+async def test_a_command_route_does_not_accept_a_query_token(client):
+    """Only the read-only stream takes ``?t=``.
+
+    A token that could reach a mutating route through a URL would be a token
+    that could be created, started or abandoned with by anyone the link was
+    forwarded to.
+    """
+    result = await client.post(
+        "/api/admin/games", json=FOUR_HUMAN_SEATS, params={"t": ADMIN_TOKEN},
+    )
+    assert result.status_code == 403

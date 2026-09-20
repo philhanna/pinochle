@@ -55,3 +55,29 @@ function tokenFor(gameId: string, fromQuery: string | null): string | null {
     return null;
   }
 }
+
+const ADMIN_KEY = "pinochle.admin";
+
+/**
+ * Return the admin token entered earlier in this tab, or the empty string.
+ *
+ * `sessionStorage` again, and for a second reason beyond the one in
+ * `resolveSeat`: an administrative credential that outlived the tab would sit
+ * in a shared browser until someone cleared it.
+ */
+export function storedAdminToken(): string {
+  try {
+    return window.sessionStorage.getItem(ADMIN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** Remember the admin token for the rest of this tab's session. */
+export function rememberAdminToken(token: string): void {
+  try {
+    window.sessionStorage.setItem(ADMIN_KEY, token);
+  } catch {
+    // Blocked site data: the console still works, it just asks again on reload.
+  }
+}

@@ -20,6 +20,11 @@ The format is based on [Keep a Changelog].
   reviewable before any presentation code exists. The seat token is held in the
   URL and `sessionStorage`, never `localStorage`, so four seats can be four
   tabs of one browser
+- The administrator's console (impl.md slice A2): create a game with four
+  named seats, copy each human seat's join link, see which seats have joined,
+  start the game, abandon it, and watch the public event stream live. An
+  all-computer table issues no join links, so the console's stream view is the
+  only way to watch one
 - `pinochle/web/routers/cards.py`: card artwork over HTTP (UI-16), addressed by
   the same two-character wire code the event stream uses — `/cards/faces/TS`
   for the ten of spades, `/cards/backs/blue` for a back, either in SVG or PNG,
@@ -38,6 +43,13 @@ The format is based on [Keep a Changelog].
   valuation — its own meld, the trick points both hands together can take, and
   an allowance for the partner's contribution — rather than a valuation of its
   own hand alone, which no hand could ever bid on
+
+### Security
+- The administrator's SSE endpoint now accepts its token as `?t=` as well as in
+  the `X-Admin-Token` header, because `EventSource` cannot set headers. It sits
+  on a router of its own so that only this read-only route accepts a token that
+  way: every command that changes a game still requires the header, so a
+  forwarded URL cannot create, start or abandon a game
 
 ### Fixed
 - A request for artwork that is well-formed but absent from disk is now a 404

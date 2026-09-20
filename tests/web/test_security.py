@@ -1,7 +1,11 @@
 # tests.web.test_security
 from fastapi import Request
 
-from pinochle.web.security import admin_token_matches, extract_seat_token
+from pinochle.web.security import (
+    admin_token_matches,
+    extract_admin_token,
+    extract_seat_token,
+)
 
 
 def _request(headers: dict | None = None, query_string: bytes = b"") -> Request:
@@ -50,3 +54,23 @@ def test_admin_token_rejects_a_wrong_value():
 def test_admin_token_rejects_a_missing_value():
     """A missing admin token (None) should be rejected, not raise."""
     assert admin_token_matches(None, "secret") is False
+
+
+# ---------------------------------------------------------------------------
+# The administrator's token (§5.1, §6.2)
+# ---------------------------------------------------------------------------
+
+def test_extract_admin_token_prefers_the_header():
+    """Administrative commands carry it in X-Admin-Token."""
+    request = _request(headers={"X-Admin-Token": "abc"}, query_string=b"t=xyz")
+    assert extract_admin_token(request) == "abc"
+
+
+def test_extract_admin_token_falls_back_to_the_query_string():
+    """The administrator's EventSource stream cannot set a header either."""
+    assert extract_admin_token(_request(query_string=b"t=xyz")) == "xyz"
+
+
+def test_extract_admin_token_returns_none_when_absent():
+    """No credential at all is None, not an empty string."""
+    assert extract_admin_token(_request()) is None

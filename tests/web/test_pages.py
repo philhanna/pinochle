@@ -42,3 +42,25 @@ async def test_the_stylesheet_is_served_from_the_public_mount(client):
     response = await client.get("/assets/style.css")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/css")
+
+
+async def test_the_admin_stream_guard_accepts_a_query_token(container):
+    """§6.2: the console opens this with ``EventSource``, which sets no headers.
+
+    Asserted against the guard rather than over HTTP: the stream never ends,
+    so a test that opened it through the client would hang on close — which
+    is why the stream tests drive the route functions directly.
+    """
+    from fastapi import Request
+
+    from pinochle.web.dependencies import require_admin_stream
+    from pinochle.web.main import create_app
+    from tests.web.conftest import ADMIN_TOKEN
+
+    app = create_app(container)
+    request = Request({
+        "type": "http", "method": "GET", "path": "/", "headers": [],
+        "query_string": f"t={ADMIN_TOKEN}".encode(), "app": app,
+    })
+
+    assert require_admin_stream(request) is None

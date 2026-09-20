@@ -25,6 +25,7 @@ def create_app(container: Container | None = None) -> FastAPI:
 
     register_error_handlers(app)
     app.include_router(admin.router)
+    app.include_router(admin.stream_router)
     app.include_router(player.router)
     app.include_router(stream.router)
     app.include_router(cards.router)

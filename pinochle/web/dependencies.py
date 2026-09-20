@@ -3,7 +3,11 @@ from fastapi import Request
 
 from pinochle.web.container import Container
 from pinochle.web.errors import ForbiddenError
-from pinochle.web.security import admin_token_matches, extract_seat_token
+from pinochle.web.security import (
+    admin_token_matches,
+    extract_admin_token,
+    extract_seat_token,
+)
 
 
 def get_container(request: Request) -> Container:
@@ -16,6 +20,17 @@ def require_admin(request: Request) -> None:
     container = get_container(request)
     provided = request.headers.get("X-Admin-Token")
     if not admin_token_matches(provided, container.settings.admin_token):
+        raise ForbiddenError("forbidden_admin", "Bad admin token.")
+
+
+def require_admin_stream(request: Request) -> None:
+    """Raise ``ForbiddenError`` unless the admin token checks out.
+
+    Accepts the token from the header or from ``?t=``, because the only
+    route using this guard is the administrator's ``EventSource`` stream.
+    """
+    container = get_container(request)
+    if not admin_token_matches(extract_admin_token(request), container.settings.admin_token):
         raise ForbiddenError("forbidden_admin", "Bad admin token.")
 
 

@@ -8,8 +8,26 @@ export interface StreamHandlers {
   onError: (message: string) => void;
 }
 
+/** The URL of a seat's own event stream. */
+export function playerStreamUrl(seat: Seat): string {
+  const path = `/api/games/${encodeURIComponent(seat.gameId)}/stream`;
+  return `${path}?t=${encodeURIComponent(seat.token)}`;
+}
+
 /**
- * Open this seat's event stream and deliver every frame to `handlers`.
+ * The URL of the administrator's stream: public events only.
+ *
+ * The token goes in the query string because `EventSource` cannot set the
+ * `X-Admin-Token` header. Only this read-only route accepts it that way;
+ * every admin command still requires the header.
+ */
+export function adminStreamUrl(gameId: string, adminToken: string): string {
+  const path = `/api/admin/games/${encodeURIComponent(gameId)}/stream`;
+  return `${path}?t=${encodeURIComponent(adminToken)}`;
+}
+
+/**
+ * Open the stream at `url` and deliver every frame to `handlers`.
  *
  * The server names each frame on its `event:` line, and `EventSource` has no
  * wildcard, so every name in `FRAME_TYPES` is subscribed individually.
@@ -19,8 +37,8 @@ export interface StreamHandlers {
  * reconnect could rebuild, because the server keeps no snapshot of a game in
  * progress (RT-5).
  */
-export function openStream(seat: Seat, handlers: StreamHandlers): EventSource {
-  const source = new EventSource(streamUrl(seat));
+export function openStream(url: string, handlers: StreamHandlers): EventSource {
+  const source = new EventSource(url);
 
   for (const type of FRAME_TYPES) {
     source.addEventListener(type, (event) => {
@@ -44,12 +62,6 @@ export function openStream(seat: Seat, handlers: StreamHandlers): EventSource {
   });
 
   return source;
-}
-
-/** Build the stream URL, carrying the token as `?t=`. */
-function streamUrl(seat: Seat): string {
-  const path = `/api/games/${encodeURIComponent(seat.gameId)}/stream`;
-  return `${path}?t=${encodeURIComponent(seat.token)}`;
 }
 
 /**

@@ -6,7 +6,11 @@ from pinochle.domain.errors import SetupError
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.web.container import Container
-from pinochle.web.dependencies import get_container, require_admin
+from pinochle.web.dependencies import (
+    get_container,
+    require_admin,
+    require_admin_stream,
+)
 from pinochle.web.event_encoder import encode_frame
 from pinochle.web.schemas import (
     AbandonRequest,
@@ -19,6 +23,12 @@ from pinochle.web.transport_events import GameAbandoned
 from pinochle.web.turn_header import build_turn_header
 
 router = APIRouter(dependencies=[Depends(require_admin)])
+
+# The administrator's stream is guarded separately because it is the one
+# admin route an ``EventSource`` opens, so it must accept its token from
+# the query string.  Keeping it on its own router is what confines that to
+# a read-only route: every command above still requires the header.
+stream_router = APIRouter(dependencies=[Depends(require_admin_stream)])
 
 
 @router.post("/api/admin/games", status_code=201)
@@ -110,7 +120,7 @@ async def abandon_game(
     return Response(status_code=204)
 
 
-@router.get("/api/admin/games/{game_id}/stream")
+@stream_router.get("/api/admin/games/{game_id}/stream")
 async def admin_stream(game_id: str, container: Container = Depends(get_container)):
     """Open the administrator's SSE stream: public events plus seat notices.
 
