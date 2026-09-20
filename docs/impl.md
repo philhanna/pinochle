@@ -326,12 +326,15 @@ a game; `make test` is green at 306 tests.
   |---|---|---|---|---|
   | before | 212.2 | 96.8% | 96.3% | 250.7 |
   | allowance 130 | 18.1 | 53.6% | 85.8% | 256.5 |
-  | **allowance 160 (shipped)** | **13.2** | **25.0%** | **69.8%** | **262.7** |
+  | allowance 160 | 13.2 | 25.0% | 69.8% | 262.7 |
+  | **allowance 170 (shipped)** | **12.6** | **16.4%** | **69.6%** | **265.7** |
 
-  The allowance is a single tunable figure, not a model of the partner's hand.
-  The two settings show which way it moves: a low allowance bids under the
-  hand's worth, so rounds are thrown in rather than played and the side that
-  does bid almost always makes it. At 160 a game runs about thirteen rounds and
-  the bidding side makes its contract a little under 70% of the time, which is
-  the band a competent partnership shows. A quarter of rounds are still
-  abandoned; raising the figure further trades those for more sets.
+  The allowance is a single tunable figure, not a model of the partner's hand,
+  and the progression shows which way it moves. A low allowance bids under the
+  hand's worth: rounds are thrown in rather than played, and the side that does
+  bid almost always makes it — 130's 85.8% is a symptom, not a strength. From
+  160 to 170 the made rate holds at just under 70%, the band a competent
+  partnership shows, while abandoned rounds fall from a quarter to a sixth, so
+  170 costs nothing for the ground it gains. Beyond it the trade reappears: a
+  sweep at 185 reached about 5% abandoned but pulled the made rate down toward
+  65%.

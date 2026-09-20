@@ -27,7 +27,7 @@ _NORMAL_SUIT_LENGTH = 4
 #
 # A single flat allowance, deliberately: it is a placeholder to be tuned by
 # playing games, not a model of the partner's hand.
-_PARTNER_CONTRIBUTION = 160
+_PARTNER_CONTRIBUTION = 170
 
 
 class ComputerPlayerStrategy:
