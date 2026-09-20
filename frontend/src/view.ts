@@ -90,6 +90,19 @@ export function meldLines(state: GameState): MeldLine[] {
     });
 }
 
+/**
+ * Whether the exposed meld is still lying on the table (UI-13, UI-14a).
+ *
+ * Which combinations a seat showed is public while the cards are face-up in
+ * front of it; once they are gathered up, UI-14a keeps the totals and lets the
+ * detail go. The first trick gathered to its winner is when that happens —
+ * meld is exposed before play, and the table is cleared for the first time
+ * when that trick is taken in.
+ */
+export function meldIsExposed(state: GameState): boolean {
+  return state.lastTrick === null;
+}
+
 /** One row of the round summary (FR-66). */
 export interface SummaryRow {
   teamId: string;

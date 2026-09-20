@@ -13,8 +13,8 @@ import {
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import type { GameState } from "./state.js";
 import {
-  bidHistory, gameOverText, meldLines, scoreboard, seatLabel, statusLine,
-  summaryHeadline, summaryRows,
+  bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
+  statusLine, summaryHeadline, summaryRows,
 } from "./view.js";
 
 /** Everything the table can ask of the player. */
@@ -24,6 +24,9 @@ export interface TableCallbacks extends PanelCallbacks {
 
 /** Whether the last completed trick is being shown (UI-14b). */
 let showingLastTrick = false;
+
+/** Whether the scoreboard is open. Closed, it is its own button and no more. */
+let scoreboardOpen = true;
 
 /** Draw the whole table. */
 export function renderTable(state: GameState, callbacks: TableCallbacks): void {
@@ -90,7 +93,7 @@ function renderSeats(state: GameState): void {
   }
 }
 
-/** The middle of the table: the spread, the trick, the meld, or a summary. */
+/** The middle of the table: the spread, the trick, or a summary. */
 function renderCentre(state: GameState, callbacks: TableCallbacks): void {
   const centre = byId("centre");
   if (centre === null) {
@@ -116,12 +119,6 @@ function renderCentre(state: GameState, callbacks: TableCallbacks): void {
     return;
   }
   const pass = passPanel(state);
-  if (state.prompt?.phase === "MELDING" || Object.keys(state.meld).length > 0) {
-    centre.replaceChildren(
-      ...(pass === null ? [] : [pass]), meldPanel(state), trickLayer(state, callbacks),
-    );
-    return;
-  }
   centre.replaceChildren(
     ...(pass === null ? [] : [pass]), trickLayer(state, callbacks),
   );
@@ -237,37 +234,6 @@ function cardRow(label: string, cards: string[]): HTMLElement {
   return row;
 }
 
-/** Exposed meld, per seat and per team (UI-13). */
-function meldPanel(state: GameState): HTMLElement {
-  const panel = document.createElement("div");
-  panel.className = "meld";
-
-  for (const line of meldLines(state)) {
-    const row = document.createElement("div");
-    row.className = "meld-row";
-    const who = document.createElement("span");
-    who.className = "meld-who";
-    who.textContent = line.name;
-    const units = document.createElement("span");
-    units.className = "meld-units";
-    units.textContent = line.units.length === 0 ? "no meld" : line.units.join(", ");
-    const total = document.createElement("span");
-    total.className = "meld-total";
-    total.textContent = String(line.total);
-    row.append(who, units, total);
-    panel.append(row);
-  }
-
-  for (const [teamId, total] of Object.entries(state.teamMeld)) {
-    const row = document.createElement("div");
-    row.className = "meld-row team";
-    const name = state.teams.find((team) => team.teamId === teamId)?.name ?? teamId;
-    row.append(text("meld-who", name), text("meld-units", "team meld"), text("meld-total", String(total)));
-    panel.append(row);
-  }
-  return panel;
-}
-
 /** The last completed trick, on demand (UI-14b). */
 function lastTrickPanel(state: GameState): HTMLElement {
   const panel = document.createElement("div");
@@ -341,31 +307,126 @@ function gameOverPanel(state: GameState): HTMLElement {
   return panel;
 }
 
-/** The persistent scoreboard and bid history (UI-14, UI-14a). */
+/**
+ * The scoreboard: scores, meld, and the bid history (UI-13, UI-14, UI-14a).
+ *
+ * Everything the round is keeping for the player is here, so there is one
+ * place to look rather than a panel in the middle of the table for the meld
+ * and a corner for the rest. It opens and closes, because a round's worth of
+ * meld and bidding is a tall thing to have standing over the felt.
+ */
 function renderScoreboard(state: GameState): void {
   const element = byId("scoreboard");
   if (element === null) {
     return;
   }
-  const children: HTMLElement[] = [];
+  element.classList.toggle("open", scoreboardOpen);
+  element.replaceChildren(
+    ...(scoreboardOpen ? [scoreboardToggle(), scoreboardBody(state)] : [scoreboardToggle()]),
+  );
+}
+
+/** The scoreboard's own heading, which is also what opens and closes it. */
+function scoreboardToggle(): HTMLElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "scoreboard-toggle";
+  // Closed, it is the only thing on screen naming what it is, so it is a
+  // labelled button and not a bare arrow.
+  button.setAttribute("aria-expanded", String(scoreboardOpen));
+  button.append(text("scoreboard-title", "Scoreboard"), text("caret", "▾"));
+  button.addEventListener("click", () => {
+    scoreboardOpen = !scoreboardOpen;
+    button.dispatchEvent(new CustomEvent("redraw", { bubbles: true }));
+  });
+  return button;
+}
+
+/**
+ * What the scoreboard holds when it is open.
+ *
+ * The scores run the width of the panel; the meld and the bidding stand side
+ * by side beneath them. Two columns because a single one would be twice as
+ * tall, and every row of it past the corner hangs over a neighbouring seat.
+ */
+function scoreboardBody(state: GameState): HTMLElement {
+  const body = document.createElement("div");
+  body.className = "scoreboard-body";
+
+  const scores = document.createElement("div");
+  scores.className = "scores";
   for (const line of scoreboard(state)) {
     const row = document.createElement("div");
     row.className = "score-row";
     row.append(text("score-label", line.label), text("score-value", line.value));
-    children.push(row);
+    scores.append(row);
+  }
+  body.append(scores);
+
+  const meld = meldSection(state);
+  if (meld.length > 0) {
+    body.append(column(meld));
   }
 
   const bids = bidHistory(state);
   if (bids.length > 0) {
-    const heading = document.createElement("div");
-    heading.className = "score-heading";
-    heading.textContent = "Bidding";
-    children.push(heading);
-    for (const bid of bids) {
-      children.push(text("bid-line", bid));
+    body.append(column([heading("Bidding"), ...bids.map((bid) => text("bid-line", bid))]));
+  }
+  return body;
+}
+
+/** One of the two columns under the scores. */
+function column(children: HTMLElement[]): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "score-column";
+  element.append(...children);
+  return element;
+}
+
+/**
+ * Each seat's exposed meld (UI-13, UI-14a).
+ *
+ * While the meld is on the table the combinations are named, not merely
+ * totalled: which cards a seat showed is what the other three are entitled to
+ * have seen. Once the cards are gathered up the totals stay and the detail
+ * goes — both what UI-14a asks for and what keeps this panel from standing
+ * over a neighbour's cards for the rest of the round. The first trick gathered
+ * to its winner is what marks the meld as taken in.
+ *
+ * The per-team totals are not repeated here: they are already beside each
+ * team's score, which is where UI-14a wants them kept for the round.
+ */
+function meldSection(state: GameState): HTMLElement[] {
+  const lines = meldLines(state);
+  if (lines.length === 0) {
+    return [];
+  }
+
+  const exposed = meldIsExposed(state);
+  const children: HTMLElement[] = [heading("Meld")];
+  for (const line of lines) {
+    children.push(meldRow(line.name, line.total));
+    if (exposed) {
+      children.push(text("meld-units", line.units.length === 0 ? "no meld" : line.units.join(", ")));
     }
   }
-  element.replaceChildren(...children);
+  return children;
+}
+
+/** A name and a meld total, on one line. */
+function meldRow(name: string, total: number): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "meld-row";
+  row.append(text("meld-who", name), text("meld-total", String(total)));
+  return row;
+}
+
+/** A small heading inside the scoreboard. */
+function heading(label: string): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "score-heading";
+  element.textContent = label;
+  return element;
 }
 
 /** The status line, and the button that shows the last trick (UI-7, UI-14b). */

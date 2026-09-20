@@ -3,8 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  bidHistory, contractText, gameOverText, meldLines, scoreboard, seatLabel,
-  statusLine, summaryHeadline, summaryRows, trumpText,
+  bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
+  seatLabel, statusLine, summaryHeadline, summaryRows, trumpText,
 } from "../dist/view.js";
 import { applyEvent, initialState } from "../dist/state.js";
 
@@ -177,4 +177,30 @@ test("the dealer is marked at their seat (UI-3)", () => {
   assert.equal(seatLabel(state, east), "East (dealer)");
   const south = state.seats.find((seat) => seat.playerId === "p-south");
   assert.equal(seatLabel(state, south), "Phil");
+});
+
+test("the meld is exposed until the first trick is gathered (UI-13, UI-14a)", () => {
+  // What a seat showed is public while its cards are face-up; afterwards the
+  // scoreboard keeps the totals and lets the named combinations go.
+  const melded = applyEvent(seated(), frame("meld_exposed", {
+    player_id: "p-south", units: [{ name: "Marriage", points: 20 }], total: 20,
+  }));
+  assert.equal(meldIsExposed(melded), true);
+
+  const played = [
+    frame("play_begun", { leader_player_id: "p-south" }),
+    frame("card_played", { player_id: "p-south", card: "AS" }),
+  ].reduce(applyEvent, melded);
+  assert.equal(meldIsExposed(played), true, "still on the table during the first trick");
+
+  const completed = applyEvent(played, frame("trick_completed", {
+    winner_player_id: "p-south", cards: [{ player_id: "p-south", card: "AS" }],
+  }));
+  assert.equal(meldIsExposed(completed), true, "and while the trick lies there won");
+
+  const gathered = applyEvent(completed, frame("trick_cleared", {
+    winner_player_id: "p-south", next_leader_player_id: "p-south",
+  }));
+  assert.equal(meldIsExposed(gathered), false);
+  assert.equal(meldLines(gathered)[0].total, 20, "but the total stays");
 });
