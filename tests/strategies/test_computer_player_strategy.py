@@ -201,3 +201,40 @@ def test_choose_cards_to_pass_falls_back_to_low_filler_when_no_support_remains()
     ])
     passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=2)
     assert set(passed) == {Card(Rank.NINE, Suit.HEARTS), Card(Rank.NINE, Suit.CLUBS)}
+
+
+# ---------------------------------------------------------------------------
+# choose_draw_position (FR-11b, NFR-7)
+# ---------------------------------------------------------------------------
+
+def test_choose_draw_position_only_picks_an_untaken_position():
+    """FR-11b: a computer draws at random from what is left of the spread."""
+    strategy = ComputerPlayerStrategy()
+    taken = {0, 1, 2, 4}
+    for _ in range(20):
+        assert strategy.choose_draw_position(taken, spread_size=6) in {3, 5}
+
+
+def test_choose_draw_position_is_reproducible_from_a_seed():
+    """NFR-7: a seed must reproduce a whole game, not only its shuffle.
+
+    The draw picks the dealer, and the dealer decides which twelve cards of a
+    shuffle each seat receives — so an unseeded draw would make a seeded deal
+    unreproducible.
+    """
+    from random import Random
+
+    first = ComputerPlayerStrategy(rng=Random(99))
+    second = ComputerPlayerStrategy(rng=Random(99))
+    draws = [(first.choose_draw_position(set(), 48), second.choose_draw_position(set(), 48))
+             for _ in range(10)]
+    assert all(a == b for a, b in draws)
+    assert len({a for a, _ in draws}) > 1, "and it is actually random"
+
+
+def test_choose_draw_position_raises_when_the_spread_is_exhausted():
+    """Nothing left to draw is a programming error, not a silent no-op."""
+    import pytest as _pytest
+
+    with _pytest.raises(ValueError):
+        ComputerPlayerStrategy().choose_draw_position({0, 1}, spread_size=2)

@@ -25,6 +25,18 @@ The format is based on [Keep a Changelog].
   start the game, abandon it, and watch the public event stream live. An
   all-computer table issues no join links, so the console's stream view is the
   only way to watch one
+- `frontend/src/state.ts`: the client's whole model of the game (impl.md slice
+  B1). RT-5 puts no snapshot on the server, so this reducer is not a cache of
+  something authoritative elsewhere — it is the only model the browser has.
+  Pure `applyEvent(state, frame)`, no DOM, 47 tests under `node --test`
+- `frontend/src/cards.ts`: card codes, and the hand order of FR-23/FR-23a —
+  grouped by suit, descending by rank with the ten above the king, trump moving
+  leftmost once it is named
+- `scripts/record_frames.py` and `make record`: record one seat's event stream
+  from an all-computer game as the reducer's test fixture, through the real
+  service and the real encoder so it cannot drift from the wire format
+- `make test` now runs the client tests as well as the server's, with
+  `make test-py` and `make test-fe` for one at a time
 - `pinochle/web/routers/cards.py`: card artwork over HTTP (UI-16), addressed by
   the same two-character wire code the event stream uses — `/cards/faces/TS`
   for the ten of spades, `/cards/backs/blue` for a back, either in SVG or PNG,
@@ -52,6 +64,13 @@ The format is based on [Keep a Changelog].
   forwarded URL cannot create, start or abandon a game
 
 ### Fixed
+- A seeded game was not reproducible (NFR-7). The computers' dealer-selection
+  draw used the unseeded global `random`, and the driver scheduled the waiting
+  seats straight from a `set`, whose iteration order depends on string hashing
+  and differs between processes. The draw picks the dealer and the dealer
+  decides which twelve cards of the shuffle each seat receives, so a seeded
+  shuffle alone reproduced nothing. `ComputerPlayerStrategy` now takes the
+  game's own `Random`, and the driver walks the waiting seats by seat position
 - A request for artwork that is well-formed but absent from disk is now a 404
   rather than an unhandled `FileNotFoundError` and a 500
 - The computer player now bids. It valued a hand as its own meld plus a trick

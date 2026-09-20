@@ -47,8 +47,19 @@ class ComputerPlayerStrategy:
     - Playing: always play the highest legal card.
     """
 
-    @staticmethod
-    def choose_draw_position(taken: set[int], spread_size: int) -> int:
+    def __init__(self, rng: random.Random | None = None):
+        """Hold the randomness source used for the dealer-selection draw.
+
+        The only decision this strategy makes at random, so it is the only
+        reason the class holds state at all and the only method below that is
+        not static.  ``None`` means the module-level ``random``; a seeded
+        ``Random`` makes a whole game reproducible (NFR-7), which a seeded
+        shuffle alone does not — the draw picks the dealer, and the dealer
+        decides which twelve cards of that shuffle each seat receives.
+        """
+        self._rng = rng or random
+
+    def choose_draw_position(self, taken: set[int], spread_size: int) -> int:
         """Pick an untaken position from the face-down dealer-selection spread.
 
         The spread is face down, so no information distinguishes one position
@@ -57,7 +68,7 @@ class ComputerPlayerStrategy:
         available = [i for i in range(spread_size) if i not in taken]
         if not available:
             raise ValueError("No positions remain in the spread.")
-        return random.choice(available)
+        return self._rng.choice(available)
 
     @staticmethod
     def choose_bid(hand_cards: list[Card], current_high_bid: int) -> int | None:

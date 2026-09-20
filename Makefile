@@ -6,15 +6,20 @@ PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TSC ?= npx -y -p typescript@5 tsc
 
 .DEFAULT_GOAL := help
-.PHONY: help test build watch dev dev-fast seed seed-watch seed-all docker docker-logs docker-down clean
+.PHONY: help test test-py test-fe build watch dev dev-fast seed seed-watch seed-all record docker docker-logs docker-down clean
 
 help:  ## List the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
 		| sed 's/:.*## /\t/' \
 		| awk -F'\t' '{printf "  %-14s %s\n", $$1, $$2}'
 
-test:  ## Run the Python test suite
+test: test-py test-fe  ## Run every test, server and client
+
+test-py:  ## Run the Python test suite
 	$(PYTHON) -m pytest
+
+test-fe:  ## Compile the client and run its tests
+	cd frontend && $(TSC) && node --test "test/*.test.js"
 
 build:  ## Compile frontend/src to frontend/dist
 	cd frontend && $(TSC)
@@ -36,6 +41,10 @@ seed-watch:  ## Create and start an all-computer game to watch
 
 seed-all:  ## Create a four-human game; start it once all four tabs are open
 	$(PYTHON) scripts/seed.py --humans NORTH,EAST,SOUTH,WEST
+
+record:  ## Re-record the reducer's test fixture from a real game
+	$(PYTHON) scripts/record_frames.py --rounds 1 \
+		--out frontend/test/fixtures/seat-stream.json
 
 docker:  ## Build and run the image, front end included
 	cd docker && docker compose up --build -d

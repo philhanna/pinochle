@@ -72,7 +72,12 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
         """
         game = self._state.load(game_id)
         if game.phase == GamePhase.DEALER_SELECTION:
-            for seat in self._service.players_awaiting_draw(game_id):
+            # Clockwise, not in the set's own order: which seat draws first
+            # decides who deals, and a set of player ids iterates differently
+            # from one process to the next, which would leave a seeded game
+            # unreproducible (NFR-7).
+            awaiting = self._service.players_awaiting_draw(game_id)
+            for seat in sorted(awaiting, key=lambda pid: game.players[pid].position.value):
                 if game.players[seat].type == PlayerType.COMPUTER:
                     self._schedule(game_id, seat)
             return

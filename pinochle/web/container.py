@@ -98,13 +98,16 @@ def build_container(
     scheduler = scheduler or AsyncioScheduler()
     sse = SseNotification(queue_maxsize=settings.sse_queue_maxsize)
     notifier = CompositeNotification([sse, LoggingNotification()])
+    # One source of randomness for the whole game, so that a seed reproduces
+    # it exactly (NFR-7): the shuffle and the computers' dealer-selection
+    # draws both draw from this stream.
     rng = Random(settings.shuffle_seed) if settings.shuffle_seed is not None else None
     service = GameService(
         state, notifier, scheduler,
         rng=rng, trick_clear_seconds=settings.trick_clear_seconds,
     )
     driver = ComputerDriver(
-        service, state, scheduler, ComputerPlayerStrategy(),
+        service, state, scheduler, ComputerPlayerStrategy(rng=rng),
         delay_seconds=settings.computer_delay_seconds,
     )
     notifier.append(driver)

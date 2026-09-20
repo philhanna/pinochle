@@ -161,3 +161,33 @@ def test_computer_never_tosses_in():
     scheduler.advance(0)
     assert round_state.phase == RoundPhase.PLAYING
     assert round_state.tossed_in is False
+
+
+def test_dealer_selection_draws_in_a_seat_determined_order():
+    """NFR-7: which seat draws first decides who deals, so it must not vary.
+
+    The seats awaiting a draw arrive as a set, and a set of player ids iterates
+    in an order that depends on string hashing, which differs from one process
+    to the next — so scheduling straight from it left even a seeded game
+    unreproducible.  The driver now walks them by seat position instead.
+
+    The resulting order is reverse-clockwise rather than clockwise, because
+    ``_schedule`` announces a seat before queueing it and that announcement
+    recurses into ``pump``, so the last seat reached is the first queued.  That
+    is harmless — FR-11 lets the four draw in any order — and it is the
+    order's *stability* that this test is for, not its direction.
+    """
+    notifier = _RecordingNotifier()
+    service, _, _, scheduler, game_id = make_table(ALL_COMPUTER_PLAYERS, delay_seconds=0)
+    # Ahead of the driver in the delivery list, so each event is recorded when
+    # it is published rather than after the driver has recursed on it.
+    service._notifier._notifiers.insert(0, notifier)
+
+    service.start_game(game_id)
+    scheduler.advance(1.0)
+
+    drawn = [
+        event.player_id for event in notifier.events
+        if type(event).__name__ == "DrawMade"
+    ]
+    assert drawn == ["W", "S", "E", "N"]

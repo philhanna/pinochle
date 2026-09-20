@@ -312,7 +312,31 @@ in order on the admin stream. Not one `cards_dealt` or `cards_passed` frame
 appeared on that stream across all 309 deals, which is NFR-6 holding
 structurally rather than by filtering. A human seat's stream carried its own
 hand and nobody else's. The image builds, serves the compiled client, and runs
-a game; `make test` is green at 313 tests.
+a game; `make test` is green at 317 server tests and 47 client tests.
+
+- **B1** — the client state model, headless: `frontend/src/state.ts` (the
+  reducer) and `frontend/src/cards.ts` (card codes and hand order), with 47
+  tests run by `node --test` and no DOM anywhere.
+
+  The replay fixture is recorded, not written: `scripts/record_frames.py`
+  (`make record`) plays an all-computer game through the real service and keeps
+  what one seat's stream carried, encoded by the real encoder, so it cannot
+  drift from the wire format. It has the awkward properties of a real stream —
+  201 frames whose sequence numbers skip 55 values where other seats' private
+  frames fell.
+
+  Two defects surfaced, both in code outside the reducer:
+
+  * A count adjusted at one end of the pass but not the other. Found by a unit
+    test, then pinned by a replay invariant: every seat holds twelve cards when
+    play begins.
+  * A seeded game was not reproducible (NFR-7). The computers' dealer-selection
+    draw used the unseeded global `random`, and the driver scheduled the
+    waiting seats straight from a `set`, whose iteration order depends on
+    string hashing and so differs between processes. Since the draw picks the
+    dealer, and the dealer decides which twelve cards of the shuffle each seat
+    receives, a seeded shuffle alone reproduced nothing. Found by re-recording
+    the fixture and getting a different game.
 
 ### Fixed after a review point
 

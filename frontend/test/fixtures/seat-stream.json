@@ -1,0 +1,3174 @@
+[
+ {
+  "seq": 0,
+  "type": "stream_started",
+  "turn": {
+   "phase": "SETUP",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "seat": "SOUTH",
+   "player_id": "p-south",
+   "you": {
+    "name": "South",
+    "type": "computer"
+   },
+   "partial": false
+  }
+ },
+ {
+  "seq": 1,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 2,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 3,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 4,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 5,
+  "type": "game_configured",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "seats": [
+    {
+     "player_id": "p-north",
+     "name": "North",
+     "type": "computer",
+     "seat": "NORTH"
+    },
+    {
+     "player_id": "p-east",
+     "name": "East",
+     "type": "computer",
+     "seat": "EAST"
+    },
+    {
+     "player_id": "p-south",
+     "name": "South",
+     "type": "computer",
+     "seat": "SOUTH"
+    },
+    {
+     "player_id": "p-west",
+     "name": "West",
+     "type": "computer",
+     "seat": "WEST"
+    }
+   ],
+   "teams": [
+    {
+     "team_id": "NS",
+     "name": "North-South"
+    },
+    {
+     "team_id": "EW",
+     "name": "East-West"
+    }
+   ],
+   "winning_score": 2000
+  }
+ },
+ {
+  "seq": 6,
+  "type": "dealer_selection_started",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "spread_size": 48,
+   "taken": []
+  }
+ },
+ {
+  "seq": 7,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-west",
+   "position": 23,
+   "card": "JC"
+  }
+ },
+ {
+  "seq": 8,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-south",
+   "position": 6,
+   "card": "AS"
+  }
+ },
+ {
+  "seq": 9,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-east",
+   "position": 37,
+   "card": "KC"
+  }
+ },
+ {
+  "seq": 10,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-north",
+   "position": 4,
+   "card": "AS"
+  }
+ },
+ {
+  "seq": 11,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 12,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 13,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 14,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 15,
+  "type": "draw_tied",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "cards": {
+    "p-west": "JC",
+    "p-south": "AS",
+    "p-east": "KC",
+    "p-north": "AS"
+   }
+  }
+ },
+ {
+  "seq": 16,
+  "type": "dealer_selection_started",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "spread_size": 48,
+   "taken": []
+  }
+ },
+ {
+  "seq": 17,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-west",
+   "position": 4,
+   "card": "9H"
+  }
+ },
+ {
+  "seq": 18,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-south",
+   "position": 6,
+   "card": "TH"
+  }
+ },
+ {
+  "seq": 19,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-east",
+   "position": 19,
+   "card": "QD"
+  }
+ },
+ {
+  "seq": 20,
+  "type": "draw_made",
+  "turn": {
+   "phase": "DEALER_SELECTION",
+   "current_player_id": null,
+   "paused": null,
+   "round_number": 0
+  },
+  "payload": {
+   "player_id": "p-north",
+   "position": 33,
+   "card": "AS"
+  }
+ },
+ {
+  "seq": 21,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 22,
+  "type": "dealer_selected",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "dealer_player_id": "p-north"
+  }
+ },
+ {
+  "seq": 23,
+  "type": "round_started",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "round_number": 1,
+   "dealer_player_id": "p-north"
+  }
+ },
+ {
+  "seq": 26,
+  "type": "cards_dealt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "cards": [
+    "AS",
+    "QH",
+    "9S",
+    "JD",
+    "TS",
+    "AD",
+    "TS",
+    "JC",
+    "KS",
+    "KH",
+    "QD",
+    "9C"
+   ]
+  }
+ },
+ {
+  "seq": 29,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 30,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-east",
+   "amount": null,
+   "current_high": 0
+  }
+ },
+ {
+  "seq": 31,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "phase": "BIDDING",
+   "minimum_bid": 250,
+   "may_pass": true
+  }
+ },
+ {
+  "seq": 32,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 33,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-south",
+   "amount": null,
+   "current_high": 0
+  }
+ },
+ {
+  "seq": 35,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 36,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 1
+  },
+  "payload": {
+   "player_id": "p-west",
+   "amount": null,
+   "current_high": 0
+  }
+ },
+ {
+  "seq": 38,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 39,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "amount": null,
+   "current_high": 0
+  }
+ },
+ {
+  "seq": 40,
+  "type": "round_abandoned",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "declined_by": null
+  }
+ },
+ {
+  "seq": 41,
+  "type": "round_started",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "round_number": 2,
+   "dealer_player_id": "p-east"
+  }
+ },
+ {
+  "seq": 44,
+  "type": "cards_dealt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "cards": [
+    "TC",
+    "9H",
+    "QC",
+    "KS",
+    "KH",
+    "KC",
+    "QH",
+    "9D",
+    "TH",
+    "9C",
+    "AH",
+    "AD"
+   ]
+  }
+ },
+ {
+  "seq": 46,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "BIDDING",
+   "minimum_bid": 250,
+   "may_pass": true
+  }
+ },
+ {
+  "seq": 47,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 48,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "amount": 250,
+   "current_high": 250
+  }
+ },
+ {
+  "seq": 50,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 51,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "amount": 260,
+   "current_high": 260
+  }
+ },
+ {
+  "seq": 53,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 54,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "amount": null,
+   "current_high": 260
+  }
+ },
+ {
+  "seq": 56,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 57,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "amount": null,
+   "current_high": 260
+  }
+ },
+ {
+  "seq": 58,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "BIDDING",
+   "minimum_bid": 270,
+   "may_pass": true
+  }
+ },
+ {
+  "seq": 59,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 60,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "amount": 270,
+   "current_high": 270
+  }
+ },
+ {
+  "seq": 62,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "TRUMP",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 63,
+  "type": "bid_placed",
+  "turn": {
+   "phase": "TRUMP",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "amount": null,
+   "current_high": 270
+  }
+ },
+ {
+  "seq": 64,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "TRUMP",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "TRUMP"
+  }
+ },
+ {
+  "seq": 65,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PASSING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 66,
+  "type": "trump_named",
+  "turn": {
+   "phase": "PASSING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "suit": "HEARTS"
+  }
+ },
+ {
+  "seq": 68,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PASSING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 70,
+  "type": "cards_passed",
+  "turn": {
+   "phase": "PASSING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "from_player_id": "p-north",
+   "to_player_id": "p-south",
+   "cards": [
+    "AS",
+    "AS",
+    "JH",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 71,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PASSING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PASSING",
+   "count": 4
+  }
+ },
+ {
+  "seq": 72,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 73,
+  "type": "cards_passed",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "from_player_id": "p-south",
+   "to_player_id": "p-north",
+   "cards": [
+    "AH",
+    "AD",
+    "AS",
+    "AS"
+   ]
+  }
+ },
+ {
+  "seq": 75,
+  "type": "meld_exposed",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "units": [
+    {
+     "name": "Royal Marriage",
+     "points": 40
+    }
+   ],
+   "total": 40
+  }
+ },
+ {
+  "seq": 76,
+  "type": "meld_exposed",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "units": [
+    {
+     "name": "Trump Nine",
+     "points": 10
+    }
+   ],
+   "total": 10
+  }
+ },
+ {
+  "seq": 77,
+  "type": "meld_exposed",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "units": [
+    {
+     "name": "Royal Marriage",
+     "points": 40
+    },
+    {
+     "name": "Marriage",
+     "points": 20
+    },
+    {
+     "name": "Trump Nine",
+     "points": 10
+    }
+   ],
+   "total": 70
+  }
+ },
+ {
+  "seq": 78,
+  "type": "meld_exposed",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "units": [
+    {
+     "name": "Marriage",
+     "points": 20
+    },
+    {
+     "name": "Pinochle",
+     "points": 40
+    }
+   ],
+   "total": 60
+  }
+ },
+ {
+  "seq": 79,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "MELDING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "MELDING",
+   "may_begin_play": true,
+   "may_toss_in": true
+  }
+ },
+ {
+  "seq": 80,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 81,
+  "type": "play_begun",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "leader_player_id": "p-south"
+  }
+ },
+ {
+  "seq": 82,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "TC",
+    "9H",
+    "QC",
+    "KS",
+    "KH",
+    "KC",
+    "QH",
+    "9D",
+    "TH",
+    "9C",
+    "JH",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 83,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 84,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "TC"
+  }
+ },
+ {
+  "seq": 86,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 87,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "AC"
+  }
+ },
+ {
+  "seq": 89,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 90,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "QC"
+  }
+ },
+ {
+  "seq": 92,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "TC"
+  }
+ },
+ {
+  "seq": 93,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "cards": [
+    {
+     "player_id": "p-south",
+     "card": "TC"
+    },
+    {
+     "player_id": "p-west",
+     "card": "AC"
+    },
+    {
+     "player_id": "p-north",
+     "card": "QC"
+    },
+    {
+     "player_id": "p-east",
+     "card": "TC"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 94,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 95,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "next_leader_player_id": "p-west"
+  }
+ },
+ {
+  "seq": 97,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 98,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "AD"
+  }
+ },
+ {
+  "seq": 100,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 101,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "AD"
+  }
+ },
+ {
+  "seq": 103,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 104,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "TD"
+  }
+ },
+ {
+  "seq": 105,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9D"
+   ]
+  }
+ },
+ {
+  "seq": 106,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "9D"
+  }
+ },
+ {
+  "seq": 107,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "cards": [
+    {
+     "player_id": "p-west",
+     "card": "AD"
+    },
+    {
+     "player_id": "p-north",
+     "card": "AD"
+    },
+    {
+     "player_id": "p-east",
+     "card": "TD"
+    },
+    {
+     "player_id": "p-south",
+     "card": "9D"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 108,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 109,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "next_leader_player_id": "p-west"
+  }
+ },
+ {
+  "seq": 111,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 112,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "AC"
+  }
+ },
+ {
+  "seq": 114,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 115,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "JC"
+  }
+ },
+ {
+  "seq": 117,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 118,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "9C"
+  }
+ },
+ {
+  "seq": 119,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "QC",
+    "KC",
+    "9C",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 120,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "KC"
+  }
+ },
+ {
+  "seq": 121,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "cards": [
+    {
+     "player_id": "p-west",
+     "card": "AC"
+    },
+    {
+     "player_id": "p-north",
+     "card": "JC"
+    },
+    {
+     "player_id": "p-east",
+     "card": "9C"
+    },
+    {
+     "player_id": "p-south",
+     "card": "KC"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 122,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 123,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-west",
+   "next_leader_player_id": "p-west"
+  }
+ },
+ {
+  "seq": 125,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 126,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "TS"
+  }
+ },
+ {
+  "seq": 128,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 129,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "AS"
+  }
+ },
+ {
+  "seq": 131,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 132,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "TS"
+  }
+ },
+ {
+  "seq": 133,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "KS"
+   ]
+  }
+ },
+ {
+  "seq": 134,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "KS"
+  }
+ },
+ {
+  "seq": 135,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "cards": [
+    {
+     "player_id": "p-west",
+     "card": "TS"
+    },
+    {
+     "player_id": "p-north",
+     "card": "AS"
+    },
+    {
+     "player_id": "p-east",
+     "card": "TS"
+    },
+    {
+     "player_id": "p-south",
+     "card": "KS"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 136,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 137,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "next_leader_player_id": "p-north"
+  }
+ },
+ {
+  "seq": 139,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 140,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "AH"
+  }
+ },
+ {
+  "seq": 142,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 143,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "AH"
+  }
+ },
+ {
+  "seq": 144,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H",
+    "KH",
+    "QH",
+    "TH",
+    "JH"
+   ]
+  }
+ },
+ {
+  "seq": 145,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 146,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "TH"
+  }
+ },
+ {
+  "seq": 148,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "KC"
+  }
+ },
+ {
+  "seq": 149,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "cards": [
+    {
+     "player_id": "p-north",
+     "card": "AH"
+    },
+    {
+     "player_id": "p-east",
+     "card": "AH"
+    },
+    {
+     "player_id": "p-south",
+     "card": "TH"
+    },
+    {
+     "player_id": "p-west",
+     "card": "KC"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 150,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 151,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "next_leader_player_id": "p-north"
+  }
+ },
+ {
+  "seq": 153,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 154,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "AS"
+  }
+ },
+ {
+  "seq": 156,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 157,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "QS"
+  }
+ },
+ {
+  "seq": 158,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H",
+    "KH",
+    "QH",
+    "JH"
+   ]
+  }
+ },
+ {
+  "seq": 159,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 160,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "KH"
+  }
+ },
+ {
+  "seq": 162,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "KS"
+  }
+ },
+ {
+  "seq": 163,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-south",
+   "cards": [
+    {
+     "player_id": "p-north",
+     "card": "AS"
+    },
+    {
+     "player_id": "p-east",
+     "card": "QS"
+    },
+    {
+     "player_id": "p-south",
+     "card": "KH"
+    },
+    {
+     "player_id": "p-west",
+     "card": "KS"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 164,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 165,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-south",
+   "next_leader_player_id": "p-south"
+  }
+ },
+ {
+  "seq": 166,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H",
+    "QC",
+    "QH",
+    "9C",
+    "JH",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 167,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 168,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "QC"
+  }
+ },
+ {
+  "seq": 170,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 171,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "KD"
+  }
+ },
+ {
+  "seq": 173,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 174,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "KH"
+  }
+ },
+ {
+  "seq": 176,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "TH"
+  }
+ },
+ {
+  "seq": 177,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "cards": [
+    {
+     "player_id": "p-south",
+     "card": "QC"
+    },
+    {
+     "player_id": "p-west",
+     "card": "KD"
+    },
+    {
+     "player_id": "p-north",
+     "card": "KH"
+    },
+    {
+     "player_id": "p-east",
+     "card": "TH"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 178,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 179,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "next_leader_player_id": "p-east"
+  }
+ },
+ {
+  "seq": 181,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 182,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "KD"
+  }
+ },
+ {
+  "seq": 183,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H",
+    "QH",
+    "JH"
+   ]
+  }
+ },
+ {
+  "seq": 184,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 185,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "QH"
+  }
+ },
+ {
+  "seq": 187,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 188,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "JD"
+  }
+ },
+ {
+  "seq": 190,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "TD"
+  }
+ },
+ {
+  "seq": 191,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-south",
+   "cards": [
+    {
+     "player_id": "p-east",
+     "card": "KD"
+    },
+    {
+     "player_id": "p-south",
+     "card": "QH"
+    },
+    {
+     "player_id": "p-west",
+     "card": "JD"
+    },
+    {
+     "player_id": "p-north",
+     "card": "TD"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 192,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 193,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-south",
+   "next_leader_player_id": "p-south"
+  }
+ },
+ {
+  "seq": 194,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H",
+    "9C",
+    "JH",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 195,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 196,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "JH"
+  }
+ },
+ {
+  "seq": 198,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 199,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "QS"
+  }
+ },
+ {
+  "seq": 201,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 202,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "QH"
+  }
+ },
+ {
+  "seq": 204,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "JH"
+  }
+ },
+ {
+  "seq": 205,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "cards": [
+    {
+     "player_id": "p-south",
+     "card": "JH"
+    },
+    {
+     "player_id": "p-west",
+     "card": "QS"
+    },
+    {
+     "player_id": "p-north",
+     "card": "QH"
+    },
+    {
+     "player_id": "p-east",
+     "card": "JH"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 206,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 207,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-north",
+   "next_leader_player_id": "p-north"
+  }
+ },
+ {
+  "seq": 209,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 210,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "QD"
+  }
+ },
+ {
+  "seq": 212,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 213,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "9H"
+  }
+ },
+ {
+  "seq": 214,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9H"
+   ]
+  }
+ },
+ {
+  "seq": 215,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 216,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "9H"
+  }
+ },
+ {
+  "seq": 218,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "JD"
+  }
+ },
+ {
+  "seq": 219,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "cards": [
+    {
+     "player_id": "p-north",
+     "card": "QD"
+    },
+    {
+     "player_id": "p-east",
+     "card": "9H"
+    },
+    {
+     "player_id": "p-south",
+     "card": "9H"
+    },
+    {
+     "player_id": "p-west",
+     "card": "JD"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 220,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 221,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "next_leader_player_id": "p-east"
+  }
+ },
+ {
+  "seq": 223,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 224,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "JS"
+  }
+ },
+ {
+  "seq": 225,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9C",
+    "JC"
+   ]
+  }
+ },
+ {
+  "seq": 226,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 227,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "JC"
+  }
+ },
+ {
+  "seq": 229,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 230,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "9S"
+  }
+ },
+ {
+  "seq": 232,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "JS"
+  }
+ },
+ {
+  "seq": 233,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "cards": [
+    {
+     "player_id": "p-east",
+     "card": "JS"
+    },
+    {
+     "player_id": "p-south",
+     "card": "JC"
+    },
+    {
+     "player_id": "p-west",
+     "card": "9S"
+    },
+    {
+     "player_id": "p-north",
+     "card": "JS"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 234,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east"
+  }
+ },
+ {
+  "seq": 235,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-east",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "next_leader_player_id": "p-east"
+  }
+ },
+ {
+  "seq": 237,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south"
+  }
+ },
+ {
+  "seq": 238,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-east",
+   "card": "9S"
+  }
+ },
+ {
+  "seq": 239,
+  "type": "turn_prompt",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-south",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "phase": "PLAYING",
+   "legal_plays": [
+    "9C"
+   ]
+  }
+ },
+ {
+  "seq": 240,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 241,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-south",
+   "card": "9C"
+  }
+ },
+ {
+  "seq": 243,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north"
+  }
+ },
+ {
+  "seq": 244,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": "p-north",
+   "paused": null,
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-west",
+   "card": "9D"
+  }
+ },
+ {
+  "seq": 246,
+  "type": "card_played",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "player_id": "p-north",
+   "card": "QD"
+  }
+ },
+ {
+  "seq": 247,
+  "type": "trick_completed",
+  "turn": {
+   "phase": "PLAYING",
+   "current_player_id": null,
+   "paused": "trick_clear",
+   "round_number": 2
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "cards": [
+    {
+     "player_id": "p-east",
+     "card": "9S"
+    },
+    {
+     "player_id": "p-south",
+     "card": "9C"
+    },
+    {
+     "player_id": "p-west",
+     "card": "9D"
+    },
+    {
+     "player_id": "p-north",
+     "card": "QD"
+    }
+   ]
+  }
+ },
+ {
+  "seq": 248,
+  "type": "seat_thinking",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 3
+  },
+  "payload": {
+   "player_id": "p-west"
+  }
+ },
+ {
+  "seq": 249,
+  "type": "trick_cleared",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 3
+  },
+  "payload": {
+   "winner_player_id": "p-east",
+   "next_leader_player_id": null
+  }
+ },
+ {
+  "seq": 250,
+  "type": "round_scored",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 3
+  },
+  "payload": {
+   "round_number": 2,
+   "bid_team_id": "NS",
+   "bid_winner_player_id": "p-south",
+   "contract": 270,
+   "made_contract": false,
+   "tossed_in": false,
+   "teams": [
+    {
+     "team_id": "NS",
+     "meld": 110,
+     "card_points": 125,
+     "last_trick_bonus": 0,
+     "round_total": 235,
+     "points_applied": -380,
+     "cumulative_score": -380
+    },
+    {
+     "team_id": "EW",
+     "meld": 70,
+     "card_points": 115,
+     "last_trick_bonus": 10,
+     "round_total": 195,
+     "points_applied": 195,
+     "cumulative_score": 195
+    }
+   ]
+  }
+ },
+ {
+  "seq": 251,
+  "type": "round_started",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 3
+  },
+  "payload": {
+   "round_number": 3,
+   "dealer_player_id": "p-south"
+  }
+ },
+ {
+  "seq": 254,
+  "type": "cards_dealt",
+  "turn": {
+   "phase": "BIDDING",
+   "current_player_id": "p-west",
+   "paused": null,
+   "round_number": 3
+  },
+  "payload": {
+   "cards": [
+    "9S",
+    "KC",
+    "AC",
+    "QS",
+    "JH",
+    "TS",
+    "QD",
+    "KD",
+    "9C",
+    "JC",
+    "9H",
+    "QS"
+   ]
+  }
+ }
+]
