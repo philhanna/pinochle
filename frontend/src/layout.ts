@@ -131,6 +131,17 @@ export function isLegalPlay(state: GameState, card: CardCode): boolean {
   return legal !== undefined && legal.includes(card);
 }
 
+/**
+ * Whether the first trick may be led yet (FR-50a).
+ *
+ * The leader is named when the meld is over, and named for the first time in
+ * the round at that moment, so having one is what tells the table that the
+ * bidding, the pass and the meld are all behind it.
+ */
+export function playHasBegun(state: GameState): boolean {
+  return state.leaderPlayerId !== null;
+}
+
 /** Whether this seat is being asked to act at all. */
 export function isMyTurn(state: GameState): boolean {
   return state.me !== null && state.currentPlayerId === state.me.playerId;

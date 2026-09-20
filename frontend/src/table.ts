@@ -8,7 +8,7 @@
 import { backUrl, faceUrl } from "./cards.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
 import {
-  isPaused, mustDraw, placement, takenPositions, trickCards,
+  isPaused, mustDraw, placement, playHasBegun, takenPositions, trickCards,
 } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import type { GameState } from "./state.js";
@@ -194,13 +194,14 @@ function spread(state: GameState, callbacks: TableCallbacks): HTMLElement {
  * What this seat passed or received, shown to its team alone (UI-12, RT-1).
  *
  * Received cards join the hand, where they are indistinguishable from the rest;
- * a player needs to see which four arrived. Shown until the trick play starts,
- * at which point it has been read and the table needs the room.
+ * a player needs to see which four arrived. It comes down when the first trick
+ * may be led: by then it has been read, and what the table needs from that
+ * moment on is the room to play in.
  */
 function passPanel(state: GameState): HTMLElement | null {
   const received = state.received;
   const sent = state.sent;
-  if ((received === null && sent === null) || state.trick.length > 0) {
+  if ((received === null && sent === null) || playHasBegun(state)) {
     return null;
   }
 

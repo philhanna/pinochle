@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import {
   fanAngles, isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
-  spotOf, takenPositions, trickCards,
+  playHasBegun, spotOf, takenPositions, trickCards,
 } from "../dist/layout.js";
 import { applyEvent, initialState } from "../dist/state.js";
 
@@ -239,4 +239,17 @@ test("a fan closes up as the hand is played out, rather than re-spreading it", (
 test("a fan of one card lies flat, and a fan of none is empty", () => {
   assert.deepEqual(fanAngles(1), [0]);
   assert.deepEqual(fanAngles(0), []);
+});
+
+test("play has begun once a leader is named, not once a card is played", () => {
+  // What the pass display waits for: the auction winner being on turn to lead
+  // is the moment the four cards received have been read and the table needs
+  // the room (UI-12, FR-50a).
+  const melded = applyEvent(seated(), frame("meld_exposed", {
+    player_id: "p-south", units: [], total: 40,
+  }));
+  assert.equal(playHasBegun(melded), false);
+
+  const leading = applyEvent(melded, frame("play_begun", { leader_player_id: "p-south" }));
+  assert.equal(playHasBegun(leading), true, "before a card has been played");
 });
