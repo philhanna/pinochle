@@ -4,8 +4,13 @@
    windows tiled on one monitor each show a complete table. */
 
 :root {
-  --stage-width: 1180px;
-  --stage-height: 830px;
+  /* Grown along with the cards below (UI-17 still applies: one fixed size,
+     scaled to fit): at the original card sizes the felt's own vertical
+     budget — between the top seat's fan and the hand at the bottom — was
+     already fully spent, so larger cards need more of it to still clear both
+     without the table being redesigned around them. */
+  --stage-width: 1420px;
+  --stage-height: 1000px;
   --felt: #17603a;
   --felt-edge: #0d3f26;
   --ink: #f2f6f3;
@@ -16,10 +21,16 @@
   --ew: #8fd6ff;
   --accent: #6ee7a0;
   --alarm: #ff9b8f;
-  --card-w: 74px;
-  --card-h: 104px;
-  --card-w-small: 46px;
-  --card-h-small: 65px;
+  --card-w: 148px;
+  --card-h: 208px;
+  --card-w-small: 92px;
+  --card-h-small: 130px;
+  /* Card backs carry no rank or suit to read, so unlike every face-up size
+     above, there is no legibility reason to grow these — only overlap risk,
+     since a taller opponent fan eats directly into the same room the pass
+     and last-trick panels need above the trick. */
+  --card-w-back: 46px;
+  --card-h-back: 65px;
 }
 
 * { box-sizing: border-box; }
@@ -102,11 +113,11 @@ body.table-page {
 /* --- Fans of cards ------------------------------------------------------- */
 
 .fan { display: flex; }
-.fan .card { margin-right: calc(var(--card-w-small) * -0.62); }
+.fan .card { margin-right: calc(var(--card-w-back) * -0.62); }
 .fan .card:last-child { margin-right: 0; }
 
 .fan.vertical { flex-direction: column; }
-.fan.vertical .card { margin: 0 0 calc(var(--card-h-small) * -0.78) 0; }
+.fan.vertical .card { margin: 0 0 calc(var(--card-h-back) * -0.78) 0; }
 .fan.vertical .card:last-child { margin-bottom: 0; }
 
 .card {
@@ -118,7 +129,8 @@ body.table-page {
   user-select: none;
 }
 
-.card.small, .fan .card { width: var(--card-w-small); height: var(--card-h-small); }
+.card.small { width: var(--card-w-small); height: var(--card-h-small); }
+.fan .card { width: var(--card-w-back); height: var(--card-h-back); }
 
 .card.back { background: #1b3c8c; }
 
@@ -439,7 +451,14 @@ body.table-page {
   --fan-pivot: 240%;
   position: relative;
   width: 100%;
-  height: calc(var(--card-h) + 58px);
+  /* Tall enough for the top offset below, the card itself, and the dip a
+     tilted outer card swings below an unrotated one — a fixed fraction of
+     the card's own height, set by fanAngles' geometry (layout.ts) and the
+     pivot above. The widest fan this game ever holds is sixteen cards, for
+     an instant during the pass (twelve dealt, four just received); that is
+     also the fan with the deepest dip, at a little over a third of the
+     card's height. */
+  height: calc(22px + var(--card-h) * 1.38);
   /* Only the cards themselves are hit: the box is as wide as the table and
      would otherwise swallow clicks meant for the felt beneath it. */
   pointer-events: none;
@@ -465,7 +484,7 @@ body.table-page {
 /* UI-9: legal and illegal must look different, and an illegal card cannot be
    submitted — the click handler is simply not attached to one. */
 #hand .card.legal { cursor: grab; box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.5); }
-#hand .card.legal:hover { --raise: -18px; }
+#hand .card.legal:hover { --raise: calc(var(--card-h) * -0.173); }
 #hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
 
 /* A card being pointed at or picked out comes clear of the ones over it,
@@ -473,7 +492,7 @@ body.table-page {
 #hand .card:hover, #hand .card.chosen { z-index: 40; }
 
 #hand.choosing .card { cursor: pointer; }
-#hand .card.chosen { --raise: -22px; box-shadow: 0 0 0 2px var(--ns); }
+#hand .card.chosen { --raise: calc(var(--card-h) * -0.212); box-shadow: 0 0 0 2px var(--ns); }
 #hand .card.lifted { opacity: 0.4; }
 
 /* Over the felt at the top, clear of every control. */
