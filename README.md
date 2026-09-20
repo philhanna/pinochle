@@ -13,8 +13,18 @@ pip install -e .          # everything, tests included
 make dev                  # server on http://localhost:8000, admin token "dev"
 ```
 
-Open <http://localhost:8000/admin>, create a game, and open each human seat's
-join link in **its own tab**. Then:
+`make dev` prints a console link with the admin token already in it — open
+that, create a game, and open each human seat's join link in **its own tab**:
+
+```
+console:        http://localhost:8000/admin?t=dev
+```
+
+Without the token in the URL the console asks for it, and it is whatever
+`PINOCHLE_ADMIN_TOKEN` was set to (`make dev` uses `dev`), or the value the
+server logs at startup if it was not set.
+
+Then:
 
 ```sh
 make seed                 # or: create a game from the command line instead

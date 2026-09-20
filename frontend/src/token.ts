@@ -59,6 +59,24 @@ function tokenFor(gameId: string, fromQuery: string | null): string | null {
 const ADMIN_KEY = "pinochle.admin";
 
 /**
+ * Return the admin token for the console: from `?t=`, else from this tab.
+ *
+ * A console link carries the token the way a join link does, so an operator
+ * opens a URL rather than copying a credential into a field — which is the
+ * difference between the console working first time and answering "Bad admin
+ * token." The token is only read here and sent in a header; no mutating
+ * endpoint accepts one from a query string.
+ */
+export function resolveAdminToken(url: URL = new URL(window.location.href)): string {
+  const fromQuery = url.searchParams.get("t");
+  if (fromQuery) {
+    rememberAdminToken(fromQuery);
+    return fromQuery;
+  }
+  return storedAdminToken();
+}
+
+/**
  * Return the admin token entered earlier in this tab, or the empty string.
  *
  * `sessionStorage` again, and for a second reason beyond the one in

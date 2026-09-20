@@ -22,7 +22,8 @@ if [[ -x .venv/bin/uvicorn ]]; then
 fi
 
 echo "admin token:    ${PINOCHLE_ADMIN_TOKEN}"
-echo "console:        ${PINOCHLE_PUBLIC_BASE_URL}/admin"
+# With the token in it, so the console needs nothing typed into it.
+echo "console:        ${PINOCHLE_PUBLIC_BASE_URL}/admin?t=${PINOCHLE_ADMIN_TOKEN}"
 echo "computer delay: ${PINOCHLE_COMPUTER_DELAY_SECONDS}s   trick clear: ${PINOCHLE_TRICK_CLEAR_SECONDS}s"
 echo
 

@@ -89,6 +89,13 @@ The format is based on [Keep a Changelog].
   forwarded URL cannot create, start or abandon a game
 
 ### Fixed
+- The console answered "Bad admin token." with no way to tell what token it
+  wanted. It now accepts the token from the URL — `/admin?t=<token>`, which
+  `make dev` prints ready to open — asks for the credential before anything
+  else on the form rather than after the seats, and when the token is refused
+  says where an operator is supposed to find one. Refused credentials are also
+  logged now, with the path and the reason but never the token itself, which
+  NFR-9 asked for and only this omission was missing
 - The client offered a card during the trick-clear pause, which the server
   rejects as out-of-phase (RT-9): a pause is a state the game occupies, not a
   presentation effect, so no play is offered while one runs

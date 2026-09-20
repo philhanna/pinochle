@@ -16,7 +16,7 @@ import {
 } from "./api.js";
 import { createLog, type LogView } from "./log.js";
 import { adminStreamUrl, openStream } from "./stream.js";
-import { rememberAdminToken, storedAdminToken } from "./token.js";
+import { rememberAdminToken, resolveAdminToken } from "./token.js";
 
 const SEATS = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
 
@@ -37,7 +37,7 @@ function main(): void {
     return;
   }
 
-  tokenField.value = storedAdminToken();
+  tokenField.value = resolveAdminToken();
   const state: Console_ = { token: () => tokenField.value.trim(), game: null, log: null };
 
   form.addEventListener("submit", (event) => {
@@ -241,6 +241,18 @@ function say(message: string, kind: "info" | "error" = "info"): void {
 
 /** Show a failure in the server's own words. */
 function report(error: unknown): void {
+  if (error instanceof ApiError && error.code === "forbidden_admin") {
+    // The server can only say the token was wrong; it is this page that knows
+    // where an operator is supposed to get one.
+    say(
+      "Bad admin token. The console needs the value of PINOCHLE_ADMIN_TOKEN: "
+      + "\"dev\" if the server was started with `make dev`, otherwise the one "
+      + "it logged at startup (\"generated one for this run\"). Opening "
+      + "/admin?t=<token> fills this in for you.",
+      "error",
+    );
+    return;
+  }
   const message = error instanceof ApiError
     ? `${error.message} (${error.code})`
     : error instanceof Error ? error.message : String(error);

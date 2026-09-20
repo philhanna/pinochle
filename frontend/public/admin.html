@@ -20,6 +20,22 @@
 
   <form id="setup">
     <fieldset>
+      <legend>Credential</legend>
+      <label>
+        Admin token
+        <input id="admin-token" name="admin-token" type="password"
+               autocomplete="off" required placeholder="PINOCHLE_ADMIN_TOKEN">
+      </label>
+      <p class="hint">
+        Required. <code>make dev</code> uses <code>dev</code>; otherwise it is
+        whatever <code>PINOCHLE_ADMIN_TOKEN</code> was set to, or the value the
+        server logged at startup if it was not set. Opening
+        <code>/admin?t=&lt;token&gt;</code> fills this in for you, and
+        <code>make dev</code> prints that link. Held for this tab only.
+      </p>
+    </fieldset>
+
+    <fieldset>
       <legend>Teams</legend>
       <label>North-South <input name="team-ns" value="North-South"></label>
       <label>East-West <input name="team-ew" value="East-West"></label>
@@ -74,20 +90,6 @@
           </tr>
         </tbody>
       </table>
-    </fieldset>
-
-    <fieldset>
-      <legend>Credential</legend>
-      <label>
-        Admin token
-        <input id="admin-token" name="admin-token" type="password"
-               autocomplete="off" placeholder="PINOCHLE_ADMIN_TOKEN">
-      </label>
-      <p class="hint">
-        Set by <code>PINOCHLE_ADMIN_TOKEN</code>; <code>make dev</code> uses
-        <code>dev</code>. If none was set, the server logged one at startup.
-        Held for this tab only.
-      </p>
     </fieldset>
 
     <button type="submit" class="primary">Create game</button>

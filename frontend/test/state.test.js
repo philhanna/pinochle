@@ -401,3 +401,32 @@ test("applyEvent does not mutate the state it is given", () => {
   assert.equal(before.hand, handBefore);
   assert.deepEqual(before.hand, []);
 });
+
+// ---------------------------------------------------------------------------
+// The console's credential (§5.1)
+// ---------------------------------------------------------------------------
+
+test("the console takes its admin token from the URL when one is there", async () => {
+  const { resolveAdminToken } = await import("../dist/token.js");
+  const store = new Map();
+  globalThis.window = {
+    sessionStorage: {
+      getItem: (k) => store.get(k) ?? null,
+      setItem: (k, v) => store.set(k, v),
+    },
+  };
+
+  assert.equal(resolveAdminToken(new URL("http://x/admin?t=dev")), "dev");
+  // …and remembers it, so a reload does not ask again.
+  assert.equal(resolveAdminToken(new URL("http://x/admin")), "dev");
+  delete globalThis.window;
+});
+
+test("the console has no token when neither the URL nor the tab has one", async () => {
+  const { resolveAdminToken } = await import("../dist/token.js");
+  globalThis.window = {
+    sessionStorage: { getItem: () => null, setItem: () => {} },
+  };
+  assert.equal(resolveAdminToken(new URL("http://x/admin")), "");
+  delete globalThis.window;
+});

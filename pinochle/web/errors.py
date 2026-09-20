@@ -1,4 +1,6 @@
 # pinochle.web.errors
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -45,7 +47,19 @@ def register_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(ForbiddenError)
     async def _handle_forbidden_error(request: Request, exc: ForbiddenError) -> JSONResponse:
-        """Map a failed admin or seat credential check to a 403."""
+        """Map a failed admin or seat credential check to a 403.
+
+        Logged, because NFR-9 wants every rejected action recorded with its
+        reason and a refused credential is the rejection an operator is most
+        likely to have to diagnose.  The credential itself is never logged:
+        whether it was absent, mistyped or stale is the operator's to work out
+        from their own end, and a log that repeated tokens would be a place to
+        harvest them.
+        """
+        logging.getLogger("pinochle.security").warning(
+            "action.rejected reason=%s path=%s method=%s",
+            exc.code, request.url.path, request.method,
+        )
         return _envelope(403, exc.code, exc.message)
 
     @app.exception_handler(RequestValidationError)
