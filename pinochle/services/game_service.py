@@ -7,7 +7,7 @@ from pinochle.domain.bid import BID_INCREMENT, MINIMUM_BID
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.deck import Deck
 from pinochle.domain.cards.suit import Suit
-from pinochle.domain.errors import IllegalActionError
+from pinochle.domain.errors import IllegalActionError, WrongPhaseError
 from pinochle.domain.game import (
     BidPlaced,
     CardPlayed,
@@ -441,7 +441,7 @@ class GameService(AdminPort, PlayerActionPort):
         Each position may be taken by only one player, so the four drawn cards
         are necessarily four distinct cards from one deck (FR-12).
         """
-        spread = self._spreads[game_id]
+        spread = self._spread(game_id)
         if not 0 <= position < len(spread.cards):
             raise IllegalActionError(f"Position {position} is not in the spread.")
         if player_id in spread.drawn:
@@ -463,6 +463,25 @@ class GameService(AdminPort, PlayerActionPort):
             self._resolve_dealer_selection(game_id, spread)
 
         return card
+
+    def _spread(self, game_id: str) -> "_DealerSpread":
+        """Return the game's dealer-selection spread, or refuse the action.
+
+        The spread exists only while dealer selection is running: it is laid
+        out when the game starts and discarded the moment a dealer is settled
+        (FR-13).  Its absence is therefore the phase check for drawing, which
+        has no ``Round`` to ask — dealer selection happens before a round
+        exists.  A draw that arrives after the deal has begun, from a stale
+        tab or a reconnected one, is refused like any other out-of-phase
+        action (NFR-4) rather than crashing the request.
+        """
+        spread = self._spreads.get(game_id)
+        if spread is None:
+            # Raises UnknownGameError if there is no such game, so a bad id is
+            # still a 404 rather than being reported as the wrong phase.
+            self._state.load(game_id)
+            raise WrongPhaseError("Dealer selection is not open.")
+        return spread
 
     def _resolve_dealer_selection(self, game_id: str, spread: "_DealerSpread") -> None:
         """Settle a completed round of draws, redealing the spread on a tie."""
@@ -495,11 +514,11 @@ class GameService(AdminPort, PlayerActionPort):
 
     def spread_size(self, game_id: str) -> int:
         """Return how many positions the dealer-selection spread offers."""
-        return len(self._spreads[game_id].cards)
+        return len(self._spread(game_id).cards)
 
     def positions_taken(self, game_id: str) -> set[int]:
         """Return the spread positions already claimed by a player."""
-        return set(self._spreads[game_id].drawn.values())
+        return set(self._spread(game_id).drawn.values())
 
     def players_awaiting_draw(self, game_id: str) -> set[str]:
         """Return the players who have not yet drawn from the current spread.
@@ -508,7 +527,7 @@ class GameService(AdminPort, PlayerActionPort):
         draw at any time — so the computer driver uses this instead of a
         turn to decide which computer seats still have a move to make.
         """
-        spread = self._spreads[game_id]
+        spread = self._spread(game_id)
         game = self._state.load(game_id)
         return set(game.players) - set(spread.drawn)
 

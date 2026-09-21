@@ -8,7 +8,11 @@ from pinochle.adapters.print_notification import PrintNotification
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
-from pinochle.domain.errors import IllegalActionError, WrongPhaseError
+from pinochle.domain.errors import (
+    IllegalActionError,
+    UnknownGameError,
+    WrongPhaseError,
+)
 from pinochle.domain.game import GamePhase
 from pinochle.services.round import Round, RoundPhase
 from pinochle.domain.player import Player, PlayerType, Position
@@ -167,6 +171,48 @@ def test_position_outside_the_spread_is_rejected():
     assert service.spread_size(game_id) == 48
     with pytest.raises(IllegalActionError):
         service.draw_for_deal(game_id, "N", 48)
+
+
+def test_a_draw_after_the_dealer_is_settled_is_refused():
+    """NFR-4: a late draw is an out-of-phase action, not a crash.
+
+    The spread is discarded once a dealer is settled, so there is nothing
+    left to draw from. A tab that was showing the spread when the deal began
+    — a stale one, or one that has just reconnected — must be refused like
+    any other action submitted for the wrong phase.
+    """
+    service, state = make_service()
+    game_id = setup_game(service)
+    cards = service._spreads[game_id].cards
+    # Distinct ranks, so the draw settles a dealer instead of tying (FR-14).
+    for position, rank in enumerate([Rank.ACE, Rank.KING, Rank.QUEEN, Rank.JACK]):
+        cards[position] = Card(rank, Suit.SPADES)
+    for position, pid in enumerate(["N", "E", "S", "W"]):
+        service.draw_for_deal(game_id, pid, position)
+    assert state.load(game_id).phase == GamePhase.IN_ROUND
+
+    with pytest.raises(WrongPhaseError):
+        service.draw_for_deal(game_id, "N", 10)
+
+
+def test_a_draw_before_the_game_starts_is_refused():
+    """There is no spread until the game starts, and no draw either."""
+    service, _ = make_service()
+    game_id = service.create_game()
+    service.assign_teams(game_id, TEAMS[0], TEAMS[1])
+    for player in PLAYERS:
+        service.add_player(game_id, player)
+
+    with pytest.raises(WrongPhaseError):
+        service.draw_for_deal(game_id, "N", 0)
+
+
+def test_a_draw_for_an_unknown_game_is_reported_as_an_unknown_game():
+    """A bad id must stay a 404, not be dressed up as the wrong phase."""
+    service, _ = make_service()
+
+    with pytest.raises(UnknownGameError):
+        service.draw_for_deal("no-such-game", "N", 0)
 
 
 def test_tie_lays_out_a_fresh_spread_for_all_four():

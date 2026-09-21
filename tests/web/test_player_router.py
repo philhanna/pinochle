@@ -168,3 +168,23 @@ async def test_play_decodes_a_card_from_its_wire_code(container, client):
     )
     assert response.status_code == 204
     assert legal_card in [play.card for play in round_state.current_trick_plays]
+
+
+async def test_a_draw_after_the_deal_is_a_409_not_a_500(container, client):
+    """NFR-4: a stale tab's draw is refused in words, not with a crash.
+
+    A seat that reconnects mid-round may still be showing the spread it was
+    looking at when the deal began. Clicking it must come back as a refusal
+    the client can display, like every other out-of-phase action.
+    """
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    start_and_deal(container, game_id)
+    token = container.tokens.mint(game_id, "p-north")
+
+    response = await client.post(
+        f"/api/games/{game_id}/draw", json={"position": 0}, headers=seat_headers(token),
+    )
+
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "wrong_phase"
