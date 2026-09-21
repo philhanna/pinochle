@@ -172,6 +172,93 @@ export function takenPositions(state: GameState): Set<number> {
   return new Set(state.draws.map((draw) => draw.position));
 }
 
+/**
+ * Where one face-down card lies in the scattered spread (FR-11c).
+ *
+ * `x` and `y` are fractions of the room the scatter area has left for a card
+ * once the card's own size is taken off it: 0 puts the card against the top
+ * or left edge of the area and 1 against the bottom or right. So the card
+ * always lands wholly inside the area, and neither its size nor the area's is
+ * known here — both are the stylesheet's.
+ */
+export interface ScatterSpot {
+  x: number;
+  y: number;
+  /** How far the card is turned, in degrees off square. */
+  tilt: number;
+  /** Which of two overlapping cards lies on top. */
+  z: number;
+}
+
+/**
+ * Strew `count` cards across the scatter area, as a deck spread by hand.
+ *
+ * Not `count` uniform random points: those clump, and a bare patch in the
+ * middle of a scattered deck reads as a mistake rather than as chance. Each
+ * card gets one cell of a grid over the area and falls somewhere inside it,
+ * far enough off the cell's centre — more than half a cell — that cards cross
+ * into their neighbours' cells and the grid cannot be read off the result.
+ * The cards therefore lie across one another, which is what a scattered deck
+ * does and what FR-11c's drag is for.
+ *
+ * The stacking order is a separate shuffle, so which of two overlapping cards
+ * is on top owes nothing to the order they were laid down in.
+ *
+ * `random` is injected so the scatter can be tested; the table lets it
+ * default, because a deck that landed the same way every game would not be
+ * scattered.
+ */
+export function scatter(count: number, random: () => number = Math.random): ScatterSpot[] {
+  if (count <= 0) {
+    return [];
+  }
+  const columns = Math.max(1, Math.round(Math.sqrt(count * SCATTER_ASPECT)));
+  const rows = Math.max(1, Math.ceil(count / columns));
+  const stacking = shuffled(count, random);
+  return Array.from({ length: count }, (_, index) => ({
+    x: inCell(index % columns, columns, random),
+    y: inCell(Math.floor(index / columns), rows, random),
+    tilt: round((random() * 2 - 1) * MAX_TILT_DEGREES),
+    z: stacking[index] ?? index,
+  }));
+}
+
+// The scatter area's proportions — the inner part of a table that is itself
+// --stage-width by --stage-height (table.css). Only the ratio matters: it is
+// what makes the grid's cells come out roughly square, whatever the area.
+const SCATTER_ASPECT = 1420 / 1000;
+
+// How far off its cell's centre a card may fall, as a fraction of the cell.
+// Over a half on purpose: at less than that every card stays inside its own
+// cell and the grid shows through.
+const JITTER = 0.62;
+
+// Enough of a turn that no two cards look squared up with each other, and not
+// so much that the spread reads as a mess to be tidied.
+const MAX_TILT_DEGREES = 24;
+
+/** A point somewhere in cell `cell` of `cells`, as a fraction of the whole. */
+function inCell(cell: number, cells: number, random: () => number): number {
+  const offset = (random() * 2 - 1) * JITTER;
+  return round(Math.min(1, Math.max(0, (cell + 0.5 + offset) / cells)), 4);
+}
+
+/** The numbers below `count`, in a random order. */
+function shuffled(count: number, random: () => number): number[] {
+  const order = Array.from({ length: count }, (_, index) => index);
+  for (let i = count - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1));
+    [order[i], order[j]] = [order[j] as number, order[i] as number];
+  }
+  return order;
+}
+
+/** Round to `places`, so the number reaches a style attribute unrounded. */
+function round(value: number, places = 1): number {
+  const scale = 10 ** places;
+  return Math.round(value * scale) / scale;
+}
+
 /** The four suits, in the order the trump picker offers them (UI-11). */
 export const SUITS: SuitName[] = ["SPADES", "HEARTS", "DIAMONDS", "CLUBS"];
 

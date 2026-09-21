@@ -96,6 +96,32 @@ test("a partner is the other seat on this team", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Dealer selection (FR-11a, FR-11c, FR-14)
+// ---------------------------------------------------------------------------
+
+const DRAWING = { ...TURN, phase: "DEALER_SELECTION" };
+
+test("a reshuffled spread is a different spread, with nothing drawn from it", () => {
+  // The positions of the new spread are the positions of the old one, so
+  // nothing else in the state says the deck on the table has been replaced —
+  // and the client has to know, because where each card lies is settled once
+  // per spread (FR-11c).
+  const first = replay([
+    frame("dealer_selection_started", { spread_size: 48, taken: [] }, DRAWING),
+    frame("draw_made", { player_id: "p-south", position: 3, card: "AS" }, DRAWING),
+  ], seated());
+  assert.equal(first.spreadSize, 48);
+  assert.equal(first.draws.length, 1);
+
+  const again = replay([
+    frame("draw_tied", { cards: ["AS", "AH"] }, DRAWING),
+    frame("dealer_selection_started", { spread_size: 48, taken: [] }, DRAWING),
+  ], first);
+  assert.deepEqual(again.draws, [], "the new deck has been drawn from by nobody");
+  assert.notEqual(again.spreadId, first.spreadId, "it is not the same spread");
+});
+
+// ---------------------------------------------------------------------------
 // The deal (FR-21, FR-22, NFR-6, UI-5)
 // ---------------------------------------------------------------------------
 

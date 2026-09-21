@@ -131,6 +131,16 @@ export interface GameState {
   teams: TeamInfo[];
   winningScore: number;
 
+  /**
+   * Which spread is on the table, counted up as each one is dealt.
+   *
+   * A reshuffled spread (FR-14) holds the same 48 positions as the one it
+   * replaces and so looks identical in the state. This is what tells the
+   * client that the deck it is showing has been swept up and thrown again,
+   * which the scattered layout of FR-11c has to know: where a card lies is
+   * decided once per spread, not once per frame.
+   */
+  spreadId: number;
   spreadSize: number;
   draws: Draw[];
   dealerPlayerId: string | null;
@@ -194,6 +204,7 @@ export function initialState(): GameState {
     seats: [],
     teams: [],
     winningScore: 0,
+    spreadId: 0,
     spreadSize: 0,
     draws: [],
     dealerPlayerId: null,
@@ -350,6 +361,7 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
   /** A fresh face-down spread, with nothing drawn from it yet (FR-11a). */
   dealer_selection_started: (state, p) => ({
     ...state,
+    spreadId: state.spreadId + 1,
     spreadSize: p["spread_size"] as number,
     draws: [],
     dealerPlayerId: null,

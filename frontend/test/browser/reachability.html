@@ -38,11 +38,20 @@ const report = (value) => { result.textContent = JSON.stringify(value, null, 1);
  * trick layer is the one that needs it: it is a fixed 300x260 box from the
  * moment a round starts, but nothing may be dropped on it until play has
  * begun, so being covered before then is not a fault.
+ *
+ * `enough` says that the control is one of many interchangeable ways to take
+ * a single action, and asks only that that many of them be reachable. The
+ * scattered spread is the one that needs it: its cards lie across one another
+ * on purpose (FR-11c), and a card underneath is reached by dragging what
+ * covers it aside, or by closing the scoreboard it slid under. Four is what
+ * the selection ever needs — one card each. What this still catches is the
+ * failure that matters: something invisible laid over the middle of the table,
+ * which takes the whole deck's clicks at once.
  */
 const CONTROLS = [
   { selector: "#panel button" },
   { selector: "#panel .tray" },
-  { selector: ".spread .card.drawable" },
+  { selector: "#spread .card.drawable", enough: 4 },
   { selector: ".scoreboard-toggle" },
   { selector: ".last-trick-toggle" },
   { selector: "#hand .card" },
@@ -82,11 +91,13 @@ try {
       if (control.when !== undefined && !control.when.includes(state.phase)) {
         continue;
       }
-      for (const element of document.querySelectorAll(control.selector)) {
+      const elements = [...document.querySelectorAll(control.selector)];
+      const covered = [];
+      for (const element of elements) {
         checked[control.selector] = (checked[control.selector] ?? 0) + 1;
         const blocker = whatCovers(element);
         if (blocker !== null) {
-          blocked.push({
+          covered.push({
             frame: index,
             type: frame.type,
             phase: state.phase,
@@ -95,6 +106,20 @@ try {
             blocker,
           });
         }
+      }
+      const free = elements.length - covered.length;
+      if (control.enough === undefined) {
+        blocked.push(...covered);
+      } else if (elements.length > 0 && free < control.enough) {
+        blocked.push({
+          frame: index,
+          type: frame.type,
+          phase: state.phase,
+          control: control.selector,
+          label: "",
+          blocker: `something over all of them -- ${free} of ${elements.length} `
+            + `reachable, ${control.enough} needed`,
+        });
       }
     }
   });

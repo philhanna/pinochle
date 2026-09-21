@@ -150,6 +150,19 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   construction rather than by a uniqueness check.
 - **FR-11b** A computer player shall draw by choosing an untaken position at
   random. Its choice shall be made through the same call a human client uses.
+- **FR-11c** The spread shall be presented as a deck thrown across the table:
+  the cards strewn irregularly over the inner portion of the felt rather than
+  laid out in ranks, turned at differing angles, and lying across one another.
+  A player shall be able to drag any card of the spread aside, to see or to
+  reach what lies under it; a card so dragged stays where it is put and stays
+  over what it was pulled off. Dragging a card moves it and shall not select
+  it — selecting is the click of FR-11a. A card that lies under another is
+  reached by moving what covers it, which is the deliberate overlap UI-18
+  excepts.
+- **FR-11d** A card once drawn shall leave the spread and be shown face up in
+  front of its drawer's seat, where that player's hand is about to be dealt,
+  for as long as the selection lasts. Which card each player drew and whose it
+  is are then one thing on screen rather than two (FR-15).
 - **FR-13** The player drawing the highest card shall become the dealer for the
   first round.
 - **FR-14** If two or more players tie for the highest card, the entire
@@ -475,7 +488,11 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   shall hold throughout a round and at every window size the layout supports
   (UI-17). An unreachable control is worse than an absent or a disabled one:
   the interface goes on offering the action, and refusing it silently, so the
-  player is given no account of why nothing happened.
+  player is given no account of why nothing happened. The scattered spread of
+  FR-11c is the one exception, and is one because the overlap is the point: its
+  cards lie across one another, any one of them will do, and the player's
+  remedy is to move what is in the way. What must hold there is that cards
+  enough to draw from are reachable, not that every card is.
 
 ---
 

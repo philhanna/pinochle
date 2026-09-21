@@ -2,15 +2,14 @@
 //
 // One function renders the whole thing from the state, because the state is
 // the only model there is (RT-5) and a redraw is cheap at this size. The
-// exception is the hand during a drag, which must not be pulled out from under
-// the pointer.
+// exceptions are the two things a pointer can be holding — a card in the hand
+// and a card in the spread — which must not be pulled out from under it.
 
-import { backUrl, faceUrl } from "./cards.js";
+import { faceUrl } from "./cards.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
-import {
-  isPaused, mustDraw, placement, playHasBegun, takenPositions, trickCards,
-} from "./layout.js";
+import { isPaused, placement, playHasBegun, trickCards } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
+import { isMovingCard, renderSpread } from "./spread.js";
 import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
 import {
@@ -32,6 +31,7 @@ let scoreboardOpen = true;
 /** Draw the whole table. */
 export function renderTable(state: GameState, callbacks: TableCallbacks): void {
   renderSeats(state);
+  renderSpreadInto(state, callbacks);
   renderCentre(state, callbacks);
   renderScoreboard(state);
   renderStatus(state);
@@ -77,6 +77,12 @@ function renderSeats(state: GameState): void {
     label.textContent = seatLabel(state, seat);
 
     const children: HTMLElement[] = [label];
+    // The card this seat drew for the deal sits in front of them, face up,
+    // where their hand is about to be (FR-11d, FR-15).
+    const drawn = drawnBy(state, seat.playerId);
+    if (drawn !== null) {
+      children.push(drawnCard(drawn));
+    }
     if (spot !== "bottom") {
       const count = state.handCounts[seat.playerId] ?? 0;
       children.push(backsFan(count, spot === "left" || spot === "right"));
@@ -94,7 +100,39 @@ function renderSeats(state: GameState): void {
   }
 }
 
-/** The middle of the table: the spread, the trick, or a summary. */
+/**
+ * What a seat drew for the deal, while the deal is still being settled.
+ *
+ * Only while it is: once the round starts, every seat has a hand, and the
+ * card that won the deal is back in the deck with the rest.
+ */
+function drawnBy(state: GameState, playerId: string): string | null {
+  if (state.phase !== "DEALER_SELECTION") {
+    return null;
+  }
+  return state.draws.find((draw) => draw.playerId === playerId)?.card ?? null;
+}
+
+/** A drawn card, face up in front of a seat (FR-11d). */
+function drawnCard(card: string): HTMLElement {
+  const image = document.createElement("img");
+  image.className = "card small drawn";
+  image.src = faceUrl(card);
+  image.alt = card;
+  return image;
+}
+
+/** The scattered spread, which a drag must not have pulled away (FR-11c). */
+function renderSpreadInto(state: GameState, callbacks: TableCallbacks): void {
+  const element = byId("spread");
+  // A redraw mid-drag would destroy the card under the pointer, so the spread
+  // waits; letting go of the card asks for the redraw it missed.
+  if (element !== null && !isMovingCard()) {
+    renderSpread(element, state, callbacks);
+  }
+}
+
+/** The middle of the table: the trick, or a panel about the round. */
 function renderCentre(state: GameState, callbacks: TableCallbacks): void {
   const centre = byId("centre");
   if (centre === null) {
@@ -110,7 +148,11 @@ function renderCentre(state: GameState, callbacks: TableCallbacks): void {
     return;
   }
   if (state.phase === "DEALER_SELECTION") {
-    centre.replaceChildren(spread(state, callbacks));
+    // The spread is not in the middle of the table but strewn across it, so
+    // the middle holds nothing — and must hold nothing, since the trick
+    // layer's box is invisible, is drawn whether or not a card has been
+    // played, and would lie over the cards and take their clicks (UI-18).
+    centre.replaceChildren();
     return;
   }
   if (showingLastTrick && state.lastTrick !== null) {
@@ -156,39 +198,6 @@ function trickLayer(state: GameState, callbacks: TableCallbacks): HTMLElement {
     }
   });
   return layer;
-}
-
-/** The face-down spread every seat draws from (FR-11, FR-11a). */
-function spread(state: GameState, callbacks: TableCallbacks): HTMLElement {
-  const taken = takenPositions(state);
-  const drawable = mustDraw(state);
-
-  const element = document.createElement("div");
-  element.className = "spread";
-
-  for (let position = 0; position < state.spreadSize; position += 1) {
-    const drawn = state.draws.find((draw) => draw.position === position);
-    if (drawn !== undefined) {
-      const face = document.createElement("img");
-      face.className = "card small turned";
-      face.src = faceUrl(drawn.card);
-      face.alt = drawn.card;
-      face.title = nameFor(state, drawn.playerId);
-      element.append(face);
-      continue;
-    }
-
-    const back = document.createElement("img");
-    back.className = "card small";
-    back.src = backUrl();
-    back.alt = "";
-    if (drawable && !taken.has(position)) {
-      back.classList.add("drawable");
-      back.addEventListener("click", () => callbacks.onDraw(position));
-    }
-    element.append(back);
-  }
-  return element;
 }
 
 /**

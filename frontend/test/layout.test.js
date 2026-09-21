@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import {
   fanAngles, isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
-  playHasBegun, spotOf, takenPositions, trickCards,
+  playHasBegun, scatter, spotOf, takenPositions, trickCards,
 } from "../dist/layout.js";
 import { applyEvent, initialState } from "../dist/state.js";
 
@@ -254,4 +254,68 @@ test("play has begun once a leader is named, not once a card is played", () => {
 
   const leading = applyEvent(melded, frame("play_begun", { leader_player_id: "p-south" }));
   assert.equal(playHasBegun(leading), true, "before a card has been played");
+});
+
+// ---------------------------------------------------------------------------
+// The scattered spread (FR-11c)
+// ---------------------------------------------------------------------------
+
+/** A repeatable stand-in for Math.random, so a scatter can be asserted on. */
+function pseudoRandom(seed = 1) {
+  let value = seed;
+  return () => {
+    value = (value * 1103515245 + 12345) % 2147483648;
+    return value / 2147483648;
+  };
+}
+
+test("every card of the spread lands inside the area it is thrown over", () => {
+  const spots = scatter(48, pseudoRandom());
+  assert.equal(spots.length, 48);
+  for (const spot of spots) {
+    // The fractions are of the room left once the card's own size is off the
+    // area, so 0 and 1 are both still wholly inside it (table.css).
+    assert.ok(spot.x >= 0 && spot.x <= 1, `x in the area: ${spot.x}`);
+    assert.ok(spot.y >= 0 && spot.y <= 1, `y in the area: ${spot.y}`);
+  }
+});
+
+test("the spread covers the whole area rather than clumping in it", () => {
+  // What a grid buys over 48 uniform random points: no quarter of the area
+  // left bare, and none of them holding half the deck.
+  const spots = scatter(48, pseudoRandom(7));
+  const quarters = [0, 0, 0, 0];
+  for (const spot of spots) {
+    quarters[(spot.x < 0.5 ? 0 : 1) + (spot.y < 0.5 ? 0 : 2)] += 1;
+  }
+  for (const count of quarters) {
+    assert.ok(count >= 8, `every quarter of the table gets cards: ${quarters}`);
+  }
+});
+
+test("the cards are turned every which way, and no two spots are alike", () => {
+  const spots = scatter(48, pseudoRandom(3));
+  assert.ok(spots.some((spot) => spot.tilt < -4), "some cards lean left");
+  assert.ok(spots.some((spot) => spot.tilt > 4), "some cards lean right");
+  const places = new Set(spots.map((spot) => `${spot.x},${spot.y}`));
+  assert.equal(places.size, spots.length, "no two cards fall on the same spot");
+});
+
+test("the stacking order is a shuffle, not the order the cards were laid", () => {
+  const spots = scatter(48, pseudoRandom(11));
+  const order = spots.map((spot) => spot.z);
+  assert.deepEqual([...order].sort((a, b) => a - b), [...Array(48).keys()]);
+  assert.notDeepEqual(order, [...Array(48).keys()], "which card is on top is chance");
+});
+
+test("a spread thrown again lands differently", () => {
+  // FR-14 reshuffles and deals the spread afresh; a deck that landed the
+  // same way twice would not read as a new one.
+  const first = scatter(48, pseudoRandom(1));
+  const second = scatter(48, pseudoRandom(2));
+  assert.notDeepEqual(first, second);
+});
+
+test("an empty spread is scattered emptily", () => {
+  assert.deepEqual(scatter(0, pseudoRandom()), []);
 });
