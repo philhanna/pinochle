@@ -140,6 +140,34 @@ def test_one_physical_card_shared_by_two_combinations_is_exposed_once():
     assert exposed.count(Card(Rank.QUEEN, Suit.SPADES)) == 1
 
 
+def test_each_meld_unit_names_the_cards_in_its_own_group():
+    """The table can arrange a run and a nine as distinct labeled melds."""
+    hand = cards(
+        (Rank.ACE, TRUMP), (Rank.TEN, TRUMP), (Rank.KING, TRUMP),
+        (Rank.QUEEN, TRUMP), (Rank.JACK, TRUMP), (Rank.NINE, TRUMP),
+    )
+
+    units = detect_meld(hand, TRUMP)
+
+    assert [(unit.name, unit.cards) for unit in units] == [
+        ("Run", hand[:5]),
+        ("Trump Nine", hand[5:]),
+    ]
+
+
+def test_a_shared_card_is_shown_in_each_meld_it_scores():
+    hand = cards(
+        (Rank.QUEEN, Suit.SPADES), (Rank.QUEEN, Suit.HEARTS),
+        (Rank.QUEEN, Suit.DIAMONDS), (Rank.QUEEN, Suit.CLUBS),
+        (Rank.JACK, Suit.DIAMONDS),
+    )
+    units = detect_meld(hand, Suit.HEARTS)
+
+    assert next(unit.cards for unit in units if unit.name == "Pinochle") == [hand[0], hand[4]]
+    assert next(unit.cards for unit in units if unit.name == "60 Queens") == hand[:4]
+    assert cards_in_meld(hand, Suit.HEARTS) == hand, "the public hand still exposes each copy once"
+
+
 def test_double_combinations_expose_both_physical_copies():
     """A double pinochle lays down both queens and both jacks."""
     hand = cards(

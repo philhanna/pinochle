@@ -88,7 +88,7 @@ def test_trick_clear_pause_is_reported():
     while round_state.phase == RoundPhase.PASSING:
         passer = round_state.current_player
         service.pass_cards(game_id, passer, list(round_state.hand(passer))[:4])
-    service.begin_play(game_id, winner)
+    service.acknowledge(game_id, winner, state.load(game_id).current_hold.id)
 
     for _ in range(4):
         player_id = round_state.current_player

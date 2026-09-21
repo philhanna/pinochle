@@ -201,9 +201,9 @@ function renderSeats(state: GameState): void {
       const count = state.handCounts[seat.playerId] ?? 0;
       children.push(backsFan(count, spot === "left" || spot === "right"));
     }
-    const meldCards = state.phase === "MELDING" ? state.meld[seat.playerId]?.cards ?? [] : [];
-    if (meldCards.length > 0) {
-      children.push(meldFan(meldCards));
+    const meld = state.phase === "MELDING" ? state.meld[seat.playerId] : undefined;
+    if (meld !== undefined && meld.units.length > 0) {
+      children.push(meldGroups(meld.units));
     }
     const call = bidCall(state, seat.playerId);
     if (call !== null) {
@@ -222,18 +222,31 @@ function renderSeats(state: GameState): void {
   }
 }
 
-/** The public cards one player has laid face-up for meld. */
-function meldFan(cards: string[]): HTMLElement {
-  const fan = document.createElement("div");
-  fan.className = "meld-cards";
-  for (const card of cards) {
-    const image = document.createElement("img");
-    image.className = "meld-card";
-    image.src = faceUrl(card);
-    image.alt = card;
-    fan.append(image);
+/** The public cards one player has laid out, separated by meld combination. */
+function meldGroups(units: GameState["meld"][string]["units"]): HTMLElement {
+  const shelf = document.createElement("div");
+  shelf.className = "meld-cards";
+  for (const unit of units) {
+    const group = document.createElement("div");
+    group.className = "meld-group";
+
+    const cards = document.createElement("div");
+    cards.className = "meld-group-cards";
+    for (const card of unit.cards ?? []) {
+      const image = document.createElement("img");
+      image.className = "meld-card";
+      image.src = faceUrl(card);
+      image.alt = card;
+      cards.append(image);
+    }
+
+    const label = document.createElement("div");
+    label.className = "meld-group-label";
+    label.textContent = `${unit.name} · ${unit.points}`;
+    group.append(cards, label);
+    shelf.append(group);
   }
-  return fan;
+  return shelf;
 }
 
 /**

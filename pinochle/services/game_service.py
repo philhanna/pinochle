@@ -336,6 +336,12 @@ class GameService(AdminPort, PlayerActionPort):
                 return
             if released.reason is HoldReason.ROUND_SCORED:
                 self._deal_next_round(g)
+            elif released.reason is HoldReason.MELD_EXPOSED:
+                winner = g.current_round.bid_winner
+                if winner is None:
+                    raise IllegalActionError("The exposed meld has no bid winner.")
+                g.current_round.begin_play(winner)
+                g.emit(PlayBegun(game_id=g.id, leader_player_id=winner))
 
         self._load_save(game_id, _acknowledge)
 
@@ -657,6 +663,8 @@ class GameService(AdminPort, PlayerActionPort):
             ))
             if round_state.phase == RoundPhase.MELDING:
                 self._emit_meld_exposed(g)
+                if self._has_human_seat(g):
+                    g.begin_hold(HoldReason.MELD_EXPOSED, ackable=True)
                 exchange_complete = True
 
         self._load_save(game_id, _pass_cards)
@@ -678,6 +686,11 @@ class GameService(AdminPort, PlayerActionPort):
         """Start trick play once the auction winner has read the exposed meld."""
         def _begin_play(g: Game) -> None:
             """End the meld display and announce the opening lead."""
+            if (
+                g.current_hold is not None
+                and g.current_hold.reason is HoldReason.MELD_EXPOSED
+            ):
+                raise WrongPhaseError("Use Continue before beginning play.")
             g.current_round.begin_play(player_id)
             g.emit(PlayBegun(game_id=g.id, leader_player_id=player_id))
 
@@ -688,6 +701,11 @@ class GameService(AdminPort, PlayerActionPort):
         def _toss_in(g: Game) -> None:
             """Give up the contract and settle the round immediately."""
             g.current_round.toss_in(player_id)
+            if (
+                g.current_hold is not None
+                and g.current_hold.reason is HoldReason.MELD_EXPOSED
+            ):
+                g.end_hold(g.current_hold.id)
             g.emit(ContractTossedIn(game_id=g.id, player_id=player_id))
             self._score_round(g)
 

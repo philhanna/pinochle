@@ -165,7 +165,14 @@ def _meld_exposed(event: MeldExposed) -> tuple[str, dict]:
     return "meld_exposed", {
         "player_id": event.player_id,
         "cards": [encode_card(card) for card in event.cards],
-        "units": [{"name": u.name, "points": u.points} for u in event.units],
+        "units": [
+            {
+                "name": unit.name,
+                "points": unit.points,
+                "cards": [encode_card(card) for card in unit.cards],
+            }
+            for unit in event.units
+        ],
         "total": event.total,
     }
 

@@ -100,6 +100,17 @@ test("a hold awaiting release carries the id to release (UI-19a, RT-13)", () => 
   assert.equal(shown.release, 41);
 });
 
+test("exposed meld waits for a Continue click", () => {
+  const hold = { id: 42, reason: "meld_exposed", ackable: true };
+  const state = applyEvent(seated(), frame("hold_begun", {
+    hold_id: 42, reason: "meld_exposed", seconds: null, ackable: true,
+  }, holding(hold, "MELDING")));
+
+  const shown = notice(state);
+  assert.equal(shown.text, "Review the meld laid out on the table.");
+  assert.equal(shown.release, 42);
+});
+
 test("any seat sees the same release control, not just the one on the clock", () => {
   // RT-13 lets any one seat release a hold, so nothing here may depend on
   // whose turn it was when the hold began.

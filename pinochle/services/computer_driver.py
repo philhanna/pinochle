@@ -71,6 +71,8 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
         seat on the clock, from ``Round.current_player``.
         """
         game = self._state.load(game_id)
+        if game.current_hold is not None:
+            return
         if game.phase == GamePhase.DEALER_SELECTION:
             # Clockwise, not in the set's own order: which seat draws first
             # decides who deals, and a set of player ids iterates differently

@@ -309,13 +309,15 @@ def _complete_exchange(service: GameService, game_id: str, round_state: Round) -
 
 
 def test_completed_exchange_reaches_trick_play():
-    """The meld display ends when the auction winner says so, not on a timer."""
+    """The meld display ends only after a seat clicks Continue."""
     service, state = make_service()
     game_id = _advance_to_passing(service, state)
     round_state = state.load(game_id).current_round
     _complete_exchange(service, game_id, round_state)
     assert round_state.phase == RoundPhase.MELDING
-    service.begin_play(game_id, "E")
+    with pytest.raises(WrongPhaseError, match="Continue"):
+        service.begin_play(game_id, "E")
+    service.acknowledge(game_id, "S", state.load(game_id).current_hold.id)
     assert round_state.phase == RoundPhase.PLAYING
     assert round_state.play_card("E", list(round_state.hand("E"))[0]) is None
 
@@ -330,7 +332,7 @@ def test_trick_clear_pause_rejects_a_new_lead_until_cleared(capsys):
     game_id = _advance_to_passing(service, state)
     round_state = state.load(game_id).current_round
     _complete_exchange(service, game_id, round_state)
-    service.begin_play(game_id, "E")
+    service.acknowledge(game_id, "S", state.load(game_id).current_hold.id)
 
     for _ in range(4):
         player_id = round_state.current_player

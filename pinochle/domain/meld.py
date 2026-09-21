@@ -1,5 +1,5 @@
 # pinochle.domain.meld
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from collections import Counter
 
 from pinochle.domain.cards.card import Card
@@ -19,6 +19,21 @@ class MeldUnit:
 
     name: str
     points: int
+    cards: list[Card] = field(default_factory=list)
+
+
+def _take(
+    cards: list[Card], requirements: Counter[tuple[Rank, Suit]],
+) -> list[Card]:
+    """Pick the physical cards that make one displayed meld combination."""
+    remaining = requirements.copy()
+    selected: list[Card] = []
+    for card in cards:
+        key = (card.rank, card.suit)
+        if remaining[key] > 0:
+            selected.append(card)
+            remaining[key] -= 1
+    return selected
 
 
 def _count(cards: list[Card], rank: Rank, suit: Suit) -> int:
@@ -34,9 +49,15 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
     run_cards = [Rank.ACE, Rank.TEN, Rank.KING, Rank.QUEEN, Rank.JACK]
     single_run_count = min(_count(cards, r, trump) for r in run_cards)
     if single_run_count >= 2:
-        units.append(MeldUnit("Double Run", 1500))
+        units.append(MeldUnit(
+            "Double Run", 1500,
+            _take(cards, Counter({(rank, trump): 2 for rank in run_cards})),
+        ))
     elif single_run_count == 1:
-        units.append(MeldUnit("Run", 150))
+        units.append(MeldUnit(
+            "Run", 150,
+            _take(cards, Counter({(rank, trump): 1 for rank in run_cards})),
+        ))
 
     # --- Marriages ---
     for suit in Suit:
@@ -47,7 +68,13 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
         if pairs >= 1:
             name = "Royal Marriage" if suit == trump else "Marriage"
             points = 40 if suit == trump else 20
-            units.append(MeldUnit(name, points * pairs))
+            units.append(MeldUnit(
+                name, points * pairs,
+                _take(cards, Counter({
+                    (Rank.KING, suit): pairs,
+                    (Rank.QUEEN, suit): pairs,
+                })),
+            ))
 
     # --- Pinochle (Q♠ + J♦) ---
     pinochle_count = min(
@@ -55,42 +82,81 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
         _count(cards, Rank.JACK, Suit.DIAMONDS),
     )
     if pinochle_count >= 2:
-        units.append(MeldUnit("Double Pinochle", 300))
+        units.append(MeldUnit(
+            "Double Pinochle", 300,
+            _take(cards, Counter({
+                (Rank.QUEEN, Suit.SPADES): 2,
+                (Rank.JACK, Suit.DIAMONDS): 2,
+            })),
+        ))
     elif pinochle_count == 1:
-        units.append(MeldUnit("Pinochle", 40))
+        units.append(MeldUnit(
+            "Pinochle", 40,
+            _take(cards, Counter({
+                (Rank.QUEEN, Suit.SPADES): 1,
+                (Rank.JACK, Suit.DIAMONDS): 1,
+            })),
+        ))
 
     # --- Aces around ---
     aces = min(_count(cards, Rank.ACE, s) for s in Suit)
     if aces >= 2:
-        units.append(MeldUnit("1000 Aces", 1000))
+        units.append(MeldUnit(
+            "1000 Aces", 1000,
+            _take(cards, Counter({(Rank.ACE, suit): 2 for suit in Suit})),
+        ))
     elif aces == 1:
-        units.append(MeldUnit("100 Aces", 100))
+        units.append(MeldUnit(
+            "100 Aces", 100,
+            _take(cards, Counter({(Rank.ACE, suit): 1 for suit in Suit})),
+        ))
 
     # --- Kings around ---
     kings = min(_count(cards, Rank.KING, s) for s in Suit)
     if kings >= 2:
-        units.append(MeldUnit("800 Kings", 800))
+        units.append(MeldUnit(
+            "800 Kings", 800,
+            _take(cards, Counter({(Rank.KING, suit): 2 for suit in Suit})),
+        ))
     elif kings == 1:
-        units.append(MeldUnit("80 Kings", 80))
+        units.append(MeldUnit(
+            "80 Kings", 80,
+            _take(cards, Counter({(Rank.KING, suit): 1 for suit in Suit})),
+        ))
 
     # --- Queens around ---
     queens = min(_count(cards, Rank.QUEEN, s) for s in Suit)
     if queens >= 2:
-        units.append(MeldUnit("600 Queens", 600))
+        units.append(MeldUnit(
+            "600 Queens", 600,
+            _take(cards, Counter({(Rank.QUEEN, suit): 2 for suit in Suit})),
+        ))
     elif queens == 1:
-        units.append(MeldUnit("60 Queens", 60))
+        units.append(MeldUnit(
+            "60 Queens", 60,
+            _take(cards, Counter({(Rank.QUEEN, suit): 1 for suit in Suit})),
+        ))
 
     # --- Jacks around ---
     jacks = min(_count(cards, Rank.JACK, s) for s in Suit)
     if jacks >= 2:
-        units.append(MeldUnit("400 Jacks", 400))
+        units.append(MeldUnit(
+            "400 Jacks", 400,
+            _take(cards, Counter({(Rank.JACK, suit): 2 for suit in Suit})),
+        ))
     elif jacks == 1:
-        units.append(MeldUnit("40 Jacks", 40))
+        units.append(MeldUnit(
+            "40 Jacks", 40,
+            _take(cards, Counter({(Rank.JACK, suit): 1 for suit in Suit})),
+        ))
 
     # --- Trump nine ---
     nines = _count(cards, Rank.NINE, trump)
     if nines >= 1:
-        units.append(MeldUnit("Trump Nine", 10 * nines))
+        units.append(MeldUnit(
+            "Trump Nine", 10 * nines,
+            _take(cards, Counter({(Rank.NINE, trump): nines})),
+        ))
 
     return units
 

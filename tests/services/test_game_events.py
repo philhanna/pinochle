@@ -28,6 +28,7 @@ from pinochle.domain.game import (
     TrickCompleted,
     TurnPrompt,
 )
+from pinochle.domain.hold import HoldReason
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.scoring import WINNING_SCORE
 from pinochle.domain.team import Team
@@ -131,6 +132,11 @@ def play_out(service: GameService, state: InMemoryGameState, game_id: str) -> No
         round_state = state.load(game_id).current_round
 
 
+def continue_meld(service: GameService, state: InMemoryGameState, game_id: str) -> None:
+    """Click through the public meld hold before leading the first trick."""
+    service.acknowledge(game_id, "N", state.load(game_id).current_hold.id)
+
+
 # ---------------------------------------------------------------------------
 # Setup and dealer selection
 # ---------------------------------------------------------------------------
@@ -208,11 +214,30 @@ def test_meld_events_carry_each_players_face_up_cards(table):
         assert all(card in round_state.hand(event.player_id) for card in event.cards)
 
 
+def test_meld_waits_for_any_seats_continue_click(table):
+    """A human table stays on exposed meld even when a computer won the bid."""
+    service, state, notifier = table
+    game_id, winner = expose_meld(service, state)
+
+    hold = state.load(game_id).current_hold
+    assert hold is not None
+    assert hold.reason is HoldReason.MELD_EXPOSED
+    assert hold.ackable and hold.seconds is None
+
+    viewer = next(player_id for player_id in ("N", "E", "S", "W") if player_id != winner)
+    service.acknowledge(game_id, viewer, hold.id)
+
+    round_state = state.load(game_id).current_round
+    assert round_state.phase == RoundPhase.PLAYING
+    assert round_state.current_player == winner
+    assert notifier.of_type(PlayBegun)[-1].leader_player_id == winner
+
+
 def test_the_table_holds_on_the_round_summary(table):
     """RT-13: the next deal waits on a seat, not on a clock."""
     service, state, notifier = table
     game_id, _ = expose_meld(service, state)
-    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     hold = state.load(game_id).current_hold
@@ -225,7 +250,7 @@ def test_round_number_counts_up(table):
     """The second round dealt is round two, once a seat moves the table on."""
     service, state, notifier = table
     game_id, _ = expose_meld(service, state)
-    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
     service.acknowledge(game_id, "N", state.load(game_id).current_hold.id)
     assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1, 2]
@@ -235,7 +260,7 @@ def test_any_seat_may_move_the_table_on(table):
     """RT-13: not only the seat the summary is about, and not the administrator."""
     service, state, _ = table
     game_id, _ = expose_meld(service, state)
-    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     # "W" is picked blind: whoever won the auction, some other seat releases.
@@ -247,14 +272,18 @@ def test_releasing_a_hold_twice_changes_nothing(table):
     """RT-13: a second click, or a second player's, is expected and harmless."""
     service, state, notifier = table
     game_id, _ = expose_meld(service, state)
-    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     hold_id = state.load(game_id).current_hold.id
     service.acknowledge(game_id, "N", hold_id)
     service.acknowledge(game_id, "S", hold_id)
 
-    assert len(notifier.of_type(HoldEnded)) == 1
+    ended = [
+        event for event in notifier.of_type(HoldEnded)
+        if event.reason is HoldReason.ROUND_SCORED
+    ]
+    assert len(ended) == 1
     assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1, 2]
 
 
@@ -262,12 +291,13 @@ def test_a_stale_hold_id_releases_nothing(table):
     """A click that arrived late must not release whatever hold came next."""
     service, state, notifier = table
     game_id, _ = expose_meld(service, state)
-    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
+    ended_before = len(notifier.of_type(HoldEnded))
     service.acknowledge(game_id, "N", state.load(game_id).current_hold.id + 99)
     assert state.load(game_id).current_hold is not None
-    assert notifier.of_type(HoldEnded) == []
+    assert len(notifier.of_type(HoldEnded)) == ended_before
 
 
 
@@ -338,7 +368,7 @@ def test_turn_prompt_carries_legal_plays_while_playing(table):
     """UI-9, FR-53: the highlighted set and the legal set are the same computation."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     round_state = state.load(game_id).current_round
 
     prompt = notifier.of_type(TurnPrompt)[-1]
@@ -362,7 +392,7 @@ def test_play_begun_ends_the_meld_display(table):
     """FR-50a: the auction winner's word clears the meld from every client."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     begun = notifier.of_type(PlayBegun)
     assert len(begun) == 1
     assert begun[0].leader_player_id == winner
@@ -372,7 +402,7 @@ def test_every_card_is_announced_as_it_is_played(table):
     """FR-57: all four cards are visible before the trick completes."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     round_state = state.load(game_id).current_round
     for _ in range(4):
         player_id = round_state.current_player
@@ -389,7 +419,7 @@ def test_trick_cleared_closes_the_pause_and_names_the_next_leader(table):
     """UI-15, RT-10: the sweep is an event, and the winner leads next (FR-56)."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     round_state = state.load(game_id).current_round
     for _ in range(4):
         player_id = round_state.current_player
@@ -406,7 +436,7 @@ def test_the_last_trick_cleared_has_no_next_leader(table):
     """Nobody leads after the twelfth trick; the round is over."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     cleared = notifier.of_type(TrickCleared)
@@ -423,7 +453,7 @@ def test_round_scored_reports_the_whole_breakdown(table):
     """FR-66: meld, card points, bonus, round total, and cumulative, per team."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     scored = notifier.of_type(RoundScored)[0]
@@ -443,7 +473,7 @@ def test_a_set_team_loses_the_contract_and_its_meld(table):
     """FR-63, and FR-66's requirement to say which way it went."""
     service, state, notifier = table
     game_id, winner = expose_meld(service, state)
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     scored = notifier.of_type(RoundScored)[0]
@@ -467,7 +497,7 @@ def test_a_made_contract_is_added_in_full(table):
     game_id, winner = expose_meld(service, state)
     round_state = state.load(game_id).current_round
     round_state._meld[winner] = [MeldUnit("Test meld", 500)]
-    service.begin_play(game_id, winner)
+    continue_meld(service, state, game_id)
     play_out(service, state, game_id)
 
     scored = notifier.of_type(RoundScored)[0]

@@ -111,7 +111,9 @@ async def test_an_unparseable_card_code_is_a_422(container, client):
     while round_state.phase == RoundPhase.PASSING:
         passer = round_state.current_player
         container.actions.pass_cards(game_id, passer, list(round_state.hand(passer))[:4])
-    container.actions.begin_play(game_id, winner)
+    container.actions.acknowledge(
+        game_id, winner, container.state.load(game_id).current_hold.id,
+    )
     token = container.tokens.mint(game_id, winner)
 
     response = await client.post(
@@ -156,7 +158,9 @@ async def test_play_decodes_a_card_from_its_wire_code(container, client):
     while round_state.phase == RoundPhase.PASSING:
         passer = round_state.current_player
         container.actions.pass_cards(game_id, passer, list(round_state.hand(passer))[:4])
-    container.actions.begin_play(game_id, winner)
+    container.actions.acknowledge(
+        game_id, winner, container.state.load(game_id).current_hold.id,
+    )
 
     legal_card = round_state.legal_plays(winner)[0]
     token = container.tokens.mint(game_id, winner)

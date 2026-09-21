@@ -14,6 +14,7 @@ from pinochle.domain.game import (
     TrumpNamed,
 )
 from pinochle.domain.hold import HoldReason
+from pinochle.domain.meld import MeldUnit
 from pinochle.domain.trick import TrickPlay
 from pinochle.domain.game import TrickCompleted
 from pinochle.web.event_encoder import encode_event
@@ -63,10 +64,16 @@ def test_exposed_meld_carries_its_face_up_cards():
     event = MeldExposed(
         game_id="g1", player_id="N",
         cards=[Card(Rank.QUEEN, Suit.SPADES), Card(Rank.JACK, Suit.DIAMONDS)],
-        units=[], total=40,
+        units=[MeldUnit(
+            "Pinochle", 40,
+            [Card(Rank.QUEEN, Suit.SPADES), Card(Rank.JACK, Suit.DIAMONDS)],
+        )], total=40,
     )
     payload = _payload_of(encode_event(event, seq=1, turn=TURN))
     assert payload["cards"] == ["QS", "JD"]
+    assert payload["units"] == [{
+        "name": "Pinochle", "points": 40, "cards": ["QS", "JD"],
+    }]
 
 
 def test_trick_completed_pairs_each_card_with_its_player():

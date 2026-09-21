@@ -17,6 +17,7 @@ class HoldReason(Enum):
     DRAW_TIED = auto()
     DEALER_SELECTED = auto()
     ROUND_ABANDONED = auto()
+    MELD_EXPOSED = auto()
     ROUND_SCORED = auto()
 
 

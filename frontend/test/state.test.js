@@ -239,7 +239,7 @@ test("meld_exposed records each seat's units and accumulates team totals", () =>
   const state = replay([
     frame("meld_exposed", {
       player_id: "p-south", cards: ["QS", "JD"],
-      units: [{ name: "Pinochle", points: 40 }], total: 40,
+      units: [{ name: "Pinochle", points: 40, cards: ["JD", "QS"] }], total: 40,
     }),
     frame("meld_exposed", {
       player_id: "p-north", units: [{ name: "Marriage", points: 20 }], total: 20,
@@ -250,6 +250,7 @@ test("meld_exposed records each seat's units and accumulates team totals", () =>
   ], seated());
   assert.equal(state.meld["p-south"].total, 40);
   assert.deepEqual(state.meld["p-south"].cards, ["QS", "JD"]);
+  assert.deepEqual(state.meld["p-south"].units[0].cards, ["QS", "JD"]);
   assert.deepEqual(state.teamMeld, { NS: 60, EW: 150 });
 });
 

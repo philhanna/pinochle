@@ -171,7 +171,7 @@ function passPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   return panel;
 }
 
-/** The auction winner's choice at the meld: play it, or concede (FR-50a, FR-50b). */
+/** The auction winner may still concede while everyone reviews the meld. */
 function meldPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   const panel = box("Your contract");
   const mine = state.teamMeld[state.me?.teamId ?? ""] ?? 0;
@@ -179,10 +179,9 @@ function meldPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   panel.append(
     hint(
       `Your side has ${mine} in meld; ${needed > 0 ? `${needed} more` : "nothing more"} `
-      + `is needed in cards. Play it out, or toss it in and concede the contract.`,
+      + `is needed in cards. Use Continue above to play, or toss it in and concede the contract.`,
     ),
     row(
-      button("Play", "primary", () => callbacks.onBeginPlay()),
       button("Toss in", "danger", () => callbacks.onTossIn()),
     ),
   );

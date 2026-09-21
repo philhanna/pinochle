@@ -84,6 +84,8 @@ function held(state: GameState, hold: Hold): Notice {
       return say(dealerText(state), state.dealerPlayerId);
     case "round_abandoned":
       return say("Nobody took the contract — the deal moves on.", state.roundNumber);
+    case "meld_exposed":
+      return say("Review the meld laid out on the table.", state.roundNumber);
     case "round_scored": {
       // The hold is on the turn header of the frame that gathers the last
       // trick, which arrives before ``round_scored`` itself: for that one

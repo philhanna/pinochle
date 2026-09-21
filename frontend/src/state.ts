@@ -53,6 +53,8 @@ export interface Play {
 export interface MeldUnit {
   name: string;
   points: number;
+  /** The cards arranged together for this individual combination. */
+  cards?: CardCode[];
 }
 
 /** A seat's exposed meld (FR-44, UI-13). */
@@ -524,13 +526,18 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
     const playerId = p["player_id"] as string;
     const total = p["total"] as number;
     const cards = (p["cards"] as CardCode[] | undefined) ?? [];
+    const units = (p["units"] as MeldUnit[]).map((unit) => (
+      unit.cards === undefined
+        ? unit
+        : { ...unit, cards: sortHand(unit.cards, state.trump) }
+    ));
     const seat = seatOf(state, playerId);
     const teamId = seat?.teamId;
     return {
       ...state,
       meld: {
         ...state.meld,
-        [playerId]: { cards: sortHand(cards, state.trump), units: p["units"] as MeldUnit[], total },
+        [playerId]: { cards: sortHand(cards, state.trump), units, total },
       },
       teamMeld: teamId === undefined
         ? state.teamMeld
