@@ -50,14 +50,14 @@ record:  ## Re-record the reducer's test fixture from a real game
 		--out frontend/test/fixtures/seat-stream.json
 
 docker:  ## Build and run the image, front end included
-	cd docker && docker compose up --build -d
-	@echo "http://localhost:8000/admin — token from: make docker-logs"
+	docker compose --env-file .env -f docker/compose.yaml up --build -d
+	@echo "http://localhost:8000/admin — use the token in .env (or make docker-logs if generated)"
 
 docker-logs:  ## Follow the container log
-	cd docker && docker compose logs -f
+	docker compose --env-file .env -f docker/compose.yaml logs -f
 
 docker-down:  ## Stop and remove the container
-	cd docker && docker compose down
+	docker compose --env-file .env -f docker/compose.yaml down
 
 clean:  ## Remove build and test artefacts
 	rm -rf frontend/dist .pytest_cache

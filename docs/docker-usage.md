@@ -4,22 +4,17 @@ This guide explains what Docker does for Pinochle and how to operate the
 container without requiring prior Docker experience. For the underlying design
 decisions, see [Docker in the system design](design.md#10-docker).
 
-> **Implementation status:** `docker/Dockerfile` and `docker/compose.yaml`
-> exist and build a working image, but the browser front end (`frontend/`)
-> does not yet — that is a separate, later piece of work. The image today
-> serves the HTTP API and the SSE streams; `/`, `/join/{id}`, and `/admin`
-> return a `404` instead of a page until the front end lands. Everything in
-> this guide about building, running, configuring, and deploying the
-> container is accurate and usable now — administer a game and play it
-> through the API (or a script) rather than a browser in the meantime.
+The image includes the Python server, compiled browser client, and card
+artwork. The player table at `/` and administrator console at `/admin` are
+served by the same container as the HTTP API and event streams.
 
 ## What Docker provides
 
 Docker packages the application and everything needed to run it into an
 **image**. Starting that image creates a **container**, which is an isolated
 running instance of the application. Docker Compose reads
-`docker/compose.yaml` and supplies the port mapping, configuration, restart
-policy, and health check for that container.
+`docker/compose.yaml` and supplies the port mapping, configuration, and restart
+policy. The image defines its own health check.
 
 Pinochle uses one image and one container:
 
@@ -49,7 +44,8 @@ is why `.dockerignore` excludes `frontend/dist`: whatever is built locally
 cannot leak into a release and make the image disagree with the source.
 
 The server runs as an unprivileged user. Uvicorn listens on port 8000 inside the
-container, and Compose maps that to port 8000 on the host.
+container. Compose maps it to `127.0.0.1:8000` on the host by default, so the
+game is not exposed to the internet without an explicit binding or proxy.
 
 ## Prerequisites
 
@@ -65,8 +61,12 @@ Run the commands below from the repository root.
 
 ## Configure the application
 
-Create a `.env` file in the repository root. At minimum, set a private admin
-token and the public URL that players will use:
+Copy the example configuration, then set a private admin token and the public
+URL that players will use:
+
+```console
+cp .env.example .env
+```
 
 ```dotenv
 PINOCHLE_ADMIN_TOKEN=replace-this-with-a-long-random-secret
@@ -82,7 +82,12 @@ If `PINOCHLE_ADMIN_TOKEN` is empty, the application generates one at startup
 and writes it to the container log. Supplying it explicitly is less surprising
 because the value remains the same when the container is recreated.
 
-Other settings have usable defaults in `docker/compose.yaml`:
+Compose passes every value in `.env` into the container, including team names
+and seat defaults. The Python application uses its built-in defaults for
+values omitted from the file. Keep `.env` on the server and set its permissions
+to `600`; it is excluded from the image build context.
+
+Other settings have usable defaults:
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -92,6 +97,8 @@ Other settings have usable defaults in `docker/compose.yaml`:
 | `PINOCHLE_SSE_KEEPALIVE_SECONDS` | `15` | Interval between stream keepalive frames |
 | `PINOCHLE_SSE_QUEUE_MAXSIZE` | `256` | Maximum queued events for one browser connection |
 | `PINOCHLE_CARD_BACK` | `blue` | Card back the hands are dealt with: the plain file name of an image in `pinochle/card_images/backs/`, such as `castle` or `castle.svg`. A path is refused at startup |
+| `PINOCHLE_BIND_ADDRESS` | `127.0.0.1` | Host address Docker publishes; use `0.0.0.0` only for deliberate direct access |
+| `PINOCHLE_PORT` | `8000` | Host port Docker publishes |
 
 ## Build and start
 
@@ -109,15 +116,13 @@ Check these addresses after the container starts:
 
 - Health check: <http://localhost:8000/healthz> — should return `{"status":"ok"}`
 - Player table: <http://localhost:8000/> and administrator console:
-  <http://localhost:8000/admin> — return `404` until the front end (`frontend/`)
-  exists; until then, administer and play a game through the API directly,
-  e.g. `curl -X POST http://localhost:8000/api/admin/games -H "X-Admin-Token: $PINOCHLE_ADMIN_TOKEN" ...`
-  (see `docs/design.md` §5 for the full HTTP surface).
+  <http://localhost:8000/admin>.
 
-The `8000:8000` mapping in `compose.yaml` means “send traffic received on host
-port 8000 to container port 8000.” Change the first number, for example to
-`8080:8000`, if port 8000 is already occupied. Also update
-`PINOCHLE_PUBLIC_BASE_URL` to match.
+The host binding is `127.0.0.1:8000:8000`: host address, host port, container
+port. Set `PINOCHLE_PORT=8080` in `.env` if host port 8000 is occupied, and
+update `PINOCHLE_PUBLIC_BASE_URL` accordingly. To connect directly from other
+computers, set `PINOCHLE_BIND_ADDRESS=0.0.0.0` and restrict access with a
+firewall. A public deployment should use an HTTPS reverse proxy instead.
 
 ## Check status and logs
 
@@ -181,6 +186,42 @@ All game state is held in memory. Consequently:
 The deployment must use exactly one Uvicorn worker and one Pinochle container.
 Do not add Compose replicas or increase the worker count: each process would
 have an independent in-memory game and independent event streams.
+
+## Transfer an image to another server
+
+You can build on your development computer and copy the image without copying
+the source tree. Use this only when both computers have the same CPU
+architecture; otherwise build the image on the destination server.
+
+On the development computer, from the repository root:
+
+```console
+docker build -f docker/Dockerfile -t pinochle:latest .
+docker save -o /tmp/pinochle-image.tar pinochle:latest
+scp /tmp/pinochle-image.tar operator@your-server:/home/operator/
+```
+
+On the server, put a private `.env` file in `/home/operator/`, then load and
+run the image. Set `PINOCHLE_PUBLIC_BASE_URL` in that file to the address
+players will actually use (normally an HTTPS domain):
+
+```console
+chmod 600 /home/operator/.env
+docker load -i /home/operator/pinochle-image.tar
+docker run -d --name pinochle --restart unless-stopped \
+  --env-file /home/operator/.env \
+  -p 127.0.0.1:8000:8000 pinochle:latest
+curl http://127.0.0.1:8000/healthz
+```
+
+Use a reverse proxy on the server to publish HTTPS (below). If you want direct
+LAN access instead, change the port mapping to `0.0.0.0:8000:8000` and apply
+appropriate firewall rules. Keep the `.env` file separate from the image; it
+contains the administrator credential and your table defaults.
+
+For an update, stop and remove the old `pinochle` container before running the
+new image. Do this between games: all game state is in memory and will be lost.
+You may then remove the transferred tarball if you no longer need it.
 
 ## Hosting behind a reverse proxy
 
@@ -269,19 +310,9 @@ Set restrictive permissions on it:
 chmod 600 .env
 ```
 
-The production Compose configuration must publish Pinochle only on the IPv4
-loopback interface:
-
-```yaml
-services:
-  pinochle:
-    ports:
-      - "127.0.0.1:8000:8000"
-```
-
-This replaces the development mapping `8000:8000`; do not leave both mappings
-active. Omitting `127.0.0.1` binds the port to every host interface. Docker
-documents the three-part syntax as
+Compose already publishes Pinochle only on IPv4 loopback by default. Do not
+set `PINOCHLE_BIND_ADDRESS=0.0.0.0` when a reverse proxy on the same server is
+handling public traffic. Docker documents the three-part syntax as
 `HOST_IP:HOST_PORT:CONTAINER_PORT` in its
 [port-publishing guide](https://docs.docker.com/engine/network/port-publishing/).
 
@@ -327,10 +358,9 @@ Verify from a computer other than the VPS:
 curl https://pinochle.example.com/healthz
 ```
 
-Then create a game through the API and confirm the generated player join
-links use the same public HTTPS hostname (`PINOCHLE_PUBLIC_BASE_URL`) — see
-`docs/design.md` §5.2. Once the front end exists, this step becomes opening
-`https://pinochle.example.com/admin` in a browser instead.
+Then open `https://pinochle.example.com/admin` in a browser, sign in with the
+administrator token, and confirm the generated player join links use the same
+public HTTPS hostname (`PINOCHLE_PUBLIC_BASE_URL`).
 
 ### 4. Deploy updates
 
@@ -355,9 +385,9 @@ though game data does not.
 
 ## Common problems
 
-**`/` or `/admin` returns 404.** Expected for now: the browser front end
-(`frontend/`) has not been built yet. The API and SSE endpoints under `/api/`
-and `/healthz` are unaffected.
+**`/` or `/admin` returns 404.** Verify that you are running a freshly built
+image from this repository and that the build included `frontend/public` and
+the compiled `frontend/dist` modules.
 
 **Port 8000 is already allocated.** Stop the process using it or change the host
 side of the mapping to another port, such as `8080:8000`.

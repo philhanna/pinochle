@@ -34,6 +34,12 @@ make test-browser         # plus: is every control actually clickable?
 make docker               # the same thing as a container image
 ```
 
+For Docker, first copy `.env.example` to `.env` and set a private
+`PINOCHLE_ADMIN_TOKEN` and the players' `PINOCHLE_PUBLIC_BASE_URL`. The
+container binds to `127.0.0.1:8000` by default; see
+[Docker deployment](docs/docker-usage.md) for a reverse proxy or transferring
+the image to another server.
+
 A seat's join link is the only copy of its token, and a seat cannot rejoin
 once its stream closes, so keep the link until the game is over.
 
