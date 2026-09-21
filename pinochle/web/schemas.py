@@ -24,6 +24,26 @@ class CreateGameRequest(BaseModel):
     seats: list[SeatRequest]
 
 
+class SeatDefaultResponse(BaseModel):
+    """One seat's starting values for the console's setup form."""
+
+    seat: str
+    name: str
+    type: str
+
+
+class TableDefaultsResponse(BaseModel):
+    """Body of ``GET /api/admin/defaults``.
+
+    What the console fills its setup form with, so that a table configured in
+    ``.env`` need not be retyped every game.  Only defaults: the game is made
+    from what the operator submits, not from this.
+    """
+
+    teams: TeamsRequest
+    seats: list[SeatDefaultResponse]
+
+
 class SeatResponse(BaseModel):
     """One seat's setup result, including its join link if it is human."""
 

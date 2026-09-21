@@ -9,10 +9,12 @@ import {
   ApiError,
   abandonGame,
   createGame,
+  getDefaults,
   getStatus,
   startGame,
   type CreatedGame,
   type SeatStatus,
+  type TableDefaults,
 } from "./api.js";
 import { createLog, type LogView } from "./log.js";
 import { adminStreamUrl, openStream } from "./stream.js";
@@ -40,6 +42,13 @@ function main(): void {
   tokenField.value = resolveAdminToken();
   const state: Console_ = { token: () => tokenField.value.trim(), game: null, log: null };
 
+  // The form is born holding the defaults written into admin.html, and asks
+  // the server for the operator's own as soon as it can authenticate. A
+  // console opened from /admin?t=<token> can do that immediately; one opened
+  // bare cannot, so it asks again when a token is typed in.
+  void fillDefaults(state, form);
+  tokenField.addEventListener("change", () => void fillDefaults(state, form));
+
   form.addEventListener("submit", (event) => {
     event.preventDefault();
     void create(state, form);
@@ -47,6 +56,43 @@ function main(): void {
   button("start")?.addEventListener("click", () => void start(state));
   button("refresh")?.addEventListener("click", () => void refresh(state));
   button("abandon")?.addEventListener("click", () => void abandon(state));
+}
+
+/**
+ * Fill the setup form from the server's configured table (§10.4).
+ *
+ * Quiet about failure on purpose. Wanting the defaults is not the same as
+ * wanting to do anything yet, and the operator has not asked for this — a
+ * console opened without a token would otherwise greet them with "Bad admin
+ * token." before they had touched a control. What is on screen in that case
+ * is admin.html's own defaults, which are the same ones the server sends when
+ * the environment says nothing.
+ */
+async function fillDefaults(state: Console_, form: HTMLFormElement): Promise<void> {
+  if (state.token() === "") {
+    return;
+  }
+  let defaults: TableDefaults;
+  try {
+    defaults = await getDefaults(state.token());
+  } catch {
+    return;
+  }
+
+  setField(form, "team-ns", defaults.teams.ns);
+  setField(form, "team-ew", defaults.teams.ew);
+  for (const seat of defaults.seats) {
+    setField(form, `name-${seat.seat}`, seat.name);
+    setField(form, `type-${seat.seat}`, seat.type);
+  }
+}
+
+/** Set one named control's value, if the form has it. */
+function setField(form: HTMLFormElement, name: string, value: string): void {
+  const field = form.elements.namedItem(name);
+  if (field instanceof HTMLInputElement || field instanceof HTMLSelectElement) {
+    field.value = value;
+  }
 }
 
 /** Create the game the form describes, then show its links and stream. */

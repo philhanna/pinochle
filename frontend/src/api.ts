@@ -46,6 +46,22 @@ export interface GameSetup {
   seats: { seat: string; name: string; type: string }[];
 }
 
+/** What the console's setup form starts out holding, from the server's config. */
+export interface TableDefaults {
+  teams: { ns: string; ew: string };
+  seats: { seat: string; name: string; type: string }[];
+}
+
+/**
+ * Return the table the setup form should be pre-filled with (§10.4).
+ *
+ * Behind the admin token like every other console call, so the console can
+ * only ask once it has one.
+ */
+export async function getDefaults(adminToken: string): Promise<TableDefaults> {
+  return (await send(adminToken, "GET", "/api/admin/defaults")) as TableDefaults;
+}
+
 /** Create a game and seat all four players (FR-6, FR-7). */
 export async function createGame(adminToken: string, setup: GameSetup): Promise<CreatedGame> {
   return (await send(adminToken, "POST", "/api/admin/games", setup)) as CreatedGame;

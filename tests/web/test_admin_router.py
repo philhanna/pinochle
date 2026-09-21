@@ -1,5 +1,12 @@
 # tests.web.test_admin_router
 from pinochle.domain.game import GamePhase
+from pinochle.web.container import (
+    DEFAULT_SEATS,
+    DEFAULT_TEAM_EW,
+    DEFAULT_TEAM_NS,
+    SeatDefault,
+    TableDefaults,
+)
 from tests.web.conftest import (
     ADMIN_TOKEN,
     FOUR_HUMAN_SEATS,
@@ -135,3 +142,41 @@ async def test_a_command_route_does_not_accept_a_query_token(client):
         "/api/admin/games", json=FOUR_HUMAN_SEATS, params={"t": ADMIN_TOKEN},
     )
     assert result.status_code == 403
+
+
+async def test_defaults_require_the_admin_token(client):
+    """The names on a configured table are the operator's own household."""
+    response = await client.get("/api/admin/defaults")
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "forbidden_admin"
+
+
+async def test_defaults_report_the_configured_table(client, container):
+    """The console fills its setup form from this (§10.4)."""
+    container.settings.table = TableDefaults(
+        ns="Us",
+        ew="Them",
+        seats={
+            "NORTH": SeatDefault(name="Mary", type="human"),
+            "EAST": SeatDefault(name="East", type="computer"),
+            "SOUTH": SeatDefault(name="Phil", type="human"),
+            "WEST": SeatDefault(name="West", type="computer"),
+        },
+    )
+
+    response = await client.get("/api/admin/defaults", headers=admin_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["teams"] == {"ns": "Us", "ew": "Them"}
+    assert body["seats"][0] == {"seat": "NORTH", "name": "Mary", "type": "human"}
+    assert [s["seat"] for s in body["seats"]] == ["NORTH", "EAST", "SOUTH", "WEST"]
+
+
+async def test_defaults_report_the_built_in_table_when_nothing_is_configured(
+    client, container,
+):
+    """An operator who has set nothing still gets a usable form."""
+    response = await client.get("/api/admin/defaults", headers=admin_headers())
+    body = response.json()
+    assert body["teams"] == {"ns": DEFAULT_TEAM_NS, "ew": DEFAULT_TEAM_EW}
+    assert {s["seat"]: (s["name"], s["type"]) for s in body["seats"]} == DEFAULT_SEATS

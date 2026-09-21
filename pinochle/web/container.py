@@ -2,7 +2,7 @@
 import os
 import re
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from random import Random
 
 from dotenv import load_dotenv
@@ -26,6 +26,69 @@ from pinochle.services.game_service import GameService
 from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
 
 
+# The table the console offers when the environment says nothing about it.
+# These are the values the setup form is born with, and they are repeated in
+# frontend/public/admin.html so the form is sensible before it has asked the
+# server anything; a test holds the two copies to each other.
+DEFAULT_TEAM_NS = "North-South"
+DEFAULT_TEAM_EW = "East-West"
+DEFAULT_SEATS = {
+    "NORTH": ("North", "computer"),
+    "EAST": ("East", "computer"),
+    "SOUTH": ("South", "human"),
+    "WEST": ("West", "computer"),
+}
+
+
+@dataclass(frozen=True)
+class SeatDefault:
+    """What one seat of the console's setup form starts out holding."""
+
+    name: str
+    type: str
+
+
+@dataclass(frozen=True)
+class TableDefaults:
+    """The table the console's setup form is pre-filled with (§10.4).
+
+    Every field is only a starting point: the operator edits the form before
+    creating the game, and the game is made from what the form says, not from
+    this.  What this changes is how much editing a regular table needs — a
+    household that plays the same four seats every week configures them once
+    in ``.env`` and stops retyping them.
+
+    Attributes:
+        ns: The North-South partnership's name.
+        ew: The East-West partnership's name.
+        seats: One entry per seat name (``NORTH``…``WEST``), in table order.
+    """
+
+    ns: str
+    ew: str
+    seats: dict[str, SeatDefault]
+
+    @classmethod
+    def from_env(cls) -> "TableDefaults":
+        """Read the table defaults from ``PINOCHLE_TEAM_*`` and ``PINOCHLE_SEAT_*``.
+
+        A variable the file does not set keeps its built-in default, so an
+        operator configures the seats they care about and leaves the rest.
+        """
+        return cls(
+            ns=os.environ.get("PINOCHLE_TEAM_NS", DEFAULT_TEAM_NS).strip() or DEFAULT_TEAM_NS,
+            ew=os.environ.get("PINOCHLE_TEAM_EW", DEFAULT_TEAM_EW).strip() or DEFAULT_TEAM_EW,
+            seats={
+                seat: SeatDefault(
+                    name=os.environ.get(f"PINOCHLE_SEAT_{seat}_NAME", name).strip() or name,
+                    type=_seat_type(
+                        seat, os.environ.get(f"PINOCHLE_SEAT_{seat}_TYPE", ""), kind),
+                )
+                for seat, (name, kind) in DEFAULT_SEATS.items()
+            },
+        )
+
+
 @dataclass
 class Settings:
     """Configuration read once from the environment (design.md §10.4)."""
@@ -41,6 +104,16 @@ class Settings:
     log_level: str = "INFO"
     card_back: str = "blue"
     admin_token_generated: bool = False
+    table: TableDefaults = field(
+        default_factory=lambda: TableDefaults(
+            ns=DEFAULT_TEAM_NS,
+            ew=DEFAULT_TEAM_EW,
+            seats={
+                seat: SeatDefault(name=name, type=kind)
+                for seat, (name, kind) in DEFAULT_SEATS.items()
+            },
+        ),
+    )
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -71,6 +144,7 @@ class Settings:
             shuffle_seed=int(seed) if seed else None,
             log_level=os.environ.get("PINOCHLE_LOG_LEVEL", "INFO"),
             card_back=_card_back_name(os.environ.get("PINOCHLE_CARD_BACK", "")),
+            table=TableDefaults.from_env(),
         )
 
 
@@ -133,6 +207,25 @@ def build_container(
         scheduler=scheduler,
         cards=SvgCardImage(default_back=settings.card_back),
     )
+
+
+def _seat_type(seat: str, configured: str, fallback: str) -> str:
+    """Return who plays a seat by default: ``"human"`` or ``"computer"``.
+
+    Refused at startup rather than at the first game, for the same reason as
+    the card back: a typo here would otherwise surface as the console quietly
+    offering the wrong table, which an operator would read as the form having
+    ignored their file.
+    """
+    name = configured.strip().lower()
+    if not name:
+        return fallback
+    if name not in ("human", "computer"):
+        raise ValueError(
+            f"PINOCHLE_SEAT_{seat}_TYPE must be 'human' or 'computer', "
+            f"not {configured!r}"
+        )
+    return name
 
 
 def _card_back_name(configured: str) -> str:

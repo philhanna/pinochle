@@ -16,7 +16,10 @@ from pinochle.web.schemas import (
     AbandonRequest,
     CreateGameRequest,
     CreateGameResponse,
+    SeatDefaultResponse,
     SeatResponse,
+    TableDefaultsResponse,
+    TeamsRequest,
 )
 from pinochle.web.sse_stream import RETRY_LINE, STREAM_HEADERS, sse_frames
 from pinochle.web.transport_events import GameAbandoned
@@ -29,6 +32,27 @@ router = APIRouter(dependencies=[Depends(require_admin)])
 # the query string.  Keeping it on its own router is what confines that to
 # a read-only route: every command above still requires the header.
 stream_router = APIRouter(dependencies=[Depends(require_admin_stream)])
+
+
+@router.get("/api/admin/defaults")
+async def get_defaults(
+    container: Container = Depends(get_container),
+) -> TableDefaultsResponse:
+    """Return the table the console's setup form should start out holding (§10.4).
+
+    Behind the admin token like every other console route. The names on it are
+    the operator's own household — real people, configured once in ``.env`` —
+    and there is no reason for anyone who cannot already run the console to be
+    able to read them.
+    """
+    table = container.settings.table
+    return TableDefaultsResponse(
+        teams=TeamsRequest(ns=table.ns, ew=table.ew),
+        seats=[
+            SeatDefaultResponse(seat=seat, name=default.name, type=default.type)
+            for seat, default in table.seats.items()
+        ],
+    )
 
 
 @router.post("/api/admin/games", status_code=201)
