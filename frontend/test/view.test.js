@@ -173,8 +173,8 @@ test("the game's result replaces the status line (FR-71)", () => {
   const state = applyEvent(seated(), frame("game_over", {
     winning_team_id: "EW", ns_score: 1920, ew_score: 2030,
   }));
-  assert.equal(gameOverText(state), "Them wins, 1920 to 2030.");
-  assert.equal(statusLine(state), "Them wins, 1920 to 2030.");
+  assert.equal(gameOverText(state), "Them team wins, 1920 to 2030.");
+  assert.equal(statusLine(state), "Them team wins, 1920 to 2030.");
 });
 
 test("the dealer is marked at their seat (UI-3)", () => {

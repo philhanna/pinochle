@@ -6,6 +6,7 @@
 
 import { ApiError } from "./api.js";
 import * as actions from "./actions.js";
+import { DEAL_PACKET_COUNT, DEAL_PACKET_MS, dealingView } from "./deal.js";
 import { clearSelection } from "./hand.js";
 import { resetPanel } from "./panels.js";
 import { openStream, playerStreamUrl, type ConnectionState } from "./stream.js";
@@ -31,6 +32,12 @@ let callbacks: TableCallbacks | null = null;
  */
 let connection: ConnectionState = "connecting";
 
+/** The cosmetic deal currently being shown, if any. */
+let dealPacketsShown: number | null = null;
+
+/** Frames that arrived while the visible deal was catching up. */
+const queuedFrames: Frame[] = [];
+
 main();
 
 /** Connect this seat's stream and draw the table from it. */
@@ -48,11 +55,7 @@ function main(): void {
   render();
 
   openStream(playerStreamUrl(seat), {
-    onFrame: (frame) => {
-      state = applyEvent(state, frame);
-      afterFrame(frame);
-      render();
-    },
+    onFrame: receiveFrame,
     onError: (message) => showError(message),
     onConnection: (next) => {
       connection = next;
@@ -66,6 +69,50 @@ function main(): void {
   // The last-trick button and the pass selection ask for a redraw without any
   // frame having arrived.
   document.addEventListener("redraw", () => render());
+}
+
+/** Apply a frame now, or preserve its order behind the visible deal. */
+function receiveFrame(frame: Frame): void {
+  if (dealPacketsShown !== null) {
+    queuedFrames.push(frame);
+    return;
+  }
+  state = applyEvent(state, frame);
+  afterFrame(frame);
+  if (frame.type === "cards_dealt" && state.hand.length > 0) {
+    beginVisibleDeal();
+  } else {
+    render();
+  }
+}
+
+/** Reveal one clockwise packet at a human dealer's pace. */
+function beginVisibleDeal(): void {
+  dealPacketsShown = 0;
+  render();
+
+  const nextPacket = () => {
+    if (dealPacketsShown === null) {
+      return;
+    }
+    dealPacketsShown += 1;
+    render();
+    if (dealPacketsShown < DEAL_PACKET_COUNT) {
+      window.setTimeout(nextPacket, DEAL_PACKET_MS);
+      return;
+    }
+
+    dealPacketsShown = null;
+    while (queuedFrames.length > 0 && dealPacketsShown === null) {
+      const frame = queuedFrames.shift();
+      if (frame !== undefined) {
+        receiveFrame(frame);
+      }
+    }
+    render();
+  };
+
+  window.setTimeout(nextPacket, DEAL_PACKET_MS);
 }
 
 /**
@@ -144,7 +191,8 @@ function afterFrame(frame: Frame): void {
 /** Draw the table from the current state. */
 function render(): void {
   if (callbacks !== null) {
-    renderTable(state, callbacks);
+    const shown = dealPacketsShown === null ? state : dealingView(state, dealPacketsShown);
+    renderTable(shown, callbacks);
   }
 }
 

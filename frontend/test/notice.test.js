@@ -43,6 +43,26 @@ test("the draw's outcome names the dealer (FR-13)", () => {
   assert.equal(notice(state).text, "East deals.");
 });
 
+test("each bid replaces the previous notice during the auction", () => {
+  const first = applyEvent(
+    seated(), frame("bid_placed", { player_id: "p-north", amount: 250, current_high: 250 }),
+  );
+  assert.equal(notice(first).text, "North bids 250.");
+
+  const second = applyEvent(
+    first, frame("bid_placed", { player_id: "p-east", amount: 260, current_high: 260 }),
+  );
+  assert.equal(notice(second).text, "East bids 260.");
+  assert.notEqual(notice(first).key, notice(second).key);
+});
+
+test("a pass is reported in the notice area", () => {
+  const state = applyEvent(
+    seated(), frame("bid_placed", { player_id: "p-west", amount: null, current_high: 250 }),
+  );
+  assert.equal(notice(state).text, "West passes.");
+});
+
 test("the auction's outcome stands until trump is named (FR-30)", () => {
   const state = [
     frame("bid_placed", { player_id: "p-east", amount: 260, current_high: 260 }),
@@ -171,7 +191,7 @@ test("the game's result outranks any hold still standing (FR-71)", () => {
 
   const shown = notice(state);
   assert.equal(shown.kind, "final");
-  assert.equal(shown.text, "Us wins, 2010 to 1240.");
+  assert.equal(shown.text, "Us team wins, 2010 to 1240.");
 });
 
 test("the deal's announcement ends when the first card is led (UI-19)", () => {

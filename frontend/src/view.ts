@@ -156,7 +156,7 @@ export function gameOverText(state: GameState): string {
     return "";
   }
   const name = state.teams.find((t) => t.teamId === over.winningTeamId)?.name ?? over.winningTeamId;
-  return `${name} wins, ${over.nsScore} to ${over.ewScore}.`;
+  return `${name} team wins, ${over.nsScore} to ${over.ewScore}.`;
 }
 
 /**
@@ -173,6 +173,9 @@ export function statusLine(state: GameState): string {
   }
   if (state.phase === "DEALER_SELECTION") {
     return "Drawing for the deal — pick a card.";
+  }
+  if (state.phase === "DEALING") {
+    return "Dealing the cards…";
   }
   if (state.phase === "SETUP") {
     return "Waiting for the game to start…";

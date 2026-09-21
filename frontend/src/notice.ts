@@ -107,6 +107,8 @@ function held(state: GameState, hold: Hold): Notice {
  * stays up until the next stage concludes (UI-19). The contract and trump are
  * on the scoreboard for the whole round anyway (UI-14), so once a trick has
  * been taken the notice moves on to that rather than repeating them.
+ * During the auction, each bid or pass replaces the previous action so every
+ * player at the table can follow it without opening the scoreboard.
  *
  * The announcements from before the cards were led have a shorter life than
  * that: they end when the first card of the round is played, whether or not
@@ -146,6 +148,14 @@ function standing(state: GameState): Notice | null {
       `${who} bid ${state.offer.amount} alone, and is deciding whether to take it.`,
       `offer:${state.offer.playerId}:${state.offer.amount}`,
     );
+  }
+  const latestBid = state.bids.at(-1);
+  if (latestBid !== undefined) {
+    const who = nameOf(state, latestBid.playerId);
+    const action = latestBid.amount === null
+      ? `${who} passes.`
+      : `${who} bids ${latestBid.amount}.`;
+    return say(action, `bid:${state.bids.length}`);
   }
   if (state.dealerPlayerId !== null) {
     return say(dealerText(state), `dealer:${state.dealerPlayerId}`);
