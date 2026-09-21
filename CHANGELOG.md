@@ -64,6 +64,11 @@ The format is based on [Keep a Changelog].
   cached immutably. Previously `CardImagePort` could resolve artwork on disk but
   nothing served it
 - `CardImagePort` in the container's object graph, wired to `SvgCardImage`
+- `PINOCHLE_CARD_BACK`: which back the hands are dealt with, read from a `.env`
+  file in the repository root (see `.env.example`) or from the environment. The
+  setting is a plain file name from `pinochle/card_images/backs/` — `castle`,
+  or `castle.svg` — never a path; the server turns it into one. The client asks
+  `/cards/back` for whatever that is, so no file name is spelled in the browser
 
 ### Changed
 - `README.md` now says what the project is and how to run it, and

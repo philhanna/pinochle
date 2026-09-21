@@ -15,6 +15,10 @@ router = APIRouter()
 # three fans of backs is ~50 image requests per render (UI-4, UI-5).
 _IMMUTABLE = {"Cache-Control": "public, max-age=31536000, immutable"}
 
+# The configured back is served from a fixed URL whose content follows the
+# configuration, so that one must be checked with the server before reuse.
+_REVALIDATED = {"Cache-Control": "no-cache"}
+
 _FORMATS = {"svg": "image/svg+xml", "png": "image/png"}
 
 # A card back is named by the client, so it is the one part of these paths
@@ -36,6 +40,23 @@ async def card_face(code: str, fmt: str = "svg", container: Container = Depends(
     media_type = _media_type(fmt)
     path = container.cards.get_image_path(decode_card(code.upper()), fmt=fmt)
     return FileResponse(path, media_type=media_type, headers=_IMMUTABLE)
+
+
+@router.get("/cards/back")
+async def configured_card_back(fmt: str = "svg", container: Container = Depends(get_container)):
+    """Serve the card back this deployment was configured with (UI-5).
+
+    The client asks for "the back" and is given whichever one
+    ``PINOCHLE_CARD_BACK`` names, so the configured file name stays on the
+    server and no part of the browser has to know it.  Unlike the named
+    artwork below, what this URL returns changes when the configuration
+    does, so the browser is told to check rather than to keep it for a
+    year — one conditional request per page load, since every back in a
+    render shares this one URL.
+    """
+    media_type = _media_type(fmt)
+    path = container.cards.get_back_path(fmt=fmt)
+    return FileResponse(path, media_type=media_type, headers=_REVALIDATED)
 
 
 @router.get("/cards/backs/{name}")

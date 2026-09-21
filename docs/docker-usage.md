@@ -91,6 +91,7 @@ Other settings have usable defaults in `docker/compose.yaml`:
 | `PINOCHLE_LOG_LEVEL` | `INFO` | Application log verbosity |
 | `PINOCHLE_SSE_KEEPALIVE_SECONDS` | `15` | Interval between stream keepalive frames |
 | `PINOCHLE_SSE_QUEUE_MAXSIZE` | `256` | Maximum queued events for one browser connection |
+| `PINOCHLE_CARD_BACK` | `blue` | Card back the hands are dealt with: the plain file name of an image in `pinochle/card_images/backs/`, such as `castle` or `castle.svg`. A path is refused at startup |
 
 ## Build and start
 

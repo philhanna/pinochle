@@ -54,3 +54,15 @@ def test_get_back_path_defaults_when_no_name_is_given():
     """``None`` means the implementation's own default back."""
     images = SvgCardImage()
     assert images.get_back_path() == images.get_back_path(name=None)
+
+
+def test_the_default_back_is_configurable_by_name():
+    """The adapter is given a bare name and works out the path itself."""
+    images = SvgCardImage(default_back="castle")
+    assert images.get_back_path().endswith("castle.svg")
+    assert images.get_back_path(fmt="png").endswith("castle.png")
+
+
+def test_a_named_back_still_wins_over_the_configured_one():
+    """A caller that asks for one back by name gets that one."""
+    assert SvgCardImage(default_back="castle").get_back_path(name="red").endswith("red.svg")

@@ -25,6 +25,17 @@ class SvgCardImage(CardImagePort):
     Raises ``FileNotFoundError`` if the requested asset does not exist on disk.
     """
 
+    def __init__(self, default_back: str = _DEFAULT_BACK):
+        """Record which back to serve when a caller names none.
+
+        ``default_back`` is a bare asset name — ``castle``, never a path or
+        a file name with an extension — because this adapter owns where the
+        artwork lives and in which format it is served.  Configuration
+        carries the name only (``PINOCHLE_CARD_BACK``); turning it into
+        ``card_images/backs/castle.svg`` happens here.
+        """
+        self._default_back = default_back
+
     def get_image_path(self, card: Card, fmt: str = "svg") -> str:
         """Return the asset path for a specific card face image."""
         suit_name = card.suit.name.lower()      # e.g. "spades"
@@ -41,8 +52,8 @@ class SvgCardImage(CardImagePort):
         return str(path)
 
     def get_back_path(self, fmt: str = "svg", name: str | None = None) -> str:
-        """Return the asset path for a named card back image."""
-        filename = f"{name or _DEFAULT_BACK}.{fmt}"
+        """Return the asset path for a named card back image, or the configured one."""
+        filename = f"{name or self._default_back}.{fmt}"
 
         if fmt == "png":
             path = _RESOURCES / "backs" / "png_96_dpi" / filename

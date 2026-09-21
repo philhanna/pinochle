@@ -1,8 +1,11 @@
 # pinochle.web.container
 import os
+import re
 import secrets
 from dataclasses import dataclass
 from random import Random
+
+from dotenv import load_dotenv
 
 from pinochle.adapters.asyncio_scheduler import AsyncioScheduler
 from pinochle.adapters.composite_notification import CompositeNotification
@@ -36,17 +39,24 @@ class Settings:
     sse_queue_maxsize: int = 256
     shuffle_seed: int | None = None
     log_level: str = "INFO"
+    card_back: str = "blue"
     admin_token_generated: bool = False
 
     @classmethod
     def from_env(cls) -> "Settings":
         """Build settings from ``PINOCHLE_*`` environment variables.
 
+        A ``.env`` file beside the project is read first, for the settings
+        an operator edits rather than exports — the card back, say.  It
+        never overrides a variable already in the environment, so the
+        container's own configuration still wins over a stray file.
+
         ``PINOCHLE_ADMIN_TOKEN`` is generated when it isn't set —
         ``admin_token_generated`` tells the caller to log it (§9.1: an
         operator running one game for an evening reads it from the
         container log rather than setting it explicitly).
         """
+        load_dotenv()
         seed = os.environ.get("PINOCHLE_SHUFFLE_SEED")
         configured_token = os.environ.get("PINOCHLE_ADMIN_TOKEN")
         return cls(
@@ -60,6 +70,7 @@ class Settings:
             sse_queue_maxsize=int(os.environ.get("PINOCHLE_SSE_QUEUE_MAXSIZE", "256")),
             shuffle_seed=int(seed) if seed else None,
             log_level=os.environ.get("PINOCHLE_LOG_LEVEL", "INFO"),
+            card_back=_card_back_name(os.environ.get("PINOCHLE_CARD_BACK", "")),
         )
 
 
@@ -120,5 +131,28 @@ def build_container(
         notifier=notifier,
         tokens=tokens,
         scheduler=scheduler,
-        cards=SvgCardImage(),
+        cards=SvgCardImage(default_back=settings.card_back),
     )
+
+
+def _card_back_name(configured: str) -> str:
+    """Return the bare asset name of the configured card back.
+
+    The setting names a file in the bundled ``backs/`` directory and nothing
+    else: ``castle``, or ``castle.svg`` for an operator who thinks of it as a
+    file.  The extension is dropped because the format is chosen per request
+    (SVG or PNG), and the directory is the adapter's business, not the
+    operator's — so anything with a path in it is refused here, at startup,
+    rather than turning into a puzzling 404 on the first deal.
+    """
+    name = configured.strip()
+    if not name:
+        return "blue"
+    if "/" in name or "\\" in name:
+        raise ValueError(
+            f"PINOCHLE_CARD_BACK must be a plain file name, not a path: {configured!r}"
+        )
+    name = re.sub(r"\.(svg|png)$", "", name, flags=re.IGNORECASE).lower()
+    if not re.fullmatch(r"[a-z0-9_]{1,40}", name):
+        raise ValueError(f"{configured!r} is not a valid card back name.")
+    return name

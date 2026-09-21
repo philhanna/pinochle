@@ -126,7 +126,13 @@ export function faceUrl(card: CardCode): string {
   return `/cards/faces/${encodeURIComponent(card)}`;
 }
 
-/** The URL of the card-back image (UI-5). */
-export function backUrl(name = "blue"): string {
-  return `/cards/backs/${encodeURIComponent(name)}`;
+/**
+ * The URL of a card-back image (UI-5).
+ *
+ * With no name, the back the server was configured with — which back that
+ * is (`PINOCHLE_CARD_BACK`) is the server's business, so the client never
+ * spells a file name of its own.
+ */
+export function backUrl(name?: string): string {
+  return name === undefined ? "/cards/back" : `/cards/backs/${encodeURIComponent(name)}`;
 }

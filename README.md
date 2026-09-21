@@ -37,6 +37,11 @@ make docker               # the same thing as a container image
 A seat's join link is the only copy of its token, and a seat cannot rejoin
 once its stream closes, so keep the link until the game is over.
 
+Settings go in a `.env` file in this directory — copy `.env.example` — or in
+the environment, which wins over the file. `PINOCHLE_CARD_BACK` chooses the
+card back by the plain file name of an image in `pinochle/card_images/backs/`
+(`castle`, `frog`, `red2`, …); `docs/docker-usage.md` lists the rest.
+
 ## How it is put together
 
 Ports and adapters, with the server as the sole authority on state and rules:

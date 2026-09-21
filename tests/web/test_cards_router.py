@@ -1,5 +1,11 @@
 # tests.web.test_cards_router
+import httpx
 import pytest
+
+from pinochle.adapters.fake_scheduler import FakeScheduler
+from pinochle.web.container import Container, Settings, build_container
+from pinochle.web.main import create_app
+from tests.web.conftest import ADMIN_TOKEN
 
 
 async def test_serves_a_card_face_by_its_wire_code(client):
@@ -75,3 +81,41 @@ async def test_missing_artwork_is_a_404_not_a_500(client):
     response = await client.get("/cards/backs/no_such_back")
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "not_found"
+
+
+async def test_serves_the_back_this_deployment_was_configured_with(configured_client):
+    """PINOCHLE_CARD_BACK names the file; the client only asks for the back."""
+    response = await configured_client.get("/cards/back")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/svg+xml"
+    named = await configured_client.get("/cards/backs/castle")
+    assert response.content == named.content
+
+
+async def test_the_configured_back_is_available_as_png(configured_client):
+    """Both bundled formats, as for every other piece of artwork."""
+    response = await configured_client.get("/cards/back", params={"fmt": "png"})
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+
+
+async def test_the_configured_back_is_rechecked_rather_than_kept_for_a_year(configured_client):
+    """Its URL is fixed but its content follows the configuration."""
+    response = await configured_client.get("/cards/back")
+    assert response.headers["cache-control"] == "no-cache"
+
+
+@pytest.fixture
+async def configured_client(container_with_card_back):
+    """A client for a server configured with the castle back."""
+    app = create_app(container_with_card_back)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+
+
+@pytest.fixture
+def container_with_card_back() -> Container:
+    """A container whose settings name a back other than the default."""
+    settings = Settings(admin_token=ADMIN_TOKEN, card_back="castle")
+    return build_container(settings, scheduler=FakeScheduler())

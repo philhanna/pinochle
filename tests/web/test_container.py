@@ -1,5 +1,10 @@
 # tests.web.test_container
-from pinochle.web.container import Settings
+import os
+
+import pytest
+
+from pinochle.web import container
+from pinochle.web.container import Settings, build_container
 
 
 def test_from_env_generates_a_token_when_none_is_set(monkeypatch):
@@ -28,3 +33,55 @@ def test_from_env_reads_the_configurable_delays(monkeypatch):
     assert settings.trick_clear_seconds == 0.5
     assert settings.computer_delay_seconds == 0
     assert settings.shuffle_seed == 42
+
+
+def test_from_env_defaults_the_card_back(monkeypatch):
+    """With nothing configured, the table is dealt with the blue back."""
+    monkeypatch.delenv("PINOCHLE_CARD_BACK", raising=False)
+    monkeypatch.setattr(container, "load_dotenv", lambda: None)
+    assert Settings.from_env().card_back == "blue"
+
+
+@pytest.mark.parametrize("configured,expected", [
+    ("castle", "castle"),
+    ("castle.svg", "castle"),
+    ("castle.PNG", "castle"),
+    ("  frog  ", "frog"),
+    ("Astronaut", "astronaut"),
+    ("", "blue"),
+])
+def test_from_env_reads_the_card_back_as_a_plain_file_name(monkeypatch, configured, expected):
+    """The setting names a file in the backs directory — extension optional."""
+    monkeypatch.setattr(container, "load_dotenv", lambda: None)
+    monkeypatch.setenv("PINOCHLE_CARD_BACK", configured)
+    assert Settings.from_env().card_back == expected
+
+
+@pytest.mark.parametrize("configured", [
+    "backs/castle.svg",
+    "/app/pinochle/card_images/backs/castle.svg",
+    "..\\castle",
+    "no such back",
+])
+def test_a_card_back_that_is_not_a_plain_file_name_is_refused(monkeypatch, configured):
+    """A path is refused at startup rather than 404ing on the first deal."""
+    monkeypatch.setattr(container, "load_dotenv", lambda: None)
+    monkeypatch.setenv("PINOCHLE_CARD_BACK", configured)
+    with pytest.raises(ValueError):
+        Settings.from_env()
+
+
+def test_the_card_back_may_be_set_in_a_dotenv_file(monkeypatch):
+    """``.env`` is read before the environment is inspected, not after."""
+    monkeypatch.setenv("PINOCHLE_CARD_BACK", "blue")
+    monkeypatch.setattr(
+        container, "load_dotenv",
+        lambda: os.environ.__setitem__("PINOCHLE_CARD_BACK", "castle"),
+    )
+    assert Settings.from_env().card_back == "castle"
+
+
+def test_the_configured_back_is_what_the_adapter_serves():
+    """Settings carry the name; the adapter turns it into a path (ARC-4)."""
+    built = build_container(Settings(admin_token="tok", card_back="castle"))
+    assert built.cards.get_back_path().endswith("castle.svg")
