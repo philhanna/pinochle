@@ -85,8 +85,14 @@ function cardElement(
 
   // The tilt is what places the card (see fanAngles); the stacking order is
   // what leaves its corner index showing, each card over the one to its left.
+  //
+  // The order goes into a custom property rather than into z-index itself,
+  // because an inline z-index outranks every rule in the stylesheet: it was
+  // silently beating the one that lifts the card under the pointer, and the
+  // one that lifts a card chosen for the pass, clear of the cards over them.
+  // table.css reads --stack, so those two can win.
   element.style.setProperty("--angle", `${angle}deg`);
-  element.style.zIndex = String(index);
+  element.style.setProperty("--stack", String(index));
 
   // UI-9: legality is shown at all times during play, not only on hover, and
   // an illegal card is not merely unstyled — it cannot be submitted.

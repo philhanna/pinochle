@@ -44,7 +44,10 @@ SIZES = ("1600x1100", "1200x900", "900x700")
 
 # Controls the recorded stream must exercise, so that a run which quietly
 # stopped rendering is a failure rather than a pass with nothing checked.
-REQUIRED = ("#panel button", "#hand .card", ".trick", "#spread .card.drawable")
+REQUIRED = (
+    "#panel button", "#hand .card", "#hand .card.chosen", ".trick",
+    "#spread .card.drawable",
+)
 
 
 def main(argv: list[str] | None = None) -> int:

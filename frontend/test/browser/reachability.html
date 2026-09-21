@@ -70,23 +70,35 @@ try {
 
   const { applyEvent, initialState } = await import("/dist/state.js");
   const { renderTable } = await import("/dist/table.js");
+  const { clearSelection } = await import("/dist/hand.js");
 
   const ignore = () => {};
   const callbacks = {
     onDraw: ignore, onPlay: ignore, onBid: ignore, onContract: ignore,
     onTrump: ignore, onPass: ignore, onBeginPlay: ignore, onTossIn: ignore,
-    onSelectionChange: ignore,
+    // As main.ts does: choosing a card redraws the hand that holds it.
+    onSelectionChange: () => { renderTable(state, callbacks); fitStage(); },
   };
 
   const stage = document.getElementById("stage");
   const blocked = [];
   const checked = {};
   let state = initialState();
+  let passChecked = false;
 
   frames.forEach((frame, index) => {
     state = applyEvent(state, frame);
     renderTable(state, callbacks);
     fitStage();
+    if (!passChecked && state.prompt?.phase === "PASSING") {
+      passChecked = true;
+      blocked.push(...chosenCardsBuried(index, frame, state));
+      checked["#hand .card.chosen"] = document.querySelectorAll("#hand .card.chosen").length;
+      // The replay owns the selection from here on, as a player would not.
+      clearSelection();
+      renderTable(state, callbacks);
+      fitStage();
+    }
     for (const control of CONTROLS) {
       if (control.when !== undefined && !control.when.includes(state.phase)) {
         continue;
@@ -130,14 +142,57 @@ try {
 }
 
 /**
+ * Check that cards picked out for the pass come clear of the ones over them.
+ *
+ * The fan shows only each card's corner index, so a card chosen for the pass
+ * has to rise clear of the unchosen cards lying across it — otherwise the
+ * player cannot see which card they took, which is unusable when the hand
+ * holds both copies of one (FR-17, FR-19): two identical corner indices, and
+ * nothing to say which of them is already in the tray.
+ *
+ * The fan's own order was once set as an inline z-index, which outranks every
+ * rule in the stylesheet, so the rule meant to lift a chosen card never
+ * applied and a chosen card stayed buried. Only a browser can see that, which
+ * is why the check lives here.
+ *
+ * Two neighbours are taken, because adjacent is where covering happens; a
+ * chosen card covered by another chosen card is the fan working, since both
+ * are lifted and both are in the tray.
+ */
+function chosenCardsBuried(index, frame, state) {
+  const hand = [...document.querySelectorAll("#hand .card")];
+  const first = Math.max(0, Math.floor(hand.length / 2) - 1);
+  hand[first]?.click();
+  hand[first + 1]?.click();
+
+  const found = [];
+  for (const element of document.querySelectorAll("#hand .card.chosen")) {
+    const blocker = whatCovers(element, (hit) => hit.classList.contains("chosen"));
+    if (blocker !== null) {
+      found.push({
+        frame: index,
+        type: frame.type,
+        phase: state.phase,
+        control: "#hand .card.chosen",
+        label: element.alt,
+        blocker: `${blocker} -- a card chosen for the pass stayed buried`,
+      });
+    }
+  }
+  return found;
+}
+
+/**
  * Name what would take a click aimed at `element`, or null if `element` would.
  *
  * A hit on something the control contains is the control: a button's own
  * label, a card's own image. Cards in the hand are the one deliberate
  * exception — they are fanned, so each lies across its neighbours, and a
- * neighbour winning is the layout working rather than failing.
+ * neighbour winning is the layout working rather than failing. `allowed`
+ * narrows that exception where a card is meant to come clear of its
+ * neighbours: it says which of them may still win.
  */
-function whatCovers(element) {
+function whatCovers(element, allowed = null) {
   const box = element.getBoundingClientRect();
   if (box.width === 0 || box.height === 0) {
     return null;
@@ -149,7 +204,9 @@ function whatCovers(element) {
     return null;
   }
   if (element.closest("#hand") !== null && hit.closest("#hand") !== null) {
-    return null;
+    if (allowed === null || allowed(hit)) {
+      return null;
+    }
   }
   return hit.tagName + (hit.className ? "." + hit.className : "");
 }
