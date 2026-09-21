@@ -179,11 +179,17 @@ timed. The only server-owned pause left is the trick clear (UI-15).
 - **FR-22** A player shall see only their own hand. The other three hands shall
   never be transmitted to a client that does not own them.
 - **FR-23** A player's hand shall be displayed grouped by suit in the order
-  Spades, Hearts, Diamonds, Clubs, and within each suit descending by rank
-  (Ace, Ten, King, Queen, Jack, Nine).
+  Spades, Hearts, Clubs, Diamonds, and within each suit descending by rank
+  (Ace, Ten, King, Queen, Jack, Nine). The suit groups shall alternate between
+  black and red. A hand is fanned (UI-4), so only each card's corner index is
+  showing; two groups of the same colour side by side leave a seam that has to
+  be read rather than seen.
 - **FR-23a** Once trump is named, the trump suit shall move to the leftmost
-  position, the remaining three suits keeping their relative order. This is the
-  only time a hand shall be reordered during a round; the re-sort shall be
+  position and the other three shall follow it, the colours still alternating.
+  Where either suit of the required colour would serve, the one earlier in
+  FR-23's order shall come first — so the four orders are ♠♥♣♦, ♥♠♦♣, ♣♥♠♦ and
+  ♦♠♥♣, each keeping as much of FR-23's order as alternation allows. This is
+  the only time a hand shall be reordered during a round; the re-sort shall be
   animated or otherwise made visible so cards do not appear to teleport.
 
 ### 3.4 Bidding

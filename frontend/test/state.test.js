@@ -110,7 +110,7 @@ test("cards_dealt fills this hand and every seat's count", () => {
 
 test("the dealt hand arrives in display order (FR-23)", () => {
   const state = replay([frame("cards_dealt", { cards: ["9C", "AD", "KH", "QS"] })], seated());
-  assert.deepEqual(state.hand, ["QS", "KH", "AD", "9C"]);
+  assert.deepEqual(state.hand, ["QS", "KH", "9C", "AD"]);
 });
 
 // ---------------------------------------------------------------------------
@@ -187,7 +187,7 @@ test("cards sent to a partner leave this hand", () => {
     }),
   ], seated());
   assert.deepEqual(state.sent, { toPlayerId: "p-north", cards: ["AS", "AH"] });
-  assert.deepEqual(state.hand, ["9D", "9C"]);
+  assert.deepEqual(state.hand, ["9C", "9D"]);
   assert.equal(state.handCounts["p-south"], 2);
 });
 
@@ -200,7 +200,7 @@ test("the other partnership's pass reveals nothing but counts", () => {
   ], seated());
   assert.equal(state.received, null);
   assert.equal(state.sent, null);
-  assert.deepEqual(state.hand, ["AS", "AH", "9D", "9C"]);
+  assert.deepEqual(state.hand, ["AS", "AH", "9C", "9D"]);
   assert.equal(state.handCounts["p-east"], 2);
   assert.equal(state.handCounts["p-west"], 6);
 });

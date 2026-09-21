@@ -19,8 +19,15 @@ const SUIT_LETTERS: Record<SuitName, string> = {
   CLUBS: "C",
 };
 
-// FR-23: spades, hearts, diamonds, clubs.
-const SUIT_ORDER = ["S", "H", "D", "C"] as const;
+// FR-23: spades, hearts, clubs, diamonds — black, red, black, red. The
+// colours alternate so that every group is bounded by the other colour and
+// the seam between two suits is visible at a glance; hearts beside diamonds
+// in a fanned hand, where only the corner index of each card shows, is the
+// one adjacency that has to be read rather than seen.
+const SUIT_ORDER = ["S", "H", "C", "D"] as const;
+
+// Which of those are red, for the alternation above.
+const RED_SUITS = new Set(["H", "D"]);
 
 // FR-23: descending by rank within a suit. Note the pinochle order — the ten
 // sits above the king (FR-18) — so this is not the familiar sequence.
@@ -47,11 +54,39 @@ export function sortHand(cards: CardCode[], trump: SuitName | null = null): Card
 
 /** The suit letters in display order, trump first if it is known (FR-23a). */
 function suitOrder(trump: SuitName | null): readonly string[] {
-  if (trump === null) {
-    return SUIT_ORDER;
+  return trump === null ? SUIT_ORDER : alternatingFrom(SUIT_LETTERS[trump]);
+}
+
+/**
+ * The four suits beginning at `first`, still alternating in colour (FR-23a).
+ *
+ * Moving trump to the left cannot leave the other three where they were: a
+ * red trump in front of spades, hearts, clubs, diamonds would strand the
+ * other red suit against it. So the rest follow in alternating colour, and
+ * where either suit of the wanted colour would do, the one earlier in FR-23's
+ * order goes first — which keeps as much of that order as alternating allows.
+ *
+ * The deck has two suits of each colour, so the suit this needs at each step
+ * always exists.
+ */
+function alternatingFrom(first: string): string[] {
+  const byColour = {
+    red: SUIT_ORDER.filter((s) => isRed(s) && s !== first) as string[],
+    black: SUIT_ORDER.filter((s) => !isRed(s) && s !== first) as string[],
+  };
+  const order = [first];
+  let wantRed = !isRed(first);
+  // The other three suits, each the opposite colour to the one before it.
+  for (let i = 0; i < 3; i += 1) {
+    order.push(...(wantRed ? byColour.red : byColour.black).splice(0, 1));
+    wantRed = !wantRed;
   }
-  const trumpLetter = SUIT_LETTERS[trump];
-  return [trumpLetter, ...SUIT_ORDER.filter((letter) => letter !== trumpLetter)];
+  return order;
+}
+
+/** Whether a suit letter names a red suit. */
+function isRed(letter: string): boolean {
+  return RED_SUITS.has(letter);
 }
 
 /** Position of `value` in `order`, or the end if it is not there at all. */

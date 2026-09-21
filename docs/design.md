@@ -1073,11 +1073,13 @@ across = (me + 2) % 4  right = (me + 3) % 4
 ```
 
 **Hand order (FR-23, FR-23a).** `cards.ts` sorts by suit in the fixed order
-Spades, Hearts, Diamonds, Clubs, and within a suit descending A, 10, K, Q, J, 9.
-Once `trump_named` arrives, the trump suit moves to the leftmost position and the
-other three keep their relative order — the only re-sort in a round, and it is
-animated with a CSS transform transition so the cards visibly travel rather than
-teleport.
+Spades, Hearts, Clubs, Diamonds — alternating black and red — and within a suit
+descending A, 10, K, Q, J, 9. Once `trump_named` arrives, the trump suit moves to
+the leftmost position and the other three follow it still alternating, which is
+why they cannot simply keep their relative order: a red trump in front of
+♠♥♣♦ would strand the other red suit against it. The only re-sort in a round,
+and it is animated with a CSS transform transition so the cards visibly travel
+rather than teleport.
 
 **The trick area (UI-6).** Four absolutely-positioned slots offset toward each
 seat, so all four cards are simultaneously visible and attributable. Cards remain
