@@ -367,6 +367,28 @@ body.table-page {
 
 .scoreboard-toggle:hover { background: rgba(255, 255, 255, 0.07); }
 
+/* Trump stays visible even when the scoreboard is closed. A light plaque
+   keeps black suits legible against the dark felt while preserving the
+   traditional red/black suit colours. */
+#trump-indicator {
+  position: absolute;
+  right: 18px;
+  bottom: 16px;
+  z-index: 7;
+  padding: 5px 12px;
+  border: 1px solid rgba(0, 0, 0, 0.32);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+#trump-indicator.red { color: #c5222a; }
+#trump-indicator.black { color: #111; }
+
 /* One arrow, turned rather than swapped, so which way it is going is legible
    as a movement and not only as a different character. */
 .caret { display: inline-block; transition: transform 140ms ease; }
@@ -463,20 +485,23 @@ body.table-page {
 
 #bottom-bar > * { pointer-events: auto; }
 
-/* What the table has just been told (UI-19).
-   Wider and quieter than the status line under it: one says what happened,
-   the other says whose turn it is now, and they must not read as one
-   sentence split over two rows. */
+/* What the table has just been told (UI-19). Keep it prominent at the top of
+   the screen and above the table contents. */
 #notice {
+  position: absolute;
+  top: 10px;
+  left: 16px;
+  z-index: 7;
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 12px;
-  max-width: 44rem;
+  max-width: calc(100% - 32px);
   padding: 6px 16px;
   border: 1px solid var(--rule);
   border-radius: 999px;
   background: var(--panel);
-  text-align: center;
+  text-align: left;
 }
 
 /* An id selector outranks the UA's own `[hidden] { display: none }`, so the
@@ -484,7 +509,13 @@ body.table-page {
    nothing to say yet shows an empty pill above the status line. */
 #notice[hidden] { display: none; }
 
-.notice-line { font-size: 1rem; color: var(--ink); }
+.notice-line {
+  color: var(--ink);
+  font-size: 2em;
+  line-height: 1.1;
+  text-align: left;
+  white-space: nowrap;
+}
 
 /* Held: the table has stopped, so the band stops looking incidental. */
 #notice.hold { border-color: var(--accent); }

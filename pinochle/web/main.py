@@ -1,15 +1,18 @@
 # pinochle.web.main
 import logging
+import re
 from contextlib import asynccontextmanager
+from html import escape
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import FastAPI, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from pinochle.web.container import Container, build_container
+from pinochle.web.container import Container, TableDefaults, build_container
 from pinochle.web.errors import register_error_handlers
 from pinochle.web.routers import admin, cards, player, stream
+from pinochle.web.security import admin_token_matches
 
 
 def create_app(container: Container | None = None) -> FastAPI:
@@ -56,9 +59,15 @@ def create_app(container: Container | None = None) -> FastAPI:
         return _serve_page(public_dir / "index.html")
 
     @app.get("/admin")
-    async def admin_page():
-        """Serve the administrator's console."""
-        return _serve_page(public_dir / "admin.html")
+    async def admin_page(request: Request):
+        """Serve the console pre-filled from the server's table settings."""
+        token = request.query_params.get("t")
+        valid_token = admin_token_matches(token, container.settings.admin_token)
+        return _serve_admin_page(
+            public_dir / "admin.html",
+            container.settings.table,
+            token if valid_token else None,
+        )
 
     return app
 
@@ -126,6 +135,54 @@ def _serve_page(path: Path):
     # Same reasoning as _Revalidated: the page names the stylesheet and the
     # entry module, so a cached copy of it pins a cached copy of those too.
     return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+def _serve_admin_page(
+    path: Path, table: TableDefaults, admin_token: str | None,
+):
+    """Serve the console with configured table defaults in its form.
+
+    The static file continues to carry useful built-in fallbacks, but the
+    server replaces them before the browser's first render. The credential is
+    filled only when the URL already contains the valid token; table names and
+    seat defaults are configuration rather than authentication secrets.
+    """
+    if not path.is_file():
+        return _serve_page(path)
+
+    page = path.read_text()
+    values = {
+        "admin-token": admin_token or "",
+        "team-ns": table.ns,
+        "team-ew": table.ew,
+        **{f"name-{seat}": default.name for seat, default in table.seats.items()},
+    }
+    for name, value in values.items():
+        page = re.sub(
+            rf'(<input\b[^>]*\bname="{re.escape(name)}"[^>]*\bvalue=")[^"]*(")',
+            lambda match, value=value: (
+                match.group(1) + escape(value, quote=True) + match.group(2)
+            ),
+            page,
+            count=1,
+        )
+
+    for seat, default in table.seats.items():
+        select_pattern = rf'(<select\s+name="type-{re.escape(seat)}">)(.*?)(</select>)'
+
+        def select_value(match: re.Match[str], selected: str = default.type) -> str:
+            options = re.sub(r"\s+selected(?=>)", "", match.group(2))
+            options = re.sub(
+                rf'(<option\s+value="{re.escape(selected)}")',
+                r"\1 selected",
+                options,
+                count=1,
+            )
+            return match.group(1) + options + match.group(3)
+
+        page = re.sub(select_pattern, select_value, page, count=1, flags=re.DOTALL)
+
+    return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
 
 app = create_app()

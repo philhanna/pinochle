@@ -1,5 +1,6 @@
 # tests.web.test_pages
-from tests.web.conftest import FRONTEND_DIR
+from pinochle.web.container import SeatDefault, TableDefaults
+from tests.web.conftest import ADMIN_TOKEN, FRONTEND_DIR
 
 
 async def test_healthz_reports_ok(client):
@@ -32,6 +33,53 @@ async def test_the_admin_path_serves_the_console_page(client):
     response = await client.get("/admin")
     assert response.status_code == 200
     assert "Pinochle console" in response.text
+
+
+async def test_authenticated_console_is_prefilled_before_its_first_render(
+    client, container,
+):
+    """The HTML response itself carries the table configured in ``.env``."""
+    container.settings.table = TableDefaults(
+        ns="Boys & Co.",
+        ew="Girls",
+        seats={
+            "NORTH": SeatDefault(name="John", type="human"),
+            "EAST": SeatDefault(name="Ellie", type="computer"),
+            "SOUTH": SeatDefault(name="Dad", type="human"),
+            "WEST": SeatDefault(name='Mom "M"', type="computer"),
+        },
+    )
+
+    response = await client.get("/admin", params={"t": ADMIN_TOKEN})
+
+    assert response.status_code == 200
+    assert f'name="admin-token" type="password"\n               value="{ADMIN_TOKEN}"' in response.text
+    assert 'name="team-ns" value="Boys &amp; Co."' in response.text
+    assert 'name="name-NORTH" value="John"' in response.text
+    assert 'name="name-WEST" value="Mom &quot;M&quot;"' in response.text
+    north = response.text.split('name="type-NORTH"', 1)[1].split("</select>", 1)[0]
+    assert '<option value="human" selected>' in north
+    assert '<option value="computer" selected>' not in north
+
+
+async def test_bare_console_is_prefilled_without_disclosing_the_admin_token(
+    client, container,
+):
+    """Table defaults need no query token, but the credential remains secret."""
+    container.settings.table = TableDefaults(
+        ns="Configured NS",
+        ew="Configured EW",
+        seats={
+            seat: SeatDefault(name=f"Configured {seat}", type="human")
+            for seat in ("NORTH", "EAST", "SOUTH", "WEST")
+        },
+    )
+
+    response = await client.get("/admin")
+
+    assert 'name="team-ns" value="Configured NS"' in response.text
+    assert 'name="name-NORTH" value="Configured NORTH"' in response.text
+    assert 'name="admin-token" type="password"\n               value=""' in response.text
 
 
 async def test_the_page_loads_its_module_from_the_compiled_output(client):

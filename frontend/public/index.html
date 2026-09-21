@@ -19,6 +19,10 @@
   </div>
 
   <aside id="scoreboard"></aside>
+  <div id="trump-indicator" hidden></div>
+  <!-- The latest table notification stays prominent at the top, with the
+       Continue control beside it whenever play is being held (UI-19a). -->
+  <div id="notice" hidden></div>
   <!-- A transient complaint about one action, and a standing statement
        about whether this table is still connected to the game. -->
   <div id="toast" hidden></div>
@@ -28,11 +32,6 @@
        the rest up instead of landing on top of it. -->
   <div id="bottom-bar">
     <div class="seat bottom" id="seat-bottom"></div>
-    <!-- What the table has just been told, and the control that moves it on
-         when it is being held (UI-19, UI-19a). In the stacked bar rather than
-         out on the felt: a band across the middle would lie over the spread
-         and take the clicks aimed at it, which is UI-18's case exactly. -->
-    <div id="notice" hidden></div>
     <div id="status"></div>
     <div id="panel" hidden></div>
     <div id="hand"></div>

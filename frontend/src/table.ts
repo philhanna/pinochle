@@ -7,7 +7,7 @@
 
 import { faceUrl } from "./cards.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
-import { isPaused, placement, playHasBegun, trickCards } from "./layout.js";
+import { isPaused, placement, playHasBegun, suitGlyph, trickCards } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import { notice } from "./notice.js";
 import { isMovingCard, renderSpread } from "./spread.js";
@@ -15,7 +15,7 @@ import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
 import {
   bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
-  statusLine, summaryHeadline, summaryRows,
+  statusLine, summaryHeadline, summaryRows, trumpText,
 } from "./view.js";
 
 /** Everything the table can ask of the player. */
@@ -36,6 +36,7 @@ export function renderTable(state: GameState, callbacks: TableCallbacks): void {
   renderSpreadInto(state, callbacks);
   renderCentre(state, callbacks);
   renderScoreboard(state);
+  renderTrump(state);
   renderNotice(state, callbacks);
   renderStatus(state);
   renderPanelInto(state, callbacks);
@@ -50,6 +51,25 @@ export function renderTable(state: GameState, callbacks: TableCallbacks): void {
       markResorted(hand);
     }
   }
+}
+
+/** Keep the named trump visible in the lower-right corner of the table. */
+function renderTrump(state: GameState): void {
+  const element = byId("trump-indicator");
+  if (element === null) {
+    return;
+  }
+  if (state.trump === null) {
+    element.textContent = "";
+    element.className = "";
+    element.hidden = true;
+    return;
+  }
+
+  const { red } = suitGlyph(state.trump);
+  element.textContent = trumpText(state);
+  element.className = red ? "red" : "black";
+  element.hidden = false;
 }
 
 /** Set when trump is named, so the next redraw can show the hand re-sorting. */
