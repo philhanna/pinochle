@@ -378,6 +378,16 @@ body.table-page {
   align-items: center;
   gap: 7px;
   pointer-events: none;
+  /* Above #centre, which is laid out from the middle of the table outwards
+     and so grows downwards into this bar whenever it holds more than the
+     trick — the passed-cards display, or the last trick. What arrives here
+     is the trick layer's own box, which is a fixed 300x260 whether or not a
+     card has been played yet, so it is invisible and still takes the click:
+     during the meld it covered this panel's buttons exactly, and a player
+     clicking Play got nothing at all, with no error to go on because no
+     handler ever ran. A seat's own controls and cards belong over the felt's
+     contents, which is the rule this states. */
+  z-index: 6;
 }
 
 #bottom-bar > * { pointer-events: auto; }
@@ -508,7 +518,10 @@ body.table-page {
   left: 50%;
   transform: translateX(-50%);
   padding: 6px 12px;
-  z-index: 6;
+  /* Over the bottom bar in turn: a complaint about what just happened, and
+     the standing notice that this table is no longer connected, are the two
+     things that must stay legible whatever is under them. */
+  z-index: 7;
   border: 1px solid var(--alarm);
   border-radius: 6px;
   background: rgba(60, 12, 8, 0.95);
