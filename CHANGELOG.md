@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
-## [Unreleased]
+## [0.4.0] - 2026-09-21
 
 ### Added
 - `docs/impl.md`: the sliced implementation plan for the remaining work (the
@@ -70,6 +70,52 @@ The format is based on [Keep a Changelog].
   or `castle.svg` — never a path; the server turns it into one. The client asks
   `/cards/back` for whatever that is, so no file name is spelled in the browser
 
+- The notice area (UI-19): the table says in one sentence what just concluded —
+  who won the draw, who won the auction, what trump is, who took the trick, how
+  the round scored — the same words on all four screens. The server sends no
+  prose: every fact a notice states already crossed the wire as an event, so
+  `frontend/src/notice.ts` derives the sentence from the state the reducer
+  already holds. There is no scrolling history; what deserves to outlive its
+  moment is on the scoreboard (UI-14a), and the rest passes as it does at a
+  physical table
+- Holds (RT-13): a pause is now a named state the game occupies, carried on the
+  turn header of every frame and delimited by `HoldBegun`/`HoldEnded`, ending
+  either after an interval or when a player releases it. The round summary takes
+  a released hold — the next deal waits on a seat rather than on a clock, because
+  the summary has arithmetic in it that players read and argue about. Any one
+  seat releases it, by voice-coordinated agreement rather than four clicks:
+  `POST /api/games/{id}/acknowledge` names the hold it releases, so a late click
+  releases nothing and two simultaneous releases emit one `HoldEnded`. A table
+  of all computers takes no such hold, since there is nobody to read the summary
+  and nobody who could end the wait
+- `PINOCHLE_TEAM_NS`, `PINOCHLE_TEAM_EW` and `PINOCHLE_SEAT_<SEAT>_NAME`/`_TYPE`:
+  the table the console's setup form is born holding, so a household that plays
+  the same four seats every week stops retyping them. Per field rather than all
+  or nothing — a key the file does not set keeps its built-in default — and a
+  `_TYPE` that is neither `human` nor `computer` is refused at startup. These are
+  only defaults; the form is still editable. `GET /api/admin/defaults` serves
+  them behind the admin token, since the names on a configured table are the
+  operator's own household
+- `.env.example` now documents every variable the server reads rather than only
+  the card back; ten of them were live and undiscoverable. Each is commented out
+  beside its default, and tests fail if a setting has no line there or if any
+  line is left uncommented
+- Startup logs which `.env` file the settings were read from, if any, so an
+  operator wondering why a setting didn't take can see whether the file was
+  found at all
+- `make test-browser`: `scripts/hit_test.py` replays the recorded seat stream
+  through the real reducer, the real renderer and the real stylesheet in
+  headless Chrome at three window sizes, and after every frame asks the browser
+  what a click aimed at each control would actually hit. The controls are taken
+  from where the click handlers are attached, so the list cannot drift from the
+  code. Not part of `make test`, which should need nothing but
+  `pip install -e .` and node
+- **UI-18**: a visible control has to be clickable — stated as a requirement
+  rather than living only in the harness that checks it, and scoped to the drop
+  targets and to every window size the layout supports
+- `python-dotenv` is now a dependency in its own right rather than arriving with
+  `uvicorn[standard]`
+
 ### Changed
 - `README.md` now says what the project is and how to run it, and
   `docs/docker-usage.md` describes the two-stage image it actually builds. The
@@ -85,6 +131,36 @@ The format is based on [Keep a Changelog].
   valuation — its own meld, the trick points both hands together can take, and
   an allowance for the partner's contribution — rather than a valuation of its
   own hand alone, which no hand could ever bid on
+
+- The dealer-selection spread is now thrown across the felt (FR-11c): 48 cards
+  strewn over the inner two thirds of the table, each turned a little and lying
+  across the others, rather than three rows of a 16-column grid. Overlap is the
+  point, so a card can be dragged aside to reach what is under it and stays
+  where it is put; a press that travels more than four pixels moves the card and
+  a press that stays put draws it, so a click that wobbles still draws. A drawn
+  card leaves the table and is shown face up in front of its drawer's seat
+  (FR-11d). Where each card lies is settled once per spread, not once per frame
+- FR-23 laid a hand out spades, hearts, diamonds, clubs, which puts the two red
+  suits next to each other — and a fan shows only each card's corner index, so
+  that boundary had to be read off the pips rather than noticed. The order is
+  now spades, hearts, clubs, diamonds, and under FR-23a the three non-trump
+  suits follow trump in alternating colour: SHCD, HSDC, CHSD, DSHC
+- The hand is held as a hand (UI-4): each card turned a little further about a
+  pivot below the fan, so the cards sweep an arc and lie across one another with
+  only the corner rank and suit showing. Spacing falls out of the tilt and the
+  pivot rather than being set anywhere, so a hand closes up as it is played out
+- The card art is twice the size it was (UI-4, UI-6, UI-12, UI-13, UI-14b), and
+  the stage grew from 1180x830 to 1420x1000 to make room for it. UI-17's
+  scale-to-fit still applies, so a narrow window gets less than a literal 2x in
+  exchange for a table that does not overlap itself. Card backs keep their
+  original size: there is nothing on a back to read
+- The meld is now a section of the scoreboard rather than a panel of its own
+  across the middle of the table, where the trick goes. The named combinations
+  show only while the meld is on the table and give way to the totals once the
+  first trick is gathered (UI-14a), and the scoreboard closes to its own heading
+- The passed-cards display (UI-12) comes down when the auction winner is on turn
+  to lead rather than when the first card is played: by then the pass has been
+  read and what the table needs is the room to play in
 
 ### Security
 - The administrator's SSE endpoint now accepts its token as `?t=` as well as in
@@ -122,6 +198,33 @@ The format is based on [Keep a Changelog].
   which over 16 complete games cuts a game to 13.4 rounds, with a tenth of them
   abandoned and the bidding side making its contract 64% of the time. The
   allowance is a single figure meant to be tuned by playing games
+- Clicking Play or Toss in at the meld did nothing at all: no move, no error, no
+  request. The trick layer is a fixed 300x260 box whether or not a card has been
+  played, and during the meld `#centre` grows tall enough to put that invisible
+  box 113px into the bottom bar — exactly over the row of buttons — while
+  carrying a `z-index` the bar did not answer. A seat's own cards and controls
+  now sit over the felt's contents. Not fixed with `pointer-events: none`, which
+  would break the trick's other job as the drop target for playing a card (UI-8).
+  The same fault was silently eating drops on the pass tray
+- Passing two copies of the same card looked as though only one could be chosen.
+  The selection was never the problem — it is held by position in the hand — but
+  `hand.ts` set the fan's order as an inline `z-index`, which outranks the
+  stylesheet, so the rule that lifts the hovered or chosen card never applied and
+  a chosen card stayed buried under its twin. The fan's order now goes into a
+  `--stack` custom property and the stylesheet does the stacking
+- A client that lost its SSE stream showed a table that looked perfectly normal
+  but was frozen at the last frame it heard, and its Play button still sent a
+  move the player would never see the result of. A seat that loses its stream
+  can now get back to the table (RT-5a)
+- A draw arriving after the dealer was settled came back as a 500 with a
+  `KeyError` behind it — from a tab still showing the spread, or one that had
+  just reconnected to a round already under way. The spread's absence is the
+  phase check for drawing, so it is now a `WrongPhaseError` and a 409 the client
+  can display
+- The turn prompt went on offering stale controls for a phase the table had
+  already left, because it was only ever replaced by the next `turn_prompt`
+  addressed to that seat and the server does not send one for every phase change
+  (NFR-4). A prompt is now good only while the turn header still agrees with it
 
 ## [0.3.0] - 2026-09-07
 
@@ -230,7 +333,9 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/0.2.0..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/0.4.0..HEAD
+[0.4.0]: https://github.com/philhanna/pinochle/compare/0.3.0..0.4.0
+[0.3.0]: https://github.com/philhanna/pinochle/compare/0.2.0..0.3.0
 [0.2.0]: https://github.com/philhanna/pinochle/compare/0.1.0..0.2.0
 [0.1.0]: https://github.com/philhanna/pinochle/compare/0.0.0..0.1.0
 [0.0.0]: https://github.com/philhanna/pinochle/compare/b4aba0b..0.0.0
