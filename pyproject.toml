@@ -17,6 +17,7 @@ dependencies = [
     "fastapi",
     "uvicorn[standard]",
     "httpx",
+    "python-dotenv",
 ]
 
 [tool.setuptools.packages.find]
