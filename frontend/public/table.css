@@ -58,7 +58,20 @@ body.table-page {
   height: var(--stage-height);
   flex: none;
   transform: scale(var(--stage-scale, 1));
-  transform-origin: center center;
+  /* Scaled from the corner, with the slack taken out of the layout box, so
+     that the box the body centres is the size the table is actually drawn at.
+     A transform does not change the space an element takes up: from the
+     centre, the box stays 1420x1000 however small the table is drawn, the
+     body grows to 1000 to hold it, and a window shorter than that centres the
+     table on the box rather than on the window.  Half the difference then
+     falls below the fold, where `overflow: hidden` means it cannot even be
+     scrolled to -- and what is down there is the bottom bar: the notice with
+     the Continue button of UI-19a, the status line, and the near edge of the
+     hand.  UI-17 asks for the whole table on any window it is given, so the
+     two must be the same size. */
+  transform-origin: top left;
+  margin-right: calc(var(--stage-width) * (var(--stage-scale, 1) - 1));
+  margin-bottom: calc(var(--stage-height) * (var(--stage-scale, 1) - 1));
 }
 
 #felt {
@@ -455,6 +468,11 @@ body.table-page {
   background: var(--panel);
   text-align: center;
 }
+
+/* An id selector outranks the UA's own `[hidden] { display: none }`, so the
+   band has to answer for the attribute itself: without this, a table with
+   nothing to say yet shows an empty pill above the status line. */
+#notice[hidden] { display: none; }
 
 .notice-line { font-size: 1rem; color: var(--ink); }
 
