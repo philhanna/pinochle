@@ -570,20 +570,20 @@ body.table-page {
    to agree on --fan-pivot.
 
    The fan therefore has no width of its own to give the flex column, so the
-   box is sized here: tall enough for the centre card raised on hover and for
-   the outer cards, which the rotation carries below it. */
+   box is sized here, for the card itself and for the outer cards, which the
+   rotation carries below it. Nothing in the hand rises above the card's own
+   top edge, so the box needs no headroom over it. */
 #hand {
   --fan-pivot: 240%;
   position: relative;
   width: 100%;
-  /* Tall enough for the top offset below, the card itself, and the dip a
-     tilted outer card swings below an unrotated one — a fixed fraction of
-     the card's own height, set by fanAngles' geometry (layout.ts) and the
-     pivot above. The widest fan this game ever holds is sixteen cards, for
-     an instant during the pass (twelve dealt, four just received); that is
-     also the fan with the deepest dip, at a little over a third of the
-     card's height. */
-  height: calc(22px + var(--card-h) * 1.38);
+  /* The card itself, plus the dip a tilted outer card swings below an
+     unrotated one — a fixed fraction of the card's own height, set by
+     fanAngles' geometry (layout.ts) and the pivot above. The widest fan this
+     game ever holds is sixteen cards, for an instant during the pass (twelve
+     dealt, four just received); that is also the fan with the deepest dip, at
+     a little over a third of the card's height. */
+  height: calc(var(--card-h) * 1.38);
   /* Only the cards themselves are hit: the box is as wide as the table and
      would otherwise swallow clicks meant for the felt beneath it. */
   pointer-events: none;
@@ -595,7 +595,7 @@ body.table-page {
 
 #hand .card {
   position: absolute;
-  top: 22px;
+  top: 0;
   left: 50%;
   margin-left: calc(var(--card-w) / -2);
   pointer-events: auto;
@@ -603,20 +603,32 @@ body.table-page {
      inline as a z-index, because that would outrank the two rules below. */
   z-index: var(--stack, 0);
   transform-origin: 50% var(--fan-pivot);
-  /* The lift comes after the turn, so a card rises out of the fan along its
-     own axis rather than straight up out of a neighbour's way. */
-  transform: rotate(var(--angle, 0deg)) translateY(var(--raise, 0px));
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  /* The turn is the whole of it: a card under the pointer or picked out for
+     the pass comes forward, and never upwards. Rising out of the fan put the
+     card over the bar above it — the notice, the status line — which is what
+     a hand must not do: the bar is where the table says what has happened and
+     holds the control that moves it on (UI-19, UI-19a). */
+  transform: rotate(var(--angle, 0deg));
+  transition: box-shadow 120ms ease, filter 120ms ease, transform 120ms ease;
 }
 
 /* UI-9: legal and illegal must look different, and an illegal card cannot be
    submitted — the click handler is simply not attached to one. */
 #hand .card.legal { cursor: grab; box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.5); }
-#hand .card.legal:hover { --raise: calc(var(--card-h) * -0.173); }
+/* The card under the pointer is already the only one showing whole, from the
+   stacking rule below; this is what says it is being pointed at rather than
+   merely in front — the shadow a card off the felt would cast, without the
+   card leaving it. */
+#hand .card.legal:hover {
+  box-shadow: 0 0 0 2px var(--accent), 0 12px 24px rgba(0, 0, 0, 0.65);
+  filter: brightness(1.08);
+}
 #hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
 
 /* A card being pointed at or picked out comes clear of the ones over it,
-   which otherwise cover all but its corner.
+   which otherwise cover all but its corner. It comes forward, not upwards:
+   the whole card shows because nothing is drawn over it, which is what makes
+   it readable, and the fan stays inside its own box.
 
    Both layers keep the fan's own order inside them, so cards that come clear
    still lie left to right as they do in the hand. That is what makes a pair
@@ -626,7 +638,14 @@ body.table-page {
 #hand .card:hover, #hand .card.chosen { z-index: calc(40 + var(--stack, 0)); }
 
 #hand.choosing .card { cursor: pointer; }
-#hand .card.chosen { --raise: calc(var(--card-h) * -0.212); box-shadow: 0 0 0 2px var(--ns); }
+/* Picked out for the pass. The ring carries this on its own now that the card
+   does not rise, so it is drawn to be read at a glance against a fan of
+   identical corners: the hand holds two of every card (FR-17), and the twin
+   of a chosen card is right beside it. */
+#hand .card.chosen {
+  box-shadow: 0 0 0 3px var(--ns), 0 0 16px 2px rgba(255, 212, 121, 0.45);
+  filter: brightness(1.12);
+}
 #hand .card.lifted { opacity: 0.4; }
 
 /* Over the felt at the top, clear of every control. */

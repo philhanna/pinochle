@@ -88,9 +88,9 @@ function cardElement(
   //
   // The order goes into a custom property rather than into z-index itself,
   // because an inline z-index outranks every rule in the stylesheet: it was
-  // silently beating the one that lifts the card under the pointer, and the
-  // one that lifts a card chosen for the pass, clear of the cards over them.
-  // table.css reads --stack, so those two can win.
+  // silently beating the one that brings the card under the pointer forward,
+  // and the one that brings a card chosen for the pass clear of the cards
+  // lying over it. table.css reads --stack, so those two can win.
   element.style.setProperty("--angle", `${angle}deg`);
   element.style.setProperty("--stack", String(index));
 
