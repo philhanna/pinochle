@@ -122,7 +122,7 @@ try {
     fitStage();
     if (!passChecked && state.prompt?.phase === "PASSING") {
       passChecked = true;
-      blocked.push(...chosenCardsBuried(index, frame, state));
+      blocked.push(...chosenCardsUnreachable(index, frame, state));
       checked["#hand .card.chosen"] = document.querySelectorAll("#hand .card.chosen").length;
       // The replay owns the selection from here on, as a player would not.
       clearSelection();
@@ -172,24 +172,19 @@ try {
 }
 
 /**
- * Check that cards picked out for the pass come clear of the ones over them.
+ * Check that a card in the fan can still be taken by the strip of it showing.
  *
- * The fan shows only each card's corner index, so a card chosen for the pass
- * has to rise clear of the unchosen cards lying across it — otherwise the
- * player cannot see which card they took, which is unusable when the hand
- * holds both copies of one (FR-17, FR-19): two identical corner indices, and
- * nothing to say which of them is already in the tray.
+ * Nothing in the hand changes places: a card pointed at or picked out keeps
+ * its position in the fan, so all that is ever exposed of it -- of every card
+ * but the last -- is the narrow strip down its left edge carrying its rank
+ * and suit. That strip is therefore the whole of the target, and a card whose
+ * strip takes no click cannot be chosen at all, however correctly it is drawn.
  *
- * The fan's own order was once set as an inline z-index, which outranks every
- * rule in the stylesheet, so the rule meant to lift a chosen card never
- * applied and a chosen card stayed buried. Only a browser can see that, which
- * is why the check lives here.
- *
- * Two neighbours are taken, because adjacent is where covering happens; a
- * chosen card covered by another chosen card is the fan working, since both
- * are lifted and both are in the tray.
+ * Two neighbours are chosen because adjacent is where covering happens, and
+ * the check is made on the strip rather than the middle of the card, which a
+ * neighbour covers by design (that is what a fan is).
  */
-function chosenCardsBuried(index, frame, state) {
+function chosenCardsUnreachable(index, frame, state) {
   const hand = [...document.querySelectorAll("#hand .card")];
   const first = Math.max(0, Math.floor(hand.length / 2) - 1);
   hand[first]?.click();
@@ -197,19 +192,41 @@ function chosenCardsBuried(index, frame, state) {
 
   const found = [];
   for (const element of document.querySelectorAll("#hand .card.chosen")) {
-    const blocker = whatCovers(element, (hit) => hit.classList.contains("chosen"));
-    if (blocker !== null) {
+    if (!stripTakesTheClick(element)) {
       found.push({
         frame: index,
         type: frame.type,
         phase: state.phase,
         control: "#hand .card.chosen",
         label: element.alt,
-        blocker: `${blocker} -- a card chosen for the pass stayed buried`,
+        blocker: "nothing along its left strip takes a click -- the card "
+          + "cannot be chosen",
       });
     }
   }
   return found;
+}
+
+/**
+ * Whether any point down the exposed left edge of `element` hits it.
+ *
+ * The cards are rotated, so the strip is not a rectangle and its corners are
+ * not the card's: several points are tried down the left of the card's box
+ * and one hit is enough, which is the question a player's aim asks too.
+ */
+function stripTakesTheClick(element) {
+  const box = element.getBoundingClientRect();
+  for (const fraction of [0.3, 0.4, 0.5, 0.6, 0.7]) {
+    for (const across of [0.06, 0.1, 0.14]) {
+      const hit = document.elementFromPoint(
+        box.left + box.width * across, box.top + box.height * fraction,
+      );
+      if (hit === element) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**

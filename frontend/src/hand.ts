@@ -86,11 +86,12 @@ function cardElement(
   // The tilt is what places the card (see fanAngles); the stacking order is
   // what leaves its corner index showing, each card over the one to its left.
   //
-  // The order goes into a custom property rather than into z-index itself,
-  // because an inline z-index outranks every rule in the stylesheet: it was
-  // silently beating the one that brings the card under the pointer forward,
-  // and the one that brings a card chosen for the pass clear of the cards
-  // lying over it. table.css reads --stack, so those two can win.
+  // The order goes into a custom property rather than into z-index itself, so
+  // that the stacking stays in the stylesheet with the rest of the fan's
+  // look: an inline z-index would outrank anything table.css had to say about
+  // it. Nothing does change it now — a card pointed at or picked out keeps
+  // its place in the hand and is marked in colour alone — and that is a rule
+  // worth keeping where it can be seen.
   element.style.setProperty("--angle", `${angle}deg`);
   element.style.setProperty("--stack", String(index));
 

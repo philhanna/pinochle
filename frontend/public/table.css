@@ -599,15 +599,19 @@ body.table-page {
   left: 50%;
   margin-left: calc(var(--card-w) / -2);
   pointer-events: auto;
-  /* Each card over the one to its left, from --stack (hand.ts). Not set
-     inline as a z-index, because that would outrank the two rules below. */
+  /* Each card over the one to its left, from --stack (hand.ts), and nothing
+     ever changes that: the order the cards lie in is the hand's own order,
+     for as long as the hand is held. A card that jumped its neighbours to be
+     pointed at or picked out covered the ones beside it, which is the whole
+     of what a player is trying to look at while choosing. */
   z-index: var(--stack, 0);
   transform-origin: 50% var(--fan-pivot);
-  /* The turn is the whole of it: a card under the pointer or picked out for
-     the pass comes forward, and never upwards. Rising out of the fan put the
-     card over the bar above it — the notice, the status line — which is what
-     a hand must not do: the bar is where the table says what has happened and
-     holds the control that moves it on (UI-19, UI-19a). */
+  /* The turn is the whole of it: nothing in the hand rises, drops, or comes
+     forward. Rising out of the fan put the card over the bar above it — the
+     notice, the status line — and coming forward put it over its neighbours;
+     either way a card being chosen hid what the player was choosing between.
+     Being pointed at or picked out is said in colour alone, on the strip of
+     the card that shows. */
   transform: rotate(var(--angle, 0deg));
   transition: box-shadow 120ms ease, filter 120ms ease, transform 120ms ease;
 }
@@ -615,36 +619,26 @@ body.table-page {
 /* UI-9: legal and illegal must look different, and an illegal card cannot be
    submitted — the click handler is simply not attached to one. */
 #hand .card.legal { cursor: grab; box-shadow: 0 0 0 2px var(--accent), 0 2px 8px rgba(0, 0, 0, 0.5); }
-/* The card under the pointer is already the only one showing whole, from the
-   stacking rule below; this is what says it is being pointed at rather than
-   merely in front — the shadow a card off the felt would cast, without the
-   card leaving it. */
+/* Pointed at. All that is being marked, for every card but the last, is the
+   narrow strip of it that shows — the rank and suit down its left edge, which
+   is the part a player aims at — so the ring has to thicken enough to read
+   there, and the card brightens behind it. */
 #hand .card.legal:hover {
-  box-shadow: 0 0 0 2px var(--accent), 0 12px 24px rgba(0, 0, 0, 0.65);
-  filter: brightness(1.08);
+  box-shadow: 0 0 0 4px var(--accent), 0 2px 10px rgba(0, 0, 0, 0.55);
+  filter: brightness(1.12);
 }
 #hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
 
-/* A card being pointed at or picked out comes clear of the ones over it,
-   which otherwise cover all but its corner. It comes forward, not upwards:
-   the whole card shows because nothing is drawn over it, which is what makes
-   it readable, and the fan stays inside its own box.
-
-   Both layers keep the fan's own order inside them, so cards that come clear
-   still lie left to right as they do in the hand. That is what makes a pair
-   of identical cards workable: the hand holds two of every card (FR-17), and
-   with only the corner index of each showing, the one under the pointer and
-   the one already chosen have to be the ones you can see whole. */
-#hand .card:hover, #hand .card.chosen { z-index: calc(40 + var(--stack, 0)); }
-
 #hand.choosing .card { cursor: pointer; }
-/* Picked out for the pass. The ring carries this on its own now that the card
-   does not rise, so it is drawn to be read at a glance against a fan of
-   identical corners: the hand holds two of every card (FR-17), and the twin
-   of a chosen card is right beside it. */
+/* Picked out for the pass. The card does not move and does not change places,
+   so the colour is the whole of the mark, and it has to be legible on a strip
+   a few millimetres wide: a thick gold ring, a glow around it, and the card
+   itself warmed behind both. The hand holds two of every card (FR-17), so the
+   twin of a chosen card may be lying right beside it; what distinguishes them
+   is which strip is gold, and the tray above shows what is in it either way. */
 #hand .card.chosen {
-  box-shadow: 0 0 0 3px var(--ns), 0 0 16px 2px rgba(255, 212, 121, 0.45);
-  filter: brightness(1.12);
+  box-shadow: 0 0 0 4px var(--ns), 0 0 18px 4px rgba(255, 212, 121, 0.55);
+  filter: brightness(1.1) saturate(1.15);
 }
 #hand .card.lifted { opacity: 0.4; }
 
