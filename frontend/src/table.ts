@@ -72,18 +72,34 @@ function renderContract(state: GameState): void {
 }
 
 const DEAL_SOURCE = {
-  top: ["50%", "7%"],
-  left: ["5%", "46%"],
-  right: ["95%", "46%"],
-  bottom: ["50%", "95%"],
+  top: [50, 7],
+  left: [5, 46],
+  right: [95, 46],
+  bottom: [50, 95],
 } as const;
 
 const DEAL_TARGET = {
-  top: ["50%", "23%"],
-  left: ["16%", "46%"],
-  right: ["84%", "46%"],
-  bottom: ["50%", "79%"],
+  top: [50, 23],
+  left: [16, 46],
+  right: [84, 46],
+  bottom: [50, 79],
 } as const;
+
+const STAGE_WIDTH = 1420;
+const STAGE_HEIGHT = 1000;
+
+/** A bowed quadratic path, rather than two straight runs through the centre. */
+function dealArc(from: readonly [number, number], to: readonly [number, number]): string {
+  const start = [from[0] * STAGE_WIDTH / 100, from[1] * STAGE_HEIGHT / 100] as const;
+  const end = [to[0] * STAGE_WIDTH / 100, to[1] * STAGE_HEIGHT / 100] as const;
+  const dx = end[0] - start[0];
+  const dy = end[1] - start[1];
+  const distance = Math.hypot(dx, dy);
+  const bow = Math.min(180, distance * 0.22);
+  const controlX = (start[0] + end[0]) / 2 - (dy / distance) * bow;
+  const controlY = (start[1] + end[1]) / 2 + (dx / distance) * bow;
+  return `path("M ${start[0]} ${start[1]} Q ${controlX} ${controlY} ${end[0]} ${end[1]}")`;
+}
 
 /** Send one visible three-card packet from the dealer to its recipient. */
 function renderDealFlight(state: GameState, packetIndex: number | null): void {
@@ -115,10 +131,7 @@ function renderDealFlight(state: GameState, packetIndex: number | null): void {
   const packet = document.createElement("div");
   packet.className = "deal-packet";
   packet.style.animationDuration = `${DEAL_PACKET_MS}ms`;
-  packet.style.setProperty("--deal-from-x", DEAL_SOURCE[from][0]);
-  packet.style.setProperty("--deal-from-y", DEAL_SOURCE[from][1]);
-  packet.style.setProperty("--deal-to-x", DEAL_TARGET[to][0]);
-  packet.style.setProperty("--deal-to-y", DEAL_TARGET[to][1]);
+  packet.style.offsetPath = dealArc(DEAL_SOURCE[from], DEAL_TARGET[to]);
   for (let cardIndex = 0; cardIndex < 3; cardIndex += 1) {
     const card = document.createElement("img");
     card.className = "deal-card";

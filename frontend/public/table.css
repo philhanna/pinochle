@@ -99,8 +99,12 @@ body.table-page {
 
 .deal-packet {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 62px;
   height: 78px;
+  offset-anchor: center;
+  offset-rotate: 0deg;
   animation-name: deal-packet-flight;
   animation-timing-function: ease-in-out;
   animation-fill-mode: forwards;
@@ -118,22 +122,18 @@ body.table-page {
 
 @keyframes deal-packet-flight {
   0% {
-    left: var(--deal-from-x);
-    top: var(--deal-from-y);
+    offset-distance: 0%;
     opacity: 0.9;
-    transform: translate(-50%, -50%) scale(0.82) rotate(-5deg);
+    transform: scale(0.82) rotate(-5deg);
   }
-  45% {
-    left: 50%;
-    top: 44%;
+  50% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1) rotate(3deg);
+    transform: scale(1) rotate(3deg);
   }
   100% {
-    left: var(--deal-to-x);
-    top: var(--deal-to-y);
+    offset-distance: 100%;
     opacity: 0.92;
-    transform: translate(-50%, -50%) scale(0.86) rotate(0deg);
+    transform: scale(0.86) rotate(0deg);
   }
 }
 
