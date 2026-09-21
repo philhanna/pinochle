@@ -3,6 +3,32 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.0.0-RC1] - 2026-09-21
+
+First release candidate.
+
+### Added
+- The meld is laid out face-up on the table rather than only named in a list.
+  `meld_exposed` now carries the physical cards — both the whole face-up
+  layout and, per combination, the cards arranged together for it — so the
+  front end can group them as they would sit on a real table (FR-44, FR-45,
+  UI-13). A card that supports several combinations at once, such as the queen
+  of spades in both queens around and a pinochle, is laid down only once;
+  duplicates are kept only where a double combination genuinely needs both
+  physical copies
+- A hold on the exposed meld (`MELD_EXPOSED`), so the table stops to be read
+  before the opening lead. It is taken only when the table has a human seat,
+  and releasing it is what begins play; an all-computer table runs straight
+  through as before. `begin_play` refuses while the hold stands, and a toss-in
+  clears it
+
+### Changed
+- The dealt packets fly along a bowed path from dealer to recipient rather
+  than as two straight runs through the centre of the table, using a
+  quadratic `offset-path` whose bow grows with the distance
+- The deal runs at 150ms a packet — about two and a half seconds for the
+  whole deal, down from five
+
 ## [0.5.0] - 2026-09-21
 
 ### Added
@@ -385,7 +411,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/0.5.0..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.0.0-RC1..HEAD
+[1.0.0-RC1]: https://github.com/philhanna/pinochle/compare/0.5.0..1.0.0-RC1
 [0.5.0]: https://github.com/philhanna/pinochle/compare/0.4.0..0.5.0
 [0.4.0]: https://github.com/philhanna/pinochle/compare/0.3.0..0.4.0
 [0.3.0]: https://github.com/philhanna/pinochle/compare/0.2.0..0.3.0
