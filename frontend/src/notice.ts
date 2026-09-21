@@ -84,8 +84,17 @@ function held(state: GameState, hold: Hold): Notice {
       return say(dealerText(state), state.dealerPlayerId);
     case "round_abandoned":
       return say("Nobody took the contract — the deal moves on.", state.roundNumber);
-    case "round_scored":
-      return say(summaryHeadline(state), state.roundSummary?.roundNumber ?? null);
+    case "round_scored": {
+      // The hold is on the turn header of the frame that gathers the last
+      // trick, which arrives before ``round_scored`` itself: for that one
+      // frame there is no summary to headline. A band holding nothing but a
+      // Continue button is worse than a sentence replaced a moment later.
+      const headline = summaryHeadline(state);
+      return say(
+        headline === "" ? "The round is over." : headline,
+        state.roundSummary?.roundNumber ?? null,
+      );
+    }
     default:
       return say("The game is paused.", hold.reason);
   }
@@ -98,6 +107,15 @@ function held(state: GameState, hold: Hold): Notice {
  * stays up until the next stage concludes (UI-19). The contract and trump are
  * on the scoreboard for the whole round anyway (UI-14), so once a trick has
  * been taken the notice moves on to that rather than repeating them.
+ *
+ * The announcements from before the cards were led have a shorter life than
+ * that: they end when the first card of the round is played, whether or not
+ * anything has replaced them. Who deals and what the contract is are settled
+ * facts by then, both of them already on the table -- the dealer on the seat's
+ * own label, the contract and trump on the scoreboard for the whole round
+ * (UI-14) -- so a band still announcing them is saying something the table has
+ * moved past. The notice says nothing at all until the first trick is taken,
+ * which is the next thing to actually conclude.
  */
 function standing(state: GameState): Notice | null {
   const say = (text: string, key: string): Notice =>
@@ -115,6 +133,9 @@ function standing(state: GameState): Notice | null {
   if (state.lastTrick !== null) {
     const who = nameOf(state, state.lastTrick.winnerPlayerId);
     return say(`${who} took the last trick.`, `took:${tricksPlayed(state)}`);
+  }
+  if (state.trick.length > 0) {
+    return null;
   }
   if (state.contract !== null) {
     return say(contractText(state), `contract:${state.contract.amount}:${state.trump ?? ""}`);

@@ -173,3 +173,49 @@ test("the game's result outranks any hold still standing (FR-71)", () => {
   assert.equal(shown.kind, "final");
   assert.equal(shown.text, "Us wins, 2010 to 1240.");
 });
+
+test("the deal's announcement ends when the first card is led (UI-19)", () => {
+  const before = [
+    frame("dealer_selected", { dealer_player_id: "p-east" }),
+    frame("bid_placed", { player_id: "p-east", amount: 260, current_high: 260 }),
+    frame("trump_named", { suit: "HEARTS" }),
+  ].reduce(applyEvent, seated());
+  assert.equal(before.trick.length, 0);
+  assert.equal(notice(before).text, "East plays 260 in ♥ hearts.");
+
+  const led = applyEvent(before, frame("card_played", { player_id: "p-east", card: "AH" }));
+  assert.equal(
+    notice(led), null,
+    "who deals and what the contract is are both on the table by then",
+  );
+});
+
+test("a trick taken is still announced once play is under way", () => {
+  // Only the announcements from before the cards were led are retired: the
+  // trick is the next thing to conclude, and UI-19 wants it said.
+  const state = [
+    frame("dealer_selected", { dealer_player_id: "p-east" }),
+    frame("card_played", { player_id: "p-east", card: "AH" }),
+    frame("trick_completed", {
+      winner_player_id: "p-west", cards: [{ player_id: "p-east", card: "AH" }],
+    }),
+    frame("trick_cleared", { winner_player_id: "p-west", next_leader_player_id: "p-west" }),
+  ].reduce(applyEvent, seated());
+  assert.equal(notice(state).text, "West took the last trick.");
+});
+
+test("the round's hold says something before the summary arrives (UI-19a)", () => {
+  // The hold is on the header of the frame that gathers the last trick, one
+  // frame ahead of round_scored: a band with nothing in it but the button is
+  // not what the player is being held for.
+  const hold = { id: 9, reason: "round_scored", ackable: true };
+  const state = applyEvent(seated(), frame(
+    "trick_cleared",
+    { winner_player_id: "p-west", next_leader_player_id: "p-west" },
+    holding(hold, "SCORING"),
+  ));
+
+  const shown = notice(state);
+  assert.equal(shown.text, "The round is over.");
+  assert.equal(shown.release, 9);
+});
