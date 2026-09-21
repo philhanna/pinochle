@@ -3,6 +3,58 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [0.5.0] - 2026-09-21
+
+### Added
+- The deal is now dealt rather than simply appearing: packets of three go
+  round the table clockwise from the dealer's left, and the frames that
+  arrive while it runs are held and applied once the presentation is over,
+  so the animation is never interactive and never contradicts the server
+- Each player's latest auction call sits beside their hand while the
+  auction is live — the number bid or `pass` — and comes down as soon as
+  the contract is settled
+- A plaque in the lower left naming the winner of the auction and the
+  amount, and a trump indicator in the lower right carrying the suit and
+  its symbol, both of which stand for as long as the round does (UI-14)
+- The administrator's console is served with the server's own table
+  settings already in its form — the partnership names, the seat names and
+  each seat's type. The admin token is filled in only when the URL already
+  carries the valid one; the rest are configuration, not credentials
+
+### Changed
+- The notice band moved out of the stacked bottom bar and up to the top of
+  the table, where it no longer competes with the hand for the space above
+  it (UI-19, UI-19a)
+- The other three hands are drawn as cards rather than as counters: three
+  quarters of this seat's own face size, written as a ratio of it. A fan is
+  now stated as the strip of each card that shows rather than as a fraction
+  of the card, so tripling the card does not triple the fan's reach, and the
+  same amount of edge still says how much of a hand is left (UI-5)
+- Nothing in the hand changes places any more. A card under the pointer, or
+  picked out for the pass, no longer jumps its neighbours to the top of the
+  fan nor lifts out of it; being pointed at or chosen is said in colour
+  alone — a thicker ring, a brighter face, and a gold ring with a glow for
+  a chosen card — which stays legible on the strip down each card's left
+  edge, the only part a click could ever reach (FR-17)
+- The announcements from before the cards are led now end at the first card
+  played. The dealer is on the seat's own label (UI-3) and the contract and
+  trump are on the scoreboard (UI-14), so the band says nothing at all
+  between the opening lead and the first trick taken
+
+### Fixed
+- The table could be drawn with its bottom edge below the window, putting
+  the round summary's Continue button somewhere no click could reach.
+  `#stage` now scales from its corner and takes the slack out of its layout
+  box, so the box the body centres is the size the table is actually drawn
+  at; checked from 1600x1250 down to 800x600. The harness now names an
+  off-window control as blocked rather than reading it as undrawn
+- An empty notice pill showed above the status line on a table with nothing
+  to say yet, because `#notice` outranked the user agent's own
+  `[hidden] { display: none }`
+- The round-summary hold arrives one frame ahead of the summary itself, and
+  for that frame the band held a Continue button and no headline; it now
+  says the round is over until the summary lands
+
 ## [0.4.0] - 2026-09-21
 
 ### Added
@@ -333,7 +385,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/0.4.0..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/0.5.0..HEAD
+[0.5.0]: https://github.com/philhanna/pinochle/compare/0.4.0..0.5.0
 [0.4.0]: https://github.com/philhanna/pinochle/compare/0.3.0..0.4.0
 [0.3.0]: https://github.com/philhanna/pinochle/compare/0.2.0..0.3.0
 [0.2.0]: https://github.com/philhanna/pinochle/compare/0.1.0..0.2.0
