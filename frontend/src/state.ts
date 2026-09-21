@@ -73,6 +73,19 @@ export interface BidRecord {
   amount: number | null;
 }
 
+/**
+ * The pause the game is currently in, if any (RT-13).
+ *
+ * `id` is null for a hold the client derived from the older `paused` field
+ * rather than being told about outright: there is nothing to name in a release
+ * because such a hold is always timed, and a timed hold has no release.
+ */
+export interface Hold {
+  id: number | null;
+  reason: string;
+  ackable: boolean;
+}
+
 /** A card drawn from the dealer-selection spread (FR-11a). */
 export interface Draw {
   playerId: string;
@@ -183,6 +196,8 @@ export interface GameState {
   phase: string;
   currentPlayerId: string | null;
   paused: TurnHeader["paused"];
+  /** The pause the table is in, named (RT-13); null when play is running. */
+  hold: Hold | null;
 
   roundSummary: RoundSummary | null;
   gameOver: { winningTeamId: string; nsScore: number; ewScore: number } | null;
@@ -231,6 +246,7 @@ export function initialState(): GameState {
     phase: "SETUP",
     currentPlayerId: null,
     paused: null,
+    hold: null,
     roundSummary: null,
     gameOver: null,
     lastSeq: -1,
@@ -280,12 +296,34 @@ function applyPayload(state: GameState, frame: Frame): GameState {
 }
 
 /** Read phase, turn and pause from the header every frame carries. */
-function fromHeader(turn: TurnHeader): Pick<GameState, "phase" | "currentPlayerId" | "paused"> {
+function fromHeader(
+  turn: TurnHeader,
+): Pick<GameState, "phase" | "currentPlayerId" | "paused" | "hold"> {
   return {
     phase: turn.phase,
     currentPlayerId: turn.current_player_id,
     paused: turn.paused,
+    hold: holdFrom(turn),
   };
+}
+
+/**
+ * The hold the header describes, from whichever field carries it.
+ *
+ * The server names its holds (RT-13), but until it does it says only that the
+ * table is paused and why, which is the same fact with less of it: such a
+ * pause is always timed, so it is never ackable and has nothing to name. That
+ * makes the fallback exact rather than a guess, and it means the notice area
+ * works against a server that has not been taught about holds yet.
+ */
+function holdFrom(turn: TurnHeader): Hold | null {
+  const sent = turn.hold;
+  if (sent !== undefined && sent !== null) {
+    return { id: sent.id, reason: sent.reason, ackable: sent.ackable };
+  }
+  return turn.paused === null
+    ? null
+    : { id: null, reason: turn.paused, ackable: false };
 }
 
 /** One frame type's contribution to the state. */

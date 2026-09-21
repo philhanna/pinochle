@@ -4,12 +4,29 @@
 // carries the public turn header — the client is never left inferring whose
 // turn it is or whether the table is paused (RT-8, RT-10).
 
+/**
+ * A server-owned pause, named so the client can say what it is for (RT-13).
+ *
+ * `ackable` is the whole difference a player can see: a timed hold runs out
+ * by itself, while one awaiting release shows a control and waits for any one
+ * seat to use it (UI-19a). `id` is what that release names, so that a second
+ * click — or a second player's click — lands on a hold that has already ended
+ * and changes nothing.
+ */
+export interface HoldHeader {
+  id: number;
+  reason: string;
+  ackable: boolean;
+}
+
 /** The public turn header attached to every frame. */
 export interface TurnHeader {
   phase: string;
   current_player_id: string | null;
   /** A server-owned pause the client renders but does not time (RT-8). */
   paused: "trick_clear" | "thinking" | null;
+  /** The same pause, named (RT-13). Absent until the server sends holds. */
+  hold?: HoldHeader | null;
   round_number: number;
 }
 

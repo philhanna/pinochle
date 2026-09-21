@@ -493,6 +493,30 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   cards lie across one another, any one of them will do, and the player's
   remedy is to move what is in the way. What must hold there is that cards
   enough to draw from are reachable, not that every card is.
+- **UI-19** The interface shall present a notice area that states the outcome
+  of each stage of play as that stage concludes: who won the draw for the deal,
+  who won the auction and at what, which suit is trump, who took the trick, and
+  how the round scored. One notice shall be shown at a time, each replacing the
+  one before it. A notice is public: all four seats shall see the same words,
+  and shall see them at the same moment (RT-11).
+  The wording shall be composed by the client from the events it has already
+  received, and shall not be sent as text by the server. Every fact a notice
+  states is already published as an event, and the event is the authoritative
+  copy of it; a second copy in prose could disagree with the first.
+  There shall be no scrolling history of notices. What deserves to outlive its
+  moment is named by UI-14a and belongs on the scoreboard; the rest passes, as
+  it does at a physical table.
+- **UI-19a** A notice shown while the game is holding for a player (RT-13)
+  shall present the control that releases the hold, and shall present it within
+  the notice itself, so that what must be read and what ends the reading are
+  the same object on screen. Any seated player may use it. A notice shown
+  during a timed hold shall offer no such control: nothing a player does
+  shortens it.
+  The notice area is not the turn indicator of UI-7, which says whose turn it
+  is rather than what has just happened; nor the report of a refused action
+  (NFR-4), which concerns one player's own attempt and is shown only to them;
+  nor the stream-status indicator of RT-5b, which is a fact about a browser
+  rather than about the game.
 
 ---
 
@@ -550,6 +574,28 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   unable to be completed. The remaining players shall be told when a seat is
   lost and when it comes back, so they can wait or abandon the game
   deliberately rather than sit in front of a table that has simply stopped.
+- **RT-13** A pause shall be modelled as a *hold*: a named state the game
+  occupies, counted by the server (RT-8) and delimited by published events
+  (RT-10). A hold shall end in one of exactly two ways, fixed at the moment it
+  begins — after a stated interval, or when a player releases it. The
+  trick-clear interval of UI-15 is a hold of the first kind.
+  A hold that waits on a player shall be released by any one seated player. It
+  shall not require all four, and it shall not require the administrator: the
+  players at a table are in contact with one another outside the game, and a
+  table that cannot go on until four people have each clicked is slower than
+  the conversation it exists to keep pace with. Requiring the administrator
+  would make a game depend on someone who need not be watching it at all.
+  Releasing a hold shall be idempotent and shall name the hold it releases. A
+  release naming a hold that has already ended shall succeed and change
+  nothing, rather than being reported to the player as a failure — two players
+  may well click at the same moment, and neither of them has done anything
+  wrong.
+  A hold that waits on a player shall wait indefinitely; it shall not also be
+  given an interval after which it ends by itself. Such an interval would undo
+  the control it was attached to, resuming the game while the players are still
+  talking about what the notice says. A table at which nobody remains to
+  release a hold is the case RT-12 already describes, and the administrator
+  ending the game is already its remedy.
 
 ---
 
