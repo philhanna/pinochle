@@ -52,6 +52,7 @@ def test_setup_phase_has_no_current_player():
         "phase": "SETUP",
         "current_player_id": None,
         "paused": None,
+        "hold": None,
         "round_number": 0,
     }
 

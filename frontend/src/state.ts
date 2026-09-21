@@ -659,6 +659,14 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
     prompt: null,
   }),
 
+  // The hold's own frames (RT-10). They carry nothing the turn header does
+  // not already carry, and the header is on every frame including these two,
+  // so folding them changes nothing — `fromHeader` has done the work by the
+  // time a handler would run. They are named because FRAME_TYPES is what the
+  // client subscribes to, and an unnamed frame is one never received.
+  hold_begun: (state) => state,
+  hold_ended: (state) => state,
+
   // RT-12's transport frames. Handling them — telling the table a seat is
   // gone, and offering to abandon — is deliberately out of scope for this
   // release (docs/impl.md §6), so they are named here and change nothing,

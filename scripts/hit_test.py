@@ -46,7 +46,7 @@ SIZES = ("1600x1100", "1200x900", "900x700")
 # stopped rendering is a failure rather than a pass with nothing checked.
 REQUIRED = (
     "#panel button", "#hand .card", "#hand .card.chosen", ".trick",
-    "#spread .card.drawable",
+    "#spread .card.drawable", ".notice-continue",
 )
 
 

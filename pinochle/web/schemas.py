@@ -47,6 +47,17 @@ class AbandonRequest(BaseModel):
     reason: str
 
 
+class AcknowledgeRequest(BaseModel):
+    """Body of ``POST /api/games/{id}/acknowledge``.
+
+    The hold is named rather than left implicit so that a click which
+    arrived a moment late releases nothing instead of releasing whatever
+    hold came next (RT-13).
+    """
+
+    hold_id: int
+
+
 class DrawRequest(BaseModel):
     """Body of ``POST /api/games/{id}/draw``."""
 

@@ -44,6 +44,18 @@ export async function tossIn(seat: Seat): Promise<void> {
   await send(seat, "toss-in");
 }
 
+/**
+ * Release the hold the table is stopped on, from this seat (RT-13, UI-19a).
+ *
+ * `holdId` names which hold, so a click that arrived a moment late releases
+ * nothing rather than releasing whatever hold came next. The server treats a
+ * hold that has already ended as success, so nothing here has to guard
+ * against another seat having got there first.
+ */
+export async function acknowledge(seat: Seat, holdId: number): Promise<void> {
+  await send(seat, "acknowledge", { hold_id: holdId });
+}
+
 /** Play one card (FR-57). */
 export async function play(seat: Seat, card: CardCode): Promise<void> {
   await send(seat, "play", { card });

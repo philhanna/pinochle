@@ -117,6 +117,48 @@ def test_an_all_computer_game_runs_to_completion_at_zero_delay():
     assert game.round_number > 0
 
 
+def test_an_all_computer_table_is_never_held():
+    """RT-13: a hold nobody could ever release would stop the game, not pause it.
+
+    The round summary holds the table so that the people at it can read the
+    arithmetic before the next deal lands on top of it. Where there are no
+    people, there is nothing to wait for and nobody who could ever end the
+    wait -- which is why the all-computer game above can finish at all.
+    """
+    service, _, state, scheduler, game_id = make_table(
+        ALL_COMPUTER_PLAYERS, delay_seconds=0, seed=7,
+    )
+    service.start_game(game_id)
+
+    for _ in range(20000):
+        if state.load(game_id).round_number > 1:
+            break
+        scheduler.advance(0)
+    else:
+        raise AssertionError("the table never reached a second round")
+
+    assert state.load(game_id).current_hold is None
+
+
+def test_a_table_with_one_human_is_held_at_the_summary():
+    """RT-13: one human seat is enough for the summary to wait to be read."""
+    service, _, state, scheduler, game_id = make_table(
+        MIXED_PLAYERS, delay_seconds=0, seed=7,
+    )
+    service.start_game(game_id)
+
+    # The computer seats drive play as far as they can; the two human seats
+    # never act, so this stops wherever it first needs one of them.
+    for _ in range(2000):
+        scheduler.advance(0)
+
+    game = state.load(game_id)
+    hold = game.current_hold
+    if hold is not None:
+        assert hold.ackable, "a hold at a table with people in it waits for them"
+        assert hold.seconds is None
+
+
 def test_computer_never_tosses_in():
     """FR-75/75a/75b govern only bidding and passing; play is always seen through."""
     notifier = _RecordingNotifier()

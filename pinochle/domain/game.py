@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.suit import Suit
 from pinochle.domain.errors import IllegalActionError, SetupError, WrongPhaseError
+from pinochle.domain.hold import Hold, HoldReason
 from pinochle.domain.meld import MeldUnit
 from pinochle.domain.player import Player
 from pinochle.domain.team import Team
@@ -428,12 +429,60 @@ class GameOver:
     ew_score: int
 
 
+@dataclass
+class HoldBegun:
+    """Emitted when the game stops on a hold (RT-13).
+
+    RT-10 wants a pause delimited by events rather than inferred from a
+    clock, and this is the opening one.  The hold is also on the turn header
+    of every frame, which is what a client reconnecting into the middle of a
+    pause reads (RT-5a); this event is what tells a client already watching
+    that the pause has begun.
+
+    Attributes:
+        game_id: The game that has stopped.
+        hold_id: Identifies this hold, and is what a release must name.
+        reason: What the table is being held for, which the client turns into
+            words of its own (UI-19).
+        seconds: The interval, for a hold the server ends by the clock;
+            ``None`` for one awaiting a player.
+        ackable: Whether any seat may release it (RT-13).
+    """
+
+    game_id: str
+    hold_id: int
+    reason: HoldReason
+    seconds: float | None
+    ackable: bool
+
+
+@dataclass
+class HoldEnded:
+    """Emitted when a hold is released, by the clock or by a player (RT-13).
+
+    The closing half of RT-10's delimiting pair.  Emitted once, by whichever
+    of the two ended the hold: a release naming a hold that has already ended
+    changes nothing and emits nothing, so two players clicking at the same
+    moment produce one of these and not two.
+
+    Attributes:
+        game_id: The game that is moving again.
+        hold_id: The hold that ended.
+        reason: What it had been held for.
+    """
+
+    game_id: str
+    hold_id: int
+    reason: HoldReason
+
+
 GameEvent = (
     GameConfigured | DealerSelectionStarted | DrawMade | DrawTied
     | DealerSelected | RoundStarted | CardsDealt | BidPlaced | ContractOffered
     | RoundAbandoned | TrumpNamed | CardsPassed | MeldExposed | PlayBegun
     | ContractTossedIn | SeatThinking | CardPlayed | TrickCompleted
     | TrickCleared | TurnPrompt | RoundScored | GameOver
+    | HoldBegun | HoldEnded
 )
 
 
@@ -476,6 +525,8 @@ class Game:
         self._dealer_id: str | None = None
         self._round_number = 0
         self._current_round: Round | None = None
+        self._hold: Hold | None = None
+        self._next_hold_id = 0
         self._events: list[GameEvent] = []
 
     # ------------------------------------------------------------------
@@ -545,6 +596,59 @@ class Game:
     def set_finished(self) -> None:
         """Mark the game as finished."""
         self.phase = GamePhase.FINISHED
+
+    # ------------------------------------------------------------------
+    # Holds
+    # ------------------------------------------------------------------
+
+    def begin_hold(
+        self,
+        reason: HoldReason,
+        *,
+        seconds: float | None = None,
+        ackable: bool = False,
+    ) -> Hold:
+        """Stop the game on a hold, and announce that it has stopped (RT-13).
+
+        Ids count up per game and are never reused, which is what lets a
+        release name the hold it means rather than merely asserting that
+        *some* hold should end.  Without that, a click that arrived a moment
+        late would release the hold after the one it was aimed at.
+        """
+        self._next_hold_id += 1
+        hold = Hold(
+            id=self._next_hold_id, reason=reason, seconds=seconds, ackable=ackable)
+        self._hold = hold
+        self.emit(HoldBegun(
+            game_id=self.id,
+            hold_id=hold.id,
+            reason=hold.reason,
+            seconds=hold.seconds,
+            ackable=hold.ackable,
+        ))
+        return hold
+
+    def end_hold(self, hold_id: int) -> Hold | None:
+        """Release the hold ``hold_id`` names, or return ``None`` if it has gone.
+
+        Idempotent by RT-13: naming a hold that has already ended — because
+        another seat released it first, or because the same seat clicked
+        twice — is a no-op rather than an error, and emits nothing.  The
+        caller distinguishes the two by the return value, not by an
+        exception, because only one of them is worth telling a player about
+        and it is not this one.
+        """
+        hold = self._hold
+        if hold is None or hold.id != hold_id:
+            return None
+        self._hold = None
+        self.emit(HoldEnded(game_id=self.id, hold_id=hold.id, reason=hold.reason))
+        return hold
+
+    @property
+    def current_hold(self) -> Hold | None:
+        """Return the hold the game is stopped on, if it is stopped."""
+        return self._hold
 
     # ------------------------------------------------------------------
     # Event log

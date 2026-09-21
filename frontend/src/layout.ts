@@ -147,9 +147,17 @@ export function isMyTurn(state: GameState): boolean {
   return state.me !== null && state.currentPlayerId === state.me.playerId;
 }
 
-/** Whether the table is waiting on a pause the server owns (RT-9). */
+/**
+ * Whether the table is waiting on a pause the server owns (RT-9, RT-13).
+ *
+ * Every pause is a hold, including the two the older `paused` field reports:
+ * the reducer derives a hold from that field when the server has not named
+ * one, so this single check covers both. A pause is a state the game occupies
+ * rather than a presentation effect, which is why nothing may be played into
+ * one.
+ */
 export function isPaused(state: GameState): boolean {
-  return state.paused !== null;
+  return state.hold !== null;
 }
 
 /**

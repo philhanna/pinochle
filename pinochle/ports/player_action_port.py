@@ -120,6 +120,29 @@ class PlayerActionPort(ABC):
         """
 
     @abstractmethod
+    def acknowledge(self, game_id: str, player_id: str, hold_id: int) -> None:
+        """Release a hold the table is stopped on, so that play goes on (RT-13).
+
+        Any one seated player may call this; it is not restricted to whoever
+        the hold concerns, and there is no separate administrative version of
+        it.  The players at a table are in contact with one another outside
+        the game, and a table that cannot go on until all four have clicked
+        is slower than the conversation it is meant to keep pace with.
+
+        Idempotent, and deliberately so: ``hold_id`` names the hold to
+        release, and naming one that has already ended — because another seat
+        got there first, or because this one clicked twice — succeeds and
+        changes nothing.  Two players clicking at the same moment is the
+        expected case, and neither of them has done anything wrong.
+
+        Args:
+            game_id: Unique identifier of the game session.
+            player_id: The seat releasing the hold, which must be one of the
+                four at the table.
+            hold_id: The hold being released, as the turn header gave it.
+        """
+
+    @abstractmethod
     def toss_in(self, game_id: str, player_id: str) -> None:
         """Concede the contract instead of playing it out.
 

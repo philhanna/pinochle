@@ -9,6 +9,7 @@ import { faceUrl } from "./cards.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
 import { isPaused, placement, playHasBegun, trickCards } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
+import { notice } from "./notice.js";
 import { isMovingCard, renderSpread } from "./spread.js";
 import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
@@ -20,6 +21,7 @@ import {
 /** Everything the table can ask of the player. */
 export interface TableCallbacks extends PanelCallbacks {
   onDraw: (position: number) => void;
+  onAcknowledge: (holdId: number) => void;
 }
 
 /** Whether the last completed trick is being shown (UI-14b). */
@@ -34,6 +36,7 @@ export function renderTable(state: GameState, callbacks: TableCallbacks): void {
   renderSpreadInto(state, callbacks);
   renderCentre(state, callbacks);
   renderScoreboard(state);
+  renderNotice(state, callbacks);
   renderStatus(state);
   renderPanelInto(state, callbacks);
 
@@ -439,6 +442,55 @@ function heading(label: string): HTMLElement {
   element.textContent = label;
   return element;
 }
+
+/**
+ * What the table has just been told, and the control that moves it on.
+ *
+ * The words come from `notice`, which is pure; this only puts them on screen
+ * and hangs a button off them when the game is being held (UI-19, UI-19a).
+ * Any seat may use that button, so nothing here asks whose turn it is.
+ *
+ * Rebuilt only when the notice actually changes. Every frame carries the turn
+ * header and so produces a notice, but most produce the same one, and
+ * replacing the button under a pointer that is on its way to it is a good way
+ * to lose the click.
+ */
+function renderNotice(state: GameState, callbacks: TableCallbacks): void {
+  const element = byId("notice");
+  if (element === null) {
+    return;
+  }
+  const shown = notice(state);
+  if (shown === null) {
+    renderedNotice = null;
+    element.replaceChildren();
+    element.hidden = true;
+    return;
+  }
+
+  const signature = `${shown.key}|${shown.text}|${shown.release ?? ""}`;
+  element.className = shown.kind;
+  element.hidden = false;
+  if (signature === renderedNotice) {
+    return;
+  }
+  renderedNotice = signature;
+
+  const children: HTMLElement[] = [text("notice-line", shown.text)];
+  if (shown.release !== null) {
+    const release = shown.release;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "notice-continue";
+    button.textContent = "Continue";
+    button.addEventListener("click", () => callbacks.onAcknowledge(release));
+    children.push(button);
+  }
+  element.replaceChildren(...children);
+}
+
+/** What the notice area is currently showing, so a redraw leaves it alone. */
+let renderedNotice: string | null = null;
 
 /** The status line, and the button that shows the last trick (UI-7, UI-14b). */
 function renderStatus(state: GameState): void {

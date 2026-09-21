@@ -54,9 +54,36 @@ const CONTROLS = [
   { selector: "#spread .card.drawable", enough: 4 },
   { selector: ".scoreboard-toggle" },
   { selector: ".last-trick-toggle" },
+  { selector: ".notice-continue" },
   { selector: "#hand .card" },
   { selector: ".trick", when: ["PLAYING"] },
 ];
+
+/**
+ * A frame that stops the table on a hold awaiting release (RT-13).
+ *
+ * Appended to the replay rather than found in it. The fixture is a recording
+ * of an all-computer game, and such a table is never held — there is nobody
+ * at it who could ever release one — so the Continue button of UI-19a can
+ * never appear in the recording however long it runs. It is on the path of
+ * every round of a real game, which is exactly the kind of control UI-18 is
+ * about, so the harness makes the one state the recording cannot hold.
+ */
+function heldFrame(frames) {
+  const last = frames[frames.length - 1];
+  return {
+    seq: last.seq + 1,
+    type: "hold_begun",
+    turn: {
+      phase: "SCORING",
+      current_player_id: null,
+      paused: null,
+      hold: { id: 1, reason: "round_scored", ackable: true },
+      round_number: last.turn.round_number,
+    },
+    payload: { hold_id: 1, reason: "round_scored", seconds: null, ackable: true },
+  };
+}
 
 try {
   const [indexHtml, frames] = await Promise.all([
@@ -76,6 +103,7 @@ try {
   const callbacks = {
     onDraw: ignore, onPlay: ignore, onBid: ignore, onContract: ignore,
     onTrump: ignore, onPass: ignore, onBeginPlay: ignore, onTossIn: ignore,
+    onAcknowledge: ignore,
     // As main.ts does: choosing a card redraws the hand that holds it.
     onSelectionChange: () => { renderTable(state, callbacks); fitStage(); },
   };
@@ -85,6 +113,8 @@ try {
   const checked = {};
   let state = initialState();
   let passChecked = false;
+
+  frames.push(heldFrame(frames));
 
   frames.forEach((frame, index) => {
     state = applyEvent(state, frame);

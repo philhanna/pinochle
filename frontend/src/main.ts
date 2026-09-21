@@ -115,6 +115,7 @@ function buildCallbacks(seat: Seat): TableCallbacks {
       clearSelection();
       attempt(() => actions.passCards(seat, cards));
     },
+    onAcknowledge: (holdId) => attempt(() => actions.acknowledge(seat, holdId)),
     onBeginPlay: () => attempt(() => actions.beginPlay(seat)),
     onTossIn: () => attempt(() => actions.tossIn(seat)),
     onSelectionChange: () => render(),

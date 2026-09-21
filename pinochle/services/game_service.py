@@ -35,7 +35,8 @@ from pinochle.domain.game import (
     TrumpNamed,
     TurnPrompt,
 )
-from pinochle.domain.player import Player
+from pinochle.domain.hold import HoldReason
+from pinochle.domain.player import Player, PlayerType
 from pinochle.domain.scoring import (
     LAST_TRICK_BONUS,
     WINNING_SCORE,
@@ -292,8 +293,52 @@ class GameService(AdminPort, PlayerActionPort):
             ))
             return
 
+        # The next deal waits on a seat rather than on a clock (RT-13). The
+        # summary has arithmetic in it that players read and argue about, and
+        # dealing over the top of that is the thing the hold exists to stop.
+        # Any one of them moves the table on; a finished game needs no hold,
+        # because there is no next deal to hold back.
+        if self._has_human_seat(game):
+            game.begin_hold(HoldReason.ROUND_SCORED, ackable=True)
+        else:
+            self._deal_next_round(game)
+
+    @staticmethod
+    def _has_human_seat(game: Game) -> bool:
+        """Whether anybody at this table would read a notice (RT-13).
+
+        A hold that waits on a player waits indefinitely, and nothing
+        releases it on a clock.  At a table of four computers there is no
+        such player and never will be, so a hold there is not a pause but a
+        stop: the game would sit on its first round summary forever.  The
+        condition is the seat's type, not whether its player is connected —
+        a human seat that has gone quiet is RT-12's case, where play blocks
+        until they return, and that is the behaviour wanted here too.
+        """
+        return any(
+            player.type == PlayerType.HUMAN for player in game.players.values())
+
+    def _deal_next_round(self, game: Game) -> None:
+        """Move the deal on one seat and deal again (FR-16)."""
         game.rotate_dealer()
         self._start_round(game)
+
+    def acknowledge(self, game_id: str, player_id: str, hold_id: int) -> None:
+        """Release a hold from any seat, and let what it was holding back happen."""
+        def _acknowledge(g: Game) -> None:
+            """Release the named hold, then do what it was standing in front of."""
+            if player_id not in g.players:
+                raise IllegalActionError(f"Unknown player: {player_id}")
+            released = g.end_hold(hold_id)
+            if released is None:
+                # Already gone: another seat released it first, or this one
+                # clicked twice. RT-13 makes that a no-op, not an error.
+                return
+            if released.reason is HoldReason.ROUND_SCORED:
+                self._deal_next_round(g)
+
+        self._load_save(game_id, _acknowledge)
+
 
     def _trick_points(
         self, game: Game, round_state: Round

@@ -19,6 +19,7 @@ from pinochle.domain.game import (
     GameConfigured,
     GameEvent,
     GameOver,
+    HoldEnded,
     PlayBegun,
     RoundScored,
     RoundStarted,
@@ -193,13 +194,67 @@ def test_round_started_precedes_the_hands(table):
     assert started.dealer_player_id == state.load(started.game_id).dealer_id
 
 
-def test_round_number_counts_up(table):
-    """The second round dealt is round two."""
+def test_the_table_holds_on_the_round_summary(table):
+    """RT-13: the next deal waits on a seat, not on a clock."""
     service, state, notifier = table
     game_id, _ = expose_meld(service, state)
     service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
     play_out(service, state, game_id)
+
+    hold = state.load(game_id).current_hold
+    assert hold is not None and hold.ackable
+    assert hold.seconds is None, "RT-13 gives a hold awaiting a player no interval"
+    assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1]
+
+
+def test_round_number_counts_up(table):
+    """The second round dealt is round two, once a seat moves the table on."""
+    service, state, notifier = table
+    game_id, _ = expose_meld(service, state)
+    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    play_out(service, state, game_id)
+    service.acknowledge(game_id, "N", state.load(game_id).current_hold.id)
     assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1, 2]
+
+
+def test_any_seat_may_move_the_table_on(table):
+    """RT-13: not only the seat the summary is about, and not the administrator."""
+    service, state, _ = table
+    game_id, _ = expose_meld(service, state)
+    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    play_out(service, state, game_id)
+
+    # "W" is picked blind: whoever won the auction, some other seat releases.
+    service.acknowledge(game_id, "W", state.load(game_id).current_hold.id)
+    assert state.load(game_id).current_hold is None
+
+
+def test_releasing_a_hold_twice_changes_nothing(table):
+    """RT-13: a second click, or a second player's, is expected and harmless."""
+    service, state, notifier = table
+    game_id, _ = expose_meld(service, state)
+    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    play_out(service, state, game_id)
+
+    hold_id = state.load(game_id).current_hold.id
+    service.acknowledge(game_id, "N", hold_id)
+    service.acknowledge(game_id, "S", hold_id)
+
+    assert len(notifier.of_type(HoldEnded)) == 1
+    assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1, 2]
+
+
+def test_a_stale_hold_id_releases_nothing(table):
+    """A click that arrived late must not release whatever hold came next."""
+    service, state, notifier = table
+    game_id, _ = expose_meld(service, state)
+    service.begin_play(game_id, state.load(game_id).current_round.bid_winner)
+    play_out(service, state, game_id)
+
+    service.acknowledge(game_id, "N", state.load(game_id).current_hold.id + 99)
+    assert state.load(game_id).current_hold is not None
+    assert notifier.of_type(HoldEnded) == []
+
 
 
 def test_a_lone_bidders_offer_is_public(table):

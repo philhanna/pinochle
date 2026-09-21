@@ -4,7 +4,15 @@ import json
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
-from pinochle.domain.game import CardPlayed, DealerSelected, DrawMade, TrumpNamed
+from pinochle.domain.game import (
+    CardPlayed,
+    DealerSelected,
+    DrawMade,
+    HoldBegun,
+    HoldEnded,
+    TrumpNamed,
+)
+from pinochle.domain.hold import HoldReason
 from pinochle.domain.trick import TrickPlay
 from pinochle.domain.game import TrickCompleted
 from pinochle.web.event_encoder import encode_event
@@ -101,3 +109,40 @@ def _payload_of(frame: str) -> dict:
     """Pull the JSON payload dict out of an encoded frame, for assertions."""
     data_line = next(line for line in frame.splitlines() if line.startswith("data: "))
     return json.loads(data_line[len("data: "):])["payload"]
+
+
+def test_hold_begun_names_the_hold_and_how_it_ends():
+    """RT-13: a client has to tell a timed pause from one it may release."""
+    event = HoldBegun(
+        game_id="g1", hold_id=7, reason=HoldReason.ROUND_SCORED,
+        seconds=None, ackable=True,
+    )
+    _, payload = payload_of(encode_event(event, seq=9, turn=TURN))
+    assert payload == {
+        "hold_id": 7, "reason": "round_scored", "seconds": None, "ackable": True,
+    }
+
+
+def test_hold_ended_names_the_hold_that_ended():
+    """The closing half of RT-10's delimiting pair."""
+    event = HoldEnded(game_id="g1", hold_id=7, reason=HoldReason.ROUND_SCORED)
+    name, payload = payload_of(encode_event(event, seq=10, turn=TURN))
+    assert name == "hold_ended"
+    assert payload == {"hold_id": 7, "reason": "round_scored"}
+
+
+def test_a_hold_reason_crosses_the_wire_in_snake_case():
+    """The client switches on this string, so its spelling is the contract."""
+    event = HoldBegun(
+        game_id="g1", hold_id=1, reason=HoldReason.TRICK_CLEAR,
+        seconds=1.5, ackable=False,
+    )
+    _, payload = payload_of(encode_event(event, seq=1, turn=TURN))
+    assert payload["reason"] == "trick_clear"
+    assert payload["seconds"] == 1.5
+
+
+def payload_of(frame: str) -> tuple[str, dict]:
+    """Return the frame's event name and decoded payload."""
+    data = json.loads(frame.split("data: ", 1)[1].split("\n", 1)[0])
+    return data["type"], data["payload"]

@@ -5,6 +5,7 @@ from pinochle.web.card_codec import decode_card, decode_suit
 from pinochle.web.container import Container
 from pinochle.web.dependencies import get_container, require_seat
 from pinochle.web.schemas import (
+    AcknowledgeRequest,
     BidRequest,
     ContractRequest,
     DrawRequest,
@@ -98,6 +99,22 @@ async def toss_in(
 ) -> Response:
     """Concede the contract without playing it out (FR-50b)."""
     container.actions.toss_in(game_id, player_id)
+    return Response(status_code=204)
+
+
+@router.post("/api/games/{game_id}/acknowledge", status_code=204)
+async def acknowledge(
+    game_id: str,
+    body: AcknowledgeRequest,
+    container: Container = Depends(get_container),
+    player_id: str = Depends(require_seat),
+) -> Response:
+    """Release the hold the table is stopped on, from any seat (RT-13, UI-19a).
+
+    Returns 204 whether or not the hold was still there to release: a second
+    click, or a second player's, is the expected case and not an error.
+    """
+    container.actions.acknowledge(game_id, player_id, body.hold_id)
     return Response(status_code=204)
 
 

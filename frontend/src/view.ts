@@ -160,20 +160,16 @@ export function gameOverText(state: GameState): string {
 }
 
 /**
- * The one-line status: whose turn it is, or what the table is waiting for.
+ * The one-line status: whose turn it is, and what they are being asked for.
  *
- * A pause is a state the game occupies rather than a presentation effect
- * (RT-9), so it is what the line says while one is running.
+ * A pause used to be reported here as well. It is the notice area's now
+ * (UI-19): a pause is a state the game occupies (RT-9), and what the table is
+ * being held for is exactly what a notice says. Saying it in both places left
+ * the two lines paraphrasing each other.
  */
 export function statusLine(state: GameState): string {
   if (state.gameOver !== null) {
     return gameOverText(state);
-  }
-  if (state.paused === "trick_clear") {
-    return "Gathering the trick…";
-  }
-  if (state.paused === "thinking" && state.thinkingPlayerId !== null) {
-    return `${nameOf(state, state.thinkingPlayerId)} is thinking…`;
   }
   if (state.phase === "DEALER_SELECTION") {
     return "Drawing for the deal — pick a card.";

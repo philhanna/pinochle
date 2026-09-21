@@ -596,6 +596,13 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   talking about what the notice says. A table at which nobody remains to
   release a hold is the case RT-12 already describes, and the administrator
   ending the game is already its remedy.
+  It follows that a hold which waits on a player shall be taken only at a table
+  that has one. Where every seat is a computer (FR-72) there is nobody to read
+  what the hold is showing and nobody who could ever end the wait, so such a
+  table shall proceed as though the hold had been released at once. The test is
+  the seat's kind, not whether its player is presently connected: a human seat
+  that has gone quiet is RT-12's case, where play blocks until they return, and
+  that is the wanted behaviour here too.
 
 ---
 

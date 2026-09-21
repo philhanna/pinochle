@@ -219,3 +219,15 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
     def toss_in(self, game_id, player_id):
         """Delegate to the wrapped service."""
         return self._service.toss_in(game_id, player_id)
+
+    def acknowledge(self, game_id, player_id, hold_id):
+        """Delegate a release, which a computer seat never initiates itself.
+
+        The decorator has to carry the method, but the driver's own pump
+        never calls it: a hold awaiting release exists so the people at the
+        table can read what it is showing, and a computer seat releasing it
+        the instant it appeared would take that away from them.  A table of
+        three computers and one human waits for the human, which is the
+        point.
+        """
+        return self._service.acknowledge(game_id, player_id, hold_id)

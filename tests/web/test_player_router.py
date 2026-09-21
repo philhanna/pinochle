@@ -188,3 +188,30 @@ async def test_a_draw_after_the_deal_is_a_409_not_a_500(container, client):
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "wrong_phase"
+
+
+async def test_acknowledge_requires_a_seat_token(container, client):
+    """Only somebody at the table moves it on, so the token is checked first."""
+    game_id = container.admin.create_game()
+    response = await client.post(
+        f"/api/games/{game_id}/acknowledge", json={"hold_id": 1})
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "forbidden_seat"
+
+
+async def test_acknowledging_a_hold_that_is_not_there_succeeds(container, client):
+    """RT-13: a release naming a hold that has ended is a no-op, not an error.
+
+    Two seats clicking at the same moment is the expected case, and the one
+    whose click arrives second has done nothing wrong.
+    """
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    token = container.tokens.mint(game_id, "p-north")
+
+    response = await client.post(
+        f"/api/games/{game_id}/acknowledge",
+        json={"hold_id": 999},
+        headers=seat_headers(token),
+    )
+    assert response.status_code == 204

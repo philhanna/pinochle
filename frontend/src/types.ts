@@ -78,6 +78,10 @@ export const FRAME_TYPES = [
   // End of round and game.
   "round_scored",
   "game_over",
+  // The start and end of a pause (RT-10). What they say is also on the turn
+  // header of every frame, which is what a client that missed them reads.
+  "hold_begun",
+  "hold_ended",
   // Published by the transport rather than the domain.  Not acted on in this
   // release: the client logs them and renders nothing (docs/impl.md §6).
   "seat_lost",

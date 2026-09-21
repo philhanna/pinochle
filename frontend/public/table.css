@@ -440,6 +440,53 @@ body.table-page {
 
 #bottom-bar > * { pointer-events: auto; }
 
+/* What the table has just been told (UI-19).
+   Wider and quieter than the status line under it: one says what happened,
+   the other says whose turn it is now, and they must not read as one
+   sentence split over two rows. */
+#notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 44rem;
+  padding: 6px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--panel);
+  text-align: center;
+}
+
+.notice-line { font-size: 1rem; color: var(--ink); }
+
+/* Held: the table has stopped, so the band stops looking incidental. */
+#notice.hold { border-color: var(--accent); }
+
+/* The game is over; nothing replaces this one. */
+#notice.final {
+  border-color: var(--ns);
+  background: rgba(38, 30, 8, 0.92);
+}
+
+#notice.final .notice-line { color: var(--ns); font-weight: 600; }
+
+/* The one control any seat may use (UI-19a). Inside the notice, so what has
+   to be read and what ends the reading are the same object; and sized well
+   past a comfortable target, because it is on the path of every round. */
+.notice-continue {
+  padding: 5px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: rgba(20, 70, 44, 0.9);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.notice-continue:hover { background: rgba(28, 96, 60, 0.95); }
+
 #status {
   display: flex;
   align-items: center;

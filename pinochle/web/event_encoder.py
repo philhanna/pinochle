@@ -15,6 +15,8 @@ from pinochle.domain.game import (
     GameConfigured,
     GameEvent,
     GameOver,
+    HoldBegun,
+    HoldEnded,
     MeldExposed,
     PlayBegun,
     RoundAbandoned,
@@ -259,6 +261,29 @@ def _game_over(event: GameOver) -> tuple[str, dict]:
     }
 
 
+def _hold_begun(event: HoldBegun) -> tuple[str, dict]:
+    """Build the payload for ``hold_begun`` (RT-10, RT-13).
+
+    Everything here is also on the turn header of every frame, deliberately:
+    RT-10 wants the pause delimited by an event, and RT-5a wants a client
+    that missed that event to find the pause anyway.
+    """
+    return "hold_begun", {
+        "hold_id": event.hold_id,
+        "reason": event.reason.name.lower(),
+        "seconds": event.seconds,
+        "ackable": event.ackable,
+    }
+
+
+def _hold_ended(event: HoldEnded) -> tuple[str, dict]:
+    """Build the payload for ``hold_ended`` (RT-10, RT-13)."""
+    return "hold_ended", {
+        "hold_id": event.hold_id,
+        "reason": event.reason.name.lower(),
+    }
+
+
 def _seat_lost(event: SeatLost) -> tuple[str, dict]:
     """Build the payload for ``seat_lost`` (RT-12)."""
     return "seat_lost", {"player_id": event.player_id}
@@ -297,6 +322,8 @@ _ENCODERS = {
     TurnPrompt: _turn_prompt,
     RoundScored: _round_scored,
     GameOver: _game_over,
+    HoldBegun: _hold_begun,
+    HoldEnded: _hold_ended,
     SeatLost: _seat_lost,
     SeatRejoined: _seat_rejoined,
     GameAbandoned: _game_abandoned,

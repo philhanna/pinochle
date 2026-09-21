@@ -6,6 +6,7 @@ import {
   bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
   seatLabel, statusLine, summaryHeadline, summaryRows, trumpText,
 } from "../dist/view.js";
+import { notice } from "../dist/notice.js";
 import { applyEvent, initialState } from "../dist/state.js";
 
 const TURN = { phase: "BIDDING", current_player_id: "p-south", paused: null, round_number: 2 };
@@ -151,16 +152,21 @@ test("the status line says whose turn it is and what for (UI-7)", () => {
   assert.equal(statusLine(theirs), "West's turn — bidding");
 });
 
-test("a pause is what the status line reports while it runs (RT-9)", () => {
+test("a pause belongs to the notice, not the status line (UI-19, RT-9)", () => {
+  // Both lines are on screen at once, so a pause reported in both would have
+  // them paraphrasing each other. The notice says what the table is held for;
+  // the status line says only whose turn it is.
   const clearing = applyEvent(seated(), frame("trick_completed", {
     winner_player_id: "p-south", cards: [],
   }, { phase: "PLAYING", current_player_id: null, paused: "trick_clear", round_number: 2 }));
-  assert.equal(statusLine(clearing), "Gathering the trick…");
+  assert.equal(notice(clearing).text, "Phil takes the trick.");
+  assert.equal(statusLine(clearing), "");
 
   const thinking = applyEvent(seated(), frame("seat_thinking", {
     player_id: "p-west",
   }, { phase: "PLAYING", current_player_id: "p-west", paused: "thinking", round_number: 2 }));
-  assert.equal(statusLine(thinking), "West is thinking…");
+  assert.equal(notice(thinking).text, "West is thinking…");
+  assert.equal(statusLine(thinking), "West's turn — play a card");
 });
 
 test("the game's result replaces the status line (FR-71)", () => {
