@@ -261,10 +261,10 @@ body.table-page {
 }
 
 .meld-card {
-  width: 48px;
-  height: 67px;
-  margin-left: -33px;
-  border-radius: 3px;
+  width: 60px;
+  height: 83.75px;
+  margin-left: -41.25px;
+  border-radius: 3.75px;
   background: #fff;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
