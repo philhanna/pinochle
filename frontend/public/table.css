@@ -27,12 +27,15 @@
   --card-h: 208px;
   --card-w-small: 92px;
   --card-h-small: 130px;
-  /* Card backs carry no rank or suit to read, so unlike every face-up size
-     above, there is no legibility reason to grow these — only overlap risk,
-     since a taller opponent fan eats directly into the same room the pass
-     and last-trick panels need above the trick. */
-  --card-w-back: 46px;
-  --card-h-back: 65px;
+  /* The other three hands, at three quarters of the size of this seat's own
+     cards. A back carries no rank or suit, so this is not about legibility:
+     it is so that the other hands read as hands of cards at a table rather
+     than as tokens, and so that what is left of one says plainly how much of
+     it is left (UI-5). The cost is room — an opponent's fan eats into the
+     same space the pass and last-trick panels need above the trick — which
+     is why the size is written here once and the collisions are measured. */
+  --card-w-back: calc(var(--card-w) * 0.75);
+  --card-h-back: calc(var(--card-h) * 0.75);
 }
 
 * { box-sizing: border-box; }
@@ -133,12 +136,19 @@ body.table-page {
 
 /* --- Fans of cards ------------------------------------------------------- */
 
-.fan { display: flex; }
-.fan .card { margin-right: calc(var(--card-w-back) * -0.62); }
+/* An opponent's fan shows a fixed strip of each card and the whole of the
+   last one, so how much of a hand is left is read off the same width of edge
+   whatever size the cards are (UI-5). Written as the strip rather than as a
+   fraction of the card, because a fraction turns every change of card size
+   into a change of how far a fan reaches across the table -- and the fans
+   reach towards the scoreboard on one side and the panels above the trick on
+   the other. */
+.fan { --fan-strip: 17px; display: flex; }
+.fan .card { margin-right: calc(var(--fan-strip) - var(--card-w-back)); }
 .fan .card:last-child { margin-right: 0; }
 
-.fan.vertical { flex-direction: column; }
-.fan.vertical .card { margin: 0 0 calc(var(--card-h-back) * -0.78) 0; }
+.fan.vertical { --fan-strip: 14px; flex-direction: column; }
+.fan.vertical .card { margin: 0 0 calc(var(--fan-strip) - var(--card-h-back)) 0; }
 .fan.vertical .card:last-child { margin-bottom: 0; }
 
 .card {
