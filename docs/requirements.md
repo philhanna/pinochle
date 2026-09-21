@@ -461,6 +461,15 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   layout scaled to the viewport rather than a responsive one. Tablet and phone
   support are not requirements, but the design should not gratuitously preclude
   them.
+- **UI-18** Every control the interface presents as available shall receive the
+  clicks aimed at it. A control that is drawn and enabled shall be reachable
+  where it is drawn, with nothing positioned over it that takes the click
+  instead; the same shall hold for the regions a card may be dragged onto
+  (UI-8), which shall accept a drop wherever they are shown as a target. This
+  shall hold throughout a round and at every window size the layout supports
+  (UI-17). An unreachable control is worse than an absent or a disabled one:
+  the interface goes on offering the action, and refusing it silently, so the
+  player is given no account of why nothing happened.
 
 ---
 

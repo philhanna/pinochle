@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that every control on the table can actually be clicked.
+"""Check that every control on the table can actually be clicked (UI-18).
 
 The client's own tests run under ``node --test``, which has no DOM and no
 layout engine, so they cannot see a control that is drawn correctly, enabled
