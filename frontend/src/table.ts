@@ -14,7 +14,7 @@ import { isMovingCard, renderSpread } from "./spread.js";
 import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
 import {
-  bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
+  bidCall, bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
   statusLine, summaryHeadline, summaryRows, trumpText,
 } from "./view.js";
 
@@ -109,6 +109,10 @@ function renderSeats(state: GameState): void {
     if (spot !== "bottom") {
       const count = state.handCounts[seat.playerId] ?? 0;
       children.push(backsFan(count, spot === "left" || spot === "right"));
+    }
+    const call = bidCall(state, seat.playerId);
+    if (call !== null) {
+      children.push(text("bid-call", call));
     }
 
     element.replaceChildren(...children);

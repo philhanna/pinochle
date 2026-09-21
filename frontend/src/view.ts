@@ -67,6 +67,20 @@ export function bidHistory(state: GameState): string[] {
   });
 }
 
+/** The latest auction call to show beside one player's hand. */
+export function bidCall(state: GameState, playerId: string): string | null {
+  if (state.contract !== null) {
+    return null;
+  }
+  for (let index = state.bids.length - 1; index >= 0; index -= 1) {
+    const bid = state.bids[index];
+    if (bid?.playerId === playerId) {
+      return bid.amount === null ? "pass" : String(bid.amount);
+    }
+  }
+  return null;
+}
+
 /** One seat's exposed meld, for the table's meld display (UI-13). */
 export interface MeldLine {
   playerId: string;

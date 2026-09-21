@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
+  bidCall, bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
   seatLabel, statusLine, summaryHeadline, summaryRows, trumpText,
 } from "../dist/view.js";
 import { notice } from "../dist/notice.js";
@@ -93,6 +93,25 @@ test("the bid history keeps every bid and pass in order (UI-10, UI-14a)", () => 
     frame("bid_placed", { player_id: "p-east", amount: null, current_high: 250 }),
   ].reduce(applyEvent, seated());
   assert.deepEqual(bidHistory(state), ["North: 250", "East: pass"]);
+});
+
+test("each hand shows that player's latest bid or pass", () => {
+  const state = [
+    frame("bid_placed", { player_id: "p-north", amount: 250, current_high: 250 }),
+    frame("bid_placed", { player_id: "p-east", amount: null, current_high: 250 }),
+    frame("bid_placed", { player_id: "p-north", amount: 270, current_high: 270 }),
+  ].reduce(applyEvent, seated());
+  assert.equal(bidCall(state, "p-north"), "270");
+  assert.equal(bidCall(state, "p-east"), "pass");
+  assert.equal(bidCall(state, "p-south"), null);
+});
+
+test("the calls beside the hands clear once trump is named", () => {
+  const state = [
+    frame("bid_placed", { player_id: "p-north", amount: 250, current_high: 250 }),
+    frame("trump_named", { suit: "SPADES" }),
+  ].reduce(applyEvent, seated());
+  assert.equal(bidCall(state, "p-north"), null);
 });
 
 test("meld lines name each seat and its combinations (UI-13)", () => {

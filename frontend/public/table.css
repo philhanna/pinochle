@@ -108,7 +108,7 @@ body.table-page {
 
 /* This seat's own label lives in the stacked bar with its hand, not pinned to
    the felt, so it cannot collide with a panel. */
-.seat.bottom { position: static; }
+.seat.bottom { position: relative; }
 
 .seat-name {
   padding: 3px 12px;
@@ -133,6 +133,48 @@ body.table-page {
 .seat.thinking .seat-name::after { content: " …"; }
 
 .seat.computer .seat-name { font-style: italic; }
+
+/* Each player's latest auction action sits just inside their hand, toward the
+   middle of the table. It is as prominent as the notification line without
+   taking that line over for every call. */
+.bid-call {
+  position: absolute;
+  z-index: 2;
+  padding: 3px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 2em;
+  font-weight: 600;
+  line-height: 1.1;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.seat.top .bid-call {
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.seat.bottom .bid-call {
+  bottom: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.seat.left .bid-call {
+  top: 50%;
+  left: calc(100% + 12px);
+  transform: translateY(-50%);
+}
+
+.seat.right .bid-call {
+  top: 50%;
+  right: calc(100% + 12px);
+  transform: translateY(-50%);
+}
 
 /* --- Fans of cards ------------------------------------------------------- */
 
