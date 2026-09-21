@@ -6,7 +6,7 @@ PYTHON ?= $(if $(wildcard .venv/bin/python),.venv/bin/python,python3)
 TSC ?= npx -y -p typescript@5 tsc
 
 .DEFAULT_GOAL := help
-.PHONY: help test test-py test-fe build watch dev dev-fast seed seed-watch seed-all record docker docker-logs docker-down clean
+.PHONY: help test test-py test-fe test-browser build watch dev dev-fast seed seed-watch seed-all record docker docker-logs docker-down clean
 
 help:  ## List the available targets
 	@grep -hE '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -20,6 +20,9 @@ test-py:  ## Run the Python test suite
 
 test-fe:  ## Compile the client and run its tests
 	cd frontend && $(TSC) && node --test "test/*.test.js"
+
+test-browser: build  ## Hit-test every control in a real browser (needs Chrome)
+	$(PYTHON) scripts/hit_test.py
 
 build:  ## Compile frontend/src to frontend/dist
 	cd frontend && $(TSC)

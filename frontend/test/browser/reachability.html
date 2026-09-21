@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Control reachability</title>
+<!-- The real stylesheet, unmodified: the whole point is to catch what it
+     does, so a copy or an override here would test the wrong thing. -->
+<link rel="stylesheet" href="/public/table.css">
+</head>
+<body class="table-page">
+<!-- scripts/hit_test.py reads the JSON this ends up holding. -->
+<pre id="result">pending</pre>
+<script type="module">
+// Is every control a player can see one they can actually click?
+//
+// The node tests fold frames and check what the client concludes; they run
+// with no DOM and no layout, so they cannot see a control that is drawn
+// correctly, enabled correctly, and covered by something else. That failure
+// is silent in a way an exception is not: the click lands on whatever is on
+// top, no handler runs, and the table looks exactly as it should.
+//
+// So this replays the recorded seat stream through the real reducer and the
+// real renderer against the real stylesheet, and after every frame asks the
+// browser the only question that matters — for each control, what would a
+// click at its centre actually hit?
+
+const result = document.getElementById("result");
+const report = (value) => { result.textContent = JSON.stringify(value, null, 1); };
+
+/**
+ * The controls, taken from where the click handlers are attached rather than
+ * from what looks clickable: the spread's backs (table.ts onDraw), the panel's
+ * buttons (panels.ts), the two toggles, the cards in hand (hand.ts), and the
+ * two drop targets — the trick a card is played onto and the tray it is
+ * passed into (UI-8).
+ *
+ * `when` narrows a control to the phases in which it is really a target. The
+ * trick layer is the one that needs it: it is a fixed 300x260 box from the
+ * moment a round starts, but nothing may be dropped on it until play has
+ * begun, so being covered before then is not a fault.
+ */
+const CONTROLS = [
+  { selector: "#panel button" },
+  { selector: "#panel .tray" },
+  { selector: ".spread .card.drawable" },
+  { selector: ".scoreboard-toggle" },
+  { selector: ".last-trick-toggle" },
+  { selector: "#hand .card" },
+  { selector: ".trick", when: ["PLAYING"] },
+];
+
+try {
+  const [indexHtml, frames] = await Promise.all([
+    fetch("/public/index.html").then((r) => r.text()),
+    fetch("/test/fixtures/seat-stream.json").then((r) => r.json()),
+  ]);
+
+  // The page's own markup, so the structure under test is the shipped one.
+  const page = new DOMParser().parseFromString(indexHtml, "text/html");
+  document.body.prepend(page.getElementById("stage"));
+
+  const { applyEvent, initialState } = await import("/dist/state.js");
+  const { renderTable } = await import("/dist/table.js");
+
+  const ignore = () => {};
+  const callbacks = {
+    onDraw: ignore, onPlay: ignore, onBid: ignore, onContract: ignore,
+    onTrump: ignore, onPass: ignore, onBeginPlay: ignore, onTossIn: ignore,
+    onSelectionChange: ignore,
+  };
+
+  const stage = document.getElementById("stage");
+  const blocked = [];
+  const checked = {};
+  let state = initialState();
+
+  frames.forEach((frame, index) => {
+    state = applyEvent(state, frame);
+    renderTable(state, callbacks);
+    fitStage();
+    for (const control of CONTROLS) {
+      if (control.when !== undefined && !control.when.includes(state.phase)) {
+        continue;
+      }
+      for (const element of document.querySelectorAll(control.selector)) {
+        checked[control.selector] = (checked[control.selector] ?? 0) + 1;
+        const blocker = whatCovers(element);
+        if (blocker !== null) {
+          blocked.push({
+            frame: index,
+            type: frame.type,
+            phase: state.phase,
+            control: control.selector,
+            label: (element.textContent || element.alt || "").trim().slice(0, 32),
+            blocker,
+          });
+        }
+      }
+    }
+  });
+
+  report({ frames: frames.length, checked, blocked });
+} catch (error) {
+  report({ error: String(error), stack: error.stack ?? null });
+}
+
+/**
+ * Name what would take a click aimed at `element`, or null if `element` would.
+ *
+ * A hit on something the control contains is the control: a button's own
+ * label, a card's own image. Cards in the hand are the one deliberate
+ * exception — they are fanned, so each lies across its neighbours, and a
+ * neighbour winning is the layout working rather than failing.
+ */
+function whatCovers(element) {
+  const box = element.getBoundingClientRect();
+  if (box.width === 0 || box.height === 0) {
+    return null;
+  }
+  const hit = document.elementFromPoint(
+    box.left + box.width / 2, box.top + box.height / 2,
+  );
+  if (hit === null || hit === element || element.contains(hit)) {
+    return null;
+  }
+  if (element.closest("#hand") !== null && hit.closest("#hand") !== null) {
+    return null;
+  }
+  return hit.tagName + (hit.className ? "." + hit.className : "");
+}
+
+/** Scale the stage to the window, exactly as main.ts does (UI-17). */
+function fitStage() {
+  const scale = Math.min(
+    window.innerWidth / stage.offsetWidth,
+    window.innerHeight / stage.offsetHeight,
+  );
+  stage.style.setProperty("--stage-scale", String(scale));
+}
+</script>
+</body>
+</html>

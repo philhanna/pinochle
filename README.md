@@ -30,6 +30,7 @@ Then:
 make seed                 # or: create a game from the command line instead
 make seed-watch           # four computer players, nothing to join
 make test                 # server and client tests
+make test-browser         # plus: is every control actually clickable?
 make docker               # the same thing as a container image
 ```
 
