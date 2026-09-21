@@ -70,6 +70,10 @@ def _lifespan(container: Container):
     ``action.accepted``/``action.rejected``/``event.published`` records
     (NFR-9) actually reach ``docker compose logs`` instead of being dropped
     by the default, unconfigured root logger.
+
+    Settings are read before any of this, so the one line saying which
+    ``.env`` was read is written here rather than where it was loaded —
+    it would otherwise be dropped by that same unconfigured logger.
     """
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -77,6 +81,10 @@ def _lifespan(container: Container):
             level=container.settings.log_level,
             format="%(asctime)s %(levelname)s %(name)s %(message)s",
         )
+        if container.settings.dotenv_path:
+            logging.getLogger("pinochle").info(
+                "Loaded settings from %s", container.settings.dotenv_path,
+            )
         if container.settings.admin_token_generated:
             logging.getLogger("pinochle").warning(
                 "No PINOCHLE_ADMIN_TOKEN was set; generated one for this run: %s",

@@ -85,3 +85,17 @@ def test_the_configured_back_is_what_the_adapter_serves():
     """Settings carry the name; the adapter turns it into a path (ARC-4)."""
     built = build_container(Settings(admin_token="tok", card_back="castle"))
     assert built.cards.get_back_path().endswith("castle.svg")
+
+
+def test_from_env_records_the_env_file_it_read(monkeypatch):
+    """The path is kept so startup can log it once logging is configured."""
+    monkeypatch.setattr(container, "find_dotenv", lambda: "/srv/pinochle/.env")
+    monkeypatch.setattr(container, "load_dotenv", lambda: True)
+    assert Settings.from_env().dotenv_path == "/srv/pinochle/.env"
+
+
+def test_from_env_records_no_env_file_when_none_was_read(monkeypatch):
+    """No file found means nothing for startup to announce."""
+    monkeypatch.setattr(container, "find_dotenv", lambda: "")
+    monkeypatch.setattr(container, "load_dotenv", lambda: False)
+    assert Settings.from_env().dotenv_path is None

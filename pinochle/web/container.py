@@ -5,7 +5,7 @@ import secrets
 from dataclasses import dataclass, field
 from random import Random
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from pinochle.adapters.asyncio_scheduler import AsyncioScheduler
 from pinochle.adapters.composite_notification import CompositeNotification
@@ -104,6 +104,7 @@ class Settings:
     log_level: str = "INFO"
     card_back: str = "blue"
     admin_token_generated: bool = False
+    dotenv_path: str | None = None
     table: TableDefaults = field(
         default_factory=lambda: TableDefaults(
             ns=DEFAULT_TEAM_NS,
@@ -128,8 +129,14 @@ class Settings:
         ``admin_token_generated`` tells the caller to log it (§9.1: an
         operator running one game for an evening reads it from the
         container log rather than setting it explicitly).
+
+        ``dotenv_path`` records which file was read, if any, so startup can
+        say so once logging exists — an operator wondering why a setting
+        didn't take can see whether the file was found at all.  It is set
+        only when the file was actually read.
         """
-        load_dotenv()
+        dotenv_path = find_dotenv()
+        loaded = load_dotenv()
         seed = os.environ.get("PINOCHLE_SHUFFLE_SEED")
         configured_token = os.environ.get("PINOCHLE_ADMIN_TOKEN")
         return cls(
@@ -144,6 +151,7 @@ class Settings:
             shuffle_seed=int(seed) if seed else None,
             log_level=os.environ.get("PINOCHLE_LOG_LEVEL", "INFO"),
             card_back=_card_back_name(os.environ.get("PINOCHLE_CARD_BACK", "")),
+            dotenv_path=dotenv_path if loaded else None,
             table=TableDefaults.from_env(),
         )
 

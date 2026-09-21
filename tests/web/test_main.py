@@ -30,3 +30,29 @@ async def test_lifespan_is_silent_when_the_token_was_configured(caplog):
         pass
 
     assert caplog.records == []
+
+
+async def test_lifespan_logs_the_env_file_it_read(caplog):
+    """An operator can see which ``.env`` the settings came from."""
+    caplog.set_level(logging.INFO, logger="pinochle")
+    settings = Settings(admin_token="explicit-token", dotenv_path="/srv/pinochle/.env")
+    container = build_container(settings, scheduler=FakeScheduler())
+    app = create_app(container)
+
+    async with app.router.lifespan_context(app):
+        pass
+
+    assert any("/srv/pinochle/.env" in record.message for record in caplog.records)
+
+
+async def test_lifespan_says_nothing_when_no_env_file_was_read(caplog):
+    """Nothing to announce when the environment alone configured the run."""
+    caplog.set_level(logging.INFO, logger="pinochle")
+    settings = Settings(admin_token="explicit-token", dotenv_path=None)
+    container = build_container(settings, scheduler=FakeScheduler())
+    app = create_app(container)
+
+    async with app.router.lifespan_context(app):
+        pass
+
+    assert caplog.records == []
