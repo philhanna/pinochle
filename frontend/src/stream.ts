@@ -2,10 +2,22 @@
 
 import { FRAME_TYPES, type Frame, type Seat } from "./types.js";
 
+/**
+ * Whether this client is currently being told what happens at the table.
+ *
+ * `"down"` is the one that matters: the connection has dropped and the
+ * browser is retrying. The table on screen is frozen at whatever it last
+ * heard, so it is no longer a picture of the game, and nothing this seat
+ * does can be trusted to mean what it appears to mean.
+ */
+export type ConnectionState = "connecting" | "live" | "down" | "closed";
+
 /** What a caller must supply to be driven by the stream. */
 export interface StreamHandlers {
   onFrame: (frame: Frame) => void;
   onError: (message: string) => void;
+  /** Called on every change of connection state, if the caller cares. */
+  onConnection?: (connection: ConnectionState) => void;
 }
 
 /** The URL of a seat's own event stream. */
@@ -32,13 +44,18 @@ export function adminStreamUrl(gameId: string, adminToken: string): string {
  * The server names each frame on its `event:` line, and `EventSource` has no
  * wildcard, so every name in `FRAME_TYPES` is subscribed individually.
  *
- * No reconnection is attempted, and the server has already set a one-day
- * retry to stop `EventSource` trying on its own: there is nothing a
- * reconnect could rebuild, because the server keeps no snapshot of a game in
- * progress (RT-5).
+ * A dropped connection is recoverable (RT-5a): `EventSource` retries on the
+ * server's short `retry:` interval, sending back the last `id:` it saw, and
+ * the server replays what this seat missed. Until that succeeds the caller
+ * is told the stream is `"down"`, because a frozen table that still looks
+ * live is the worst of the three things this can do.
  */
 export function openStream(url: string, handlers: StreamHandlers): EventSource {
   const source = new EventSource(url);
+  const report = (connection: ConnectionState) => handlers.onConnection?.(connection);
+
+  report("connecting");
+  source.addEventListener("open", () => report("live"));
 
   for (const type of FRAME_TYPES) {
     source.addEventListener(type, (event) => {
@@ -52,13 +69,15 @@ export function openStream(url: string, handlers: StreamHandlers): EventSource {
   }
 
   source.addEventListener("error", () => {
-    // Indistinguishable here from the server closing a finished game's
-    // stream; the caller decides how to say so.
-    handlers.onError(
-      source.readyState === EventSource.CLOSED
-        ? "Stream closed. This seat cannot rejoin (RT-5); open a new game."
-        : "Stream interrupted.",
-    );
+    // CLOSED means the browser has given up — a rejected token, or a server
+    // that will not have it. Anything else is a drop it is already retrying,
+    // and those are expected: a laptop lid, a dozing wifi radio.
+    if (source.readyState === EventSource.CLOSED) {
+      report("closed");
+      handlers.onError("Connection refused. Reopen this seat's join link.");
+    } else {
+      report("down");
+    }
   });
 
   return source;

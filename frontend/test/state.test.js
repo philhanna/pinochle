@@ -48,6 +48,31 @@ test("stream_started identifies this seat and derives its partnership", () => {
   assert.equal(state.partial, false);
 });
 
+test("a resumed stream_started leaves what the client already knows (RT-5a)", () => {
+  const before = replay([
+    frame("bid_placed", { player_id: "p-south", amount: 250, current_high: 250 }),
+  ], seated());
+
+  const after = applyEvent(before, frame("stream_started", {
+    seat: "SOUTH", player_id: "p-south",
+    you: { name: "Phil", type: "human" }, partial: true, resume: "resumed",
+  }, TURN, 0));
+
+  // The reopened connection re-sends this frame; it must not undo the round.
+  assert.equal(after.bids.length, 1);
+  assert.equal(after.partial, false);
+  assert.equal(after.me.playerId, "p-south");
+});
+
+test("a resume the server could not complete leaves the client partial (RT-5a)", () => {
+  const after = applyEvent(seated(), frame("stream_started", {
+    seat: "SOUTH", player_id: "p-south",
+    you: { name: "Phil", type: "human" }, partial: false, resume: "incomplete",
+  }, TURN, 0));
+
+  assert.equal(after.partial, true);
+});
+
 test("partnerships are derived from the seat, never carried (FR-4a)", () => {
   assert.equal(teamOf("NORTH"), "NS");
   assert.equal(teamOf("SOUTH"), "NS");

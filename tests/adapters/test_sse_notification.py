@@ -95,3 +95,54 @@ async def test_a_full_queue_is_dropped_rather_than_blocking():
 
     hub.notify("N", DealerSelected(game_id="g1", dealer_player_id="N"))  # would block
     assert hub.seats_connected("g1") == set()
+
+
+def test_history_replays_what_a_seat_missed_in_order():
+    """RT-5a: a dropped seat gets back exactly the frames it did not see."""
+    hub = SseNotification()
+    first = DealerSelected(game_id="g1", dealer_player_id="N")
+    second = BidPlaced(game_id="g1", player_id="N", amount=250, current_high=250)
+    third = BidPlaced(game_id="g1", player_id="E", amount=260, current_high=260)
+    hub.broadcast("g1", first)
+    hub.broadcast("g1", second)
+    hub.broadcast("g1", third)
+
+    missed, whole = hub.history_since("g1", "N", after_seq=1)
+
+    assert whole is True
+    assert missed == [(2, second), (3, third)]
+
+
+def test_history_never_replays_another_seat_s_private_event():
+    """NFR-6: resuming is not a way round the filter a live stream applies."""
+    hub = SseNotification()
+    mine = BidPlaced(game_id="g1", player_id="N", amount=250, current_high=250)
+    theirs = BidPlaced(game_id="g1", player_id="E", amount=260, current_high=260)
+    public = DealerSelected(game_id="g1", dealer_player_id="N")
+    hub.notify("N", mine)
+    hub.notify("E", theirs)
+    hub.broadcast("g1", public)
+
+    missed, _ = hub.history_since("g1", "N", after_seq=0)
+
+    assert missed == [(1, mine), (3, public)]
+
+
+def test_history_reports_a_hole_it_cannot_fill():
+    """A seat asking from further back than the buffer holds is told so."""
+    hub = SseNotification(history_maxlen=2)
+    for amount in (250, 260, 270):
+        hub.broadcast("g1", BidPlaced(game_id="g1", player_id="N", amount=amount, current_high=amount))
+
+    # The buffer now starts at seq 2, so a seat resuming after seq 0 has a hole
+    # between what it last saw and what can still be replayed.
+    assert hub.history_since("g1", "N", after_seq=0)[1] is False
+    assert hub.history_since("g1", "N", after_seq=1)[1] is True
+
+
+def test_history_for_a_game_this_process_never_saw():
+    """A fresh stream is vacuously whole; a resume into nothing is not."""
+    hub = SseNotification()
+
+    assert hub.history_since("g1", "N", after_seq=0) == ([], True)
+    assert hub.history_since("g1", "N", after_seq=7) == ([], False)

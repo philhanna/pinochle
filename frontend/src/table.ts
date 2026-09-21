@@ -12,6 +12,7 @@ import {
 } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import type { GameState } from "./state.js";
+import type { ConnectionState } from "./stream.js";
 import {
   bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
   statusLine, summaryHeadline, summaryRows,
@@ -473,6 +474,34 @@ export function showError(message: string): void {
     element.hidden = true;
   }, 4000);
 }
+
+/**
+ * Say whether this table is still connected, and keep saying it.
+ *
+ * Deliberately not a toast. A toast that fades leaves a table that looks
+ * perfectly normal but is frozen at the last frame it heard, with buttons
+ * that quietly do nothing — which is exactly how a dropped connection was
+ * reported before, and exactly why it read as a broken Play button. A
+ * connection that is down stays on screen until it is not.
+ */
+export function showConnection(connection: ConnectionState): void {
+  const element = byId("connection");
+  if (element === null) {
+    return;
+  }
+  const message = CONNECTION_MESSAGES[connection];
+  element.textContent = message ?? "";
+  element.className = connection;
+  element.hidden = message === null;
+}
+
+/** What each connection state says, or null for the states that say nothing. */
+const CONNECTION_MESSAGES: Record<ConnectionState, string | null> = {
+  connecting: null,
+  live: null,
+  down: "Disconnected — reconnecting. The table is frozen until it comes back.",
+  closed: "Disconnected. Reopen this seat's join link to sit down again.",
+};
 
 /** Stop showing the last trick — called when the next one is cleared. */
 export function hideLastTrick(): void {

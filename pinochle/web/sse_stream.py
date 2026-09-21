@@ -6,9 +6,12 @@ from pinochle.domain.game import Game
 from pinochle.web.event_encoder import encode_event
 from pinochle.web.turn_header import build_turn_header
 
-# Sets EventSource's reconnection delay to a day, since a reconnect could
-# not rebuild anything the server does not keep (RT-5, §6.9).
-RETRY_LINE = "retry: 86400000\n\n"
+# How long EventSource waits before reconnecting a dropped stream.  Short,
+# because a reconnect now recovers the seat rather than showing it a dead
+# table: the server replays what the seat missed from its ``Last-Event-ID``
+# (RT-5a).  Two seconds is long enough not to hammer a server that is down
+# and short enough that a blip is over before a player finishes noticing it.
+RETRY_LINE = "retry: 2000\n\n"
 
 STREAM_HEADERS = {
     "Cache-Control": "no-cache, no-transform",

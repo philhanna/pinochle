@@ -1,10 +1,14 @@
 // The client's model of the game.
 //
 // RT-5 puts no snapshot on the server: a client builds its whole view from the
-// frames it has received since it joined, and a client that loses its stream
-// cannot rebuild one. So this reducer is not a cache of something
-// authoritative elsewhere — it is the only model the browser has, and every
-// later rendering slice draws from it alone.
+// frames it has received, and a stream that drops is recovered by replaying
+// the frames it missed (RT-5a), not by asking for the state. So this reducer
+// is not a cache of something authoritative elsewhere — it is the only model
+// the browser has, and every later rendering slice draws from it alone.
+//
+// One consequence: folding a frame twice is not safe (a second `bid_placed`
+// would be a second bid), which is why the server's replay is exact rather
+// than generous.
 //
 // Two rules follow, and both are enforced by tests:
 //
@@ -121,7 +125,7 @@ export interface RoundSummary {
 export interface GameState {
   /** This seat, from `stream_started`; null until the stream opens. */
   me: SeatInfo | null;
-  /** Whether the stream opened into a round already in progress (RT-5). */
+  /** Whether this client is missing frames it cannot get back (RT-5a). */
   partial: boolean;
   seats: SeatInfo[];
   teams: TeamInfo[];
@@ -299,7 +303,16 @@ export function isPartner(state: GameState, playerId: string): boolean {
 }
 
 const HANDLERS: Partial<Record<FrameType, Handler>> = {
-  /** The stream's opening frame: which seat this client is (§6.2). */
+  /**
+   * The stream's opening frame: which seat this client is (§6.2).
+   *
+   * Sent again every time a dropped connection is reopened (RT-5a), so it
+   * has to be safe to re-apply: it names the seat, which cannot change, and
+   * otherwise touches only `partial`. On a resume the client is the same
+   * page with the same history, so what it already knew about joining
+   * mid-round stands; only a resume the server could not complete makes a
+   * client that started whole partial.
+   */
   stream_started: (state, p) => ({
     ...state,
     me: {
@@ -309,7 +322,7 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
       type: (p["you"] as { type: "human" | "computer" }).type,
       teamId: teamOf(p["seat"] as SeatName),
     },
-    partial: Boolean(p["partial"]),
+    partial: partialAfter(state, p),
   }),
 
   /** The table: seats, partnerships, and the score the game is played to. */
@@ -628,6 +641,23 @@ interface TeamScorePayload {
   round_total: number;
   points_applied: number;
   cumulative_score: number;
+}
+
+/**
+ * Whether this client is missing part of the round, after a `stream_started`.
+ *
+ * A fresh stream is told by the server whether it opened into a round already
+ * under way. A resumed one already knows: it is the same page, with the same
+ * history behind it. The exception is a resume the server could not complete
+ * (`"incomplete"`), which means frames this seat needed have aged out of the
+ * replay buffer — a hole, and an honest client says so.
+ */
+function partialAfter(state: GameState, p: Record<string, unknown>): boolean {
+  switch (p["resume"]) {
+    case "resumed": return state.partial;
+    case "incomplete": return true;
+    default: return Boolean(p["partial"]);
+  }
 }
 
 /**

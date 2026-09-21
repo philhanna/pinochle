@@ -21,6 +21,8 @@
   --ew: #8fd6ff;
   --accent: #6ee7a0;
   --alarm: #ff9b8f;
+  /* Something is wrong but is being dealt with, as against --alarm's refusal. */
+  --warn: #ffd08a;
   --card-w: 148px;
   --card-h: 208px;
   --card-w-small: 92px;
@@ -496,7 +498,11 @@ body.table-page {
 #hand .card.lifted { opacity: 0.4; }
 
 /* Over the felt at the top, clear of every control. */
-#toast {
+/* The transient complaint and the standing connection notice share a look and
+   a place; the connection notice sits above, so a rejected action can still be
+   read while one is up. */
+#toast,
+#connection {
   position: absolute;
   top: 16px;
   left: 50%;
@@ -509,6 +515,19 @@ body.table-page {
   color: var(--alarm);
   font-size: 0.85rem;
   max-width: 34rem;
+}
+
+#connection {
+  top: 56px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Still retrying, so it reads as a state to wait out rather than a dead end. */
+#connection.down {
+  border-color: var(--warn);
+  background: rgba(60, 44, 8, 0.95);
+  color: var(--warn);
 }
 
 .no-seat {

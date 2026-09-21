@@ -53,9 +53,16 @@ def encode_frame(name: str, seq: int, turn: dict, payload: dict) -> str:
     field, so no frame can be split by its own payload.  Used directly for
     the one frame that isn't a ``GameEvent`` at all: ``stream_started``,
     built by the stream router itself when a connection opens (§6.2).
+
+    Real sequence numbers start at 1, so ``seq=0`` marks that opening frame
+    and its ``id:`` line is left off.  It has to be: the browser remembers
+    the last ``id:`` it saw and sends it back as ``Last-Event-ID`` on the
+    next reconnect (RT-5a), and an ``id: 0`` on every reconnect would wind
+    that marker back to the start of the game each time.
     """
     data = json.dumps({"seq": seq, "type": name, "turn": turn, "payload": payload})
-    return f"id: {seq}\nevent: {name}\ndata: {data}\n\n"
+    head = "" if seq == 0 else f"id: {seq}\n"
+    return f"{head}event: {name}\ndata: {data}\n\n"
 
 
 def _game_configured(event: GameConfigured) -> tuple[str, dict]:

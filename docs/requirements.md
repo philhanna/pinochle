@@ -99,9 +99,10 @@ ranking or statistics, chat, and mobile-native clients.
   actions and the player's event stream shall be authorized by it, and the
   server shall serve a given player's hand only to the holder of that seat's
   token.
-- **FR-10b** All four players shall join before play begins. A client that has
-  joined follows the game entirely from the event stream, so there is nothing
-  to catch up on and no need to rebuild state from scratch (see RT-5).
+- **FR-10b** All four players shall join before play begins. A client follows
+  the game entirely from the event stream, and a client that opens one late —
+  a reconnection, or a second tab for the same seat — is caught up by replay
+  rather than by a snapshot (see RT-5, RT-5a).
 - **FR-10c** A seat token may drive several concurrent client connections. All
   of them shall show that seat's view and shall receive the same events, and
   any of them may act for the seat. Opening a seat in a second browser shall
@@ -477,10 +478,19 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   dealt (per player, privately), bid placed, trump named, cards passed (to the
   passing team only), meld exposed, card played, trick completed, round scored,
   game over.
-- **RT-5** Reconnection is out of scope for this release. A client builds its
-  view from the event stream it has been receiving since it joined; the server
-  shall not construct a point-in-time snapshot of a game in progress, and a
-  client that loses its stream cannot rebuild one.
+- **RT-5** A client builds its view from the event stream alone. The server
+  shall not construct a point-in-time snapshot of a game in progress; there is
+  one authoritative history, and it is the sequence of events.
+- **RT-5a** A client that loses its stream shall be able to resume it. Every
+  frame carries a sequence number; on reconnecting, a client shall present the
+  last one it received, and the server shall replay the frames that seat
+  missed — its own private frames and the table's broadcasts, never another
+  seat's — before resuming live delivery. Replay is bounded: where the server
+  can no longer reach back far enough, it shall say so rather than deliver a
+  history with a hole in it.
+- **RT-5b** A client shall show whether its stream is live, and shall not
+  submit actions while it is not. A table that has stopped being told what
+  happens is frozen, not merely quiet, and shall not be presented as playable.
 - **RT-6** Computer players' actions shall be produced by the server and
   published through the same event stream as human actions, so that clients
   need not distinguish between them.
@@ -502,11 +512,12 @@ timed. The only server-owned pause left is the trick clear (UI-15).
 - **RT-11** Because all four clients are driven from one clock, they shall
   display the same phase at the same time, to within network latency. No client
   shall be able to run ahead of or behind the others.
-- **RT-12** A human player who loses their connection cannot rejoin, and
-  nothing acts for their seat (FR-2a). Play blocks there permanently and the
-  game cannot be completed. The remaining players shall be told the seat is
-  gone, so they abandon the game deliberately rather than waiting on a seat
-  that will never act.
+- **RT-12** Nothing acts for a seat whose player is absent (FR-2a), so play
+  blocks there until they return. A seat that reconnects within the replay
+  window resumes and play continues (RT-5a); one that does not leaves the game
+  unable to be completed. The remaining players shall be told when a seat is
+  lost and when it comes back, so they can wait or abandon the game
+  deliberately rather than sit in front of a table that has simply stopped.
 
 ---
 

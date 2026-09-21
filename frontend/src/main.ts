@@ -8,10 +8,11 @@ import { ApiError } from "./api.js";
 import * as actions from "./actions.js";
 import { clearSelection } from "./hand.js";
 import { resetPanel } from "./panels.js";
-import { openStream, playerStreamUrl } from "./stream.js";
+import { openStream, playerStreamUrl, type ConnectionState } from "./stream.js";
 import { applyEvent, initialState, type GameState } from "./state.js";
 import {
-  hideLastTrick, noteResort, renderTable, showError, type TableCallbacks,
+  hideLastTrick, noteResort, renderTable, showConnection, showError,
+  type TableCallbacks,
 } from "./table.js";
 import { resolveSeat } from "./token.js";
 import type { Frame, Seat } from "./types.js";
@@ -20,6 +21,15 @@ let state: GameState = initialState();
 
 /** Set once the seat is known; every redraw goes through it. */
 let callbacks: TableCallbacks | null = null;
+
+/**
+ * Whether the stream is currently delivering.
+ *
+ * The client holds no game rules (ARC-2), but it does know whether it is
+ * still being told what happens, and that is a fact about this browser that
+ * no server event can carry.
+ */
+let connection: ConnectionState = "connecting";
 
 main();
 
@@ -44,6 +54,10 @@ function main(): void {
       render();
     },
     onError: (message) => showError(message),
+    onConnection: (next) => {
+      connection = next;
+      showConnection(next);
+    },
   });
 
   // The hand is not redrawn during a drag, so the drop or the abandonment of
@@ -76,24 +90,33 @@ function fitStage(): void {
 
 /** Turn the table's requests into HTTP, and refusals into a visible message. */
 function buildCallbacks(seat: Seat): TableCallbacks {
-  const attempt = (work: Promise<void>) => {
-    work.catch((error: unknown) => {
+  // Every action goes through here, so this is the one place that can stop a
+  // seat acting into a connection that is not there. Sending anyway is worse
+  // than not sending: the server would accept the move and carry the game on
+  // without this player, whose screen would stay frozen on the turn they
+  // thought they had just taken.
+  const attempt = (work: () => Promise<void>) => {
+    if (connection !== "live") {
+      showError("Not connected — waiting for the stream to come back.");
+      return;
+    }
+    work().catch((error: unknown) => {
       showError(error instanceof ApiError ? error.message : String(error));
     });
   };
 
   return {
-    onDraw: (position) => attempt(actions.draw(seat, position)),
-    onPlay: (card) => attempt(actions.play(seat, card)),
-    onBid: (amount) => attempt(actions.bid(seat, amount)),
-    onContract: (accept) => attempt(actions.decideContract(seat, accept)),
-    onTrump: (suit) => attempt(actions.nameTrump(seat, suit)),
+    onDraw: (position) => attempt(() => actions.draw(seat, position)),
+    onPlay: (card) => attempt(() => actions.play(seat, card)),
+    onBid: (amount) => attempt(() => actions.bid(seat, amount)),
+    onContract: (accept) => attempt(() => actions.decideContract(seat, accept)),
+    onTrump: (suit) => attempt(() => actions.nameTrump(seat, suit)),
     onPass: (cards) => {
       clearSelection();
-      attempt(actions.passCards(seat, cards));
+      attempt(() => actions.passCards(seat, cards));
     },
-    onBeginPlay: () => attempt(actions.beginPlay(seat)),
-    onTossIn: () => attempt(actions.tossIn(seat)),
+    onBeginPlay: () => attempt(() => actions.beginPlay(seat)),
+    onTossIn: () => attempt(() => actions.tossIn(seat)),
     onSelectionChange: () => render(),
   };
 }
