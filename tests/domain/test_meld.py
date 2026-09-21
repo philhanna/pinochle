@@ -4,7 +4,7 @@ import pytest
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
-from pinochle.domain.meld import detect_meld, total_meld, MeldUnit
+from pinochle.domain.meld import MeldUnit, cards_in_meld, detect_meld, total_meld
 
 TRUMP = Suit.SPADES
 
@@ -117,3 +117,33 @@ def test_trump_nine():
 def test_empty_hand_no_meld():
     """An empty hand should not produce any meld."""
     assert detect_meld([], TRUMP) == []
+
+
+def test_only_cards_participating_in_meld_are_exposed():
+    """Dead cards stay private when the player's meld is laid down."""
+    hand = cards(
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.HEARTS),
+        (Rank.ACE, Suit.CLUBS),
+    )
+    assert cards_in_meld(hand, TRUMP) == hand[:2]
+
+
+def test_one_physical_card_shared_by_two_combinations_is_exposed_once():
+    """The spade queen can serve queens-around and pinochle simultaneously."""
+    hand = cards(
+        (Rank.QUEEN, Suit.SPADES), (Rank.QUEEN, Suit.HEARTS),
+        (Rank.QUEEN, Suit.DIAMONDS), (Rank.QUEEN, Suit.CLUBS),
+        (Rank.JACK, Suit.DIAMONDS), (Rank.ACE, Suit.CLUBS),
+    )
+    exposed = cards_in_meld(hand, Suit.HEARTS)
+    assert exposed == hand[:5]
+    assert exposed.count(Card(Rank.QUEEN, Suit.SPADES)) == 1
+
+
+def test_double_combinations_expose_both_physical_copies():
+    """A double pinochle lays down both queens and both jacks."""
+    hand = cards(
+        (Rank.QUEEN, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+        (Rank.QUEEN, Suit.SPADES), (Rank.JACK, Suit.DIAMONDS),
+    )
+    assert cards_in_meld(hand, Suit.HEARTS) == hand

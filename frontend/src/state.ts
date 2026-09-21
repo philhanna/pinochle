@@ -57,6 +57,7 @@ export interface MeldUnit {
 
 /** A seat's exposed meld (FR-44, UI-13). */
 export interface PlayerMeld {
+  cards: CardCode[];
   units: MeldUnit[];
   total: number;
 }
@@ -522,13 +523,14 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
   meld_exposed: (state, p) => {
     const playerId = p["player_id"] as string;
     const total = p["total"] as number;
+    const cards = (p["cards"] as CardCode[] | undefined) ?? [];
     const seat = seatOf(state, playerId);
     const teamId = seat?.teamId;
     return {
       ...state,
       meld: {
         ...state.meld,
-        [playerId]: { units: p["units"] as MeldUnit[], total },
+        [playerId]: { cards: sortHand(cards, state.trump), units: p["units"] as MeldUnit[], total },
       },
       teamMeld: teamId === undefined
         ? state.teamMeld

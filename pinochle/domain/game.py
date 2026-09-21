@@ -243,12 +243,14 @@ class MeldExposed:
     Attributes:
         game_id: The game in which meld was exposed.
         player_id: The player whose meld this is.
+        cards: The physical cards laid face-up for these combinations.
         units: The combinations detected in the player's hand.
         total: The points those combinations are worth.
     """
 
     game_id: str
     player_id: str
+    cards: list[Card]
     units: list[MeldUnit]
     total: int
 

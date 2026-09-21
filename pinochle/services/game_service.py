@@ -669,6 +669,7 @@ class GameService(AdminPort, PlayerActionPort):
             game.emit(MeldExposed(
                 game_id=game.id,
                 player_id=pid,
+                cards=round_state.meld_cards(pid),
                 units=round_state.meld(pid),
                 total=round_state.meld_total(pid),
             ))

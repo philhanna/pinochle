@@ -80,7 +80,7 @@ def test_public_events_are_broadcast():
     dispatch(
         service,
         BidPlaced(game_id="g1", player_id="E", amount=250, current_high=250),
-        MeldExposed(game_id="g1", player_id="E", units=[], total=0),
+        MeldExposed(game_id="g1", player_id="E", cards=[], units=[], total=0),
     )
     assert notifier.notified == []
     assert len(notifier.broadcast_events) == 2

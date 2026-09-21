@@ -10,6 +10,7 @@ from pinochle.domain.game import (
     DrawMade,
     HoldBegun,
     HoldEnded,
+    MeldExposed,
     TrumpNamed,
 )
 from pinochle.domain.hold import HoldReason
@@ -55,6 +56,17 @@ def test_suit_fields_use_the_wire_codec():
     event = TrumpNamed(game_id="g1", suit=Suit.HEARTS)
     frame = encode_event(event, seq=1, turn=TURN)
     assert _payload_of(frame)["suit"] == "HEARTS"
+
+
+def test_exposed_meld_carries_its_face_up_cards():
+    """Every client needs the public meld cards to lay them on the table."""
+    event = MeldExposed(
+        game_id="g1", player_id="N",
+        cards=[Card(Rank.QUEEN, Suit.SPADES), Card(Rank.JACK, Suit.DIAMONDS)],
+        units=[], total=40,
+    )
+    payload = _payload_of(encode_event(event, seq=1, turn=TURN))
+    assert payload["cards"] == ["QS", "JD"]
 
 
 def test_trick_completed_pairs_each_card_with_its_player():

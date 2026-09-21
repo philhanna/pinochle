@@ -201,6 +201,10 @@ function renderSeats(state: GameState): void {
       const count = state.handCounts[seat.playerId] ?? 0;
       children.push(backsFan(count, spot === "left" || spot === "right"));
     }
+    const meldCards = state.phase === "MELDING" ? state.meld[seat.playerId]?.cards ?? [] : [];
+    if (meldCards.length > 0) {
+      children.push(meldFan(meldCards));
+    }
     const call = bidCall(state, seat.playerId);
     if (call !== null) {
       children.push(text("bid-call", call));
@@ -216,6 +220,20 @@ function renderSeats(state: GameState): void {
       seat.type === "computer" ? "computer" : "human",
     ].filter(Boolean).join(" ");
   }
+}
+
+/** The public cards one player has laid face-up for meld. */
+function meldFan(cards: string[]): HTMLElement {
+  const fan = document.createElement("div");
+  fan.className = "meld-cards";
+  for (const card of cards) {
+    const image = document.createElement("img");
+    image.className = "meld-card";
+    image.src = faceUrl(card);
+    image.alt = card;
+    fan.append(image);
+  }
+  return fan;
 }
 
 /**
@@ -329,7 +347,7 @@ function trickLayer(state: GameState, callbacks: TableCallbacks): HTMLElement {
 function passPanel(state: GameState): HTMLElement | null {
   const received = state.received;
   const sent = state.sent;
-  if ((received === null && sent === null) || playHasBegun(state)) {
+  if ((received === null && sent === null) || state.phase === "MELDING" || playHasBegun(state)) {
     return null;
   }
 

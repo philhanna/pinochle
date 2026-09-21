@@ -8,7 +8,7 @@ from pinochle.domain.cards.suit import Suit
 from pinochle.domain.errors import IllegalActionError, NotYourTurnError, WrongPhaseError
 from pinochle.domain.hand import Hand
 from pinochle.domain.bid import BidEntry, BiddingRound
-from pinochle.domain.meld import MeldUnit, detect_meld
+from pinochle.domain.meld import MeldUnit, cards_in_meld, detect_meld
 from pinochle.domain.trick import Trick, TrickPlay
 
 
@@ -85,6 +85,7 @@ class Round:
         # Meld, captured once at the end of PASSING and never recomputed,
         # because the cards leave the hands during trick play.
         self._meld: dict[str, list[MeldUnit]] = {}
+        self._meld_cards: dict[str, list[Card]] = {}
         self._tossed_in: bool = False
 
     # ------------------------------------------------------------------
@@ -201,6 +202,10 @@ class Round:
         """Record every player's meld from their hand as it stands after the pass."""
         self._meld = {
             player_id: detect_meld(list(hand), self._trump)
+            for player_id, hand in self._hands.items()
+        }
+        self._meld_cards = {
+            player_id: cards_in_meld(list(hand), self._trump)
             for player_id, hand in self._hands.items()
         }
 
@@ -342,6 +347,10 @@ class Round:
     def meld_total(self, player_id: str) -> int:
         """Return the meld points recorded for ``player_id`` after the pass."""
         return sum(unit.points for unit in self._meld.get(player_id, []))
+
+    def meld_cards(self, player_id: str) -> list[Card]:
+        """Return the physical cards exposed for one player's meld."""
+        return list(self._meld_cards.get(player_id, []))
 
     def all_meld(self) -> dict[str, list[MeldUnit]]:
         """Return every player's recorded meld, keyed by player id.

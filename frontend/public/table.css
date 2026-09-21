@@ -106,7 +106,7 @@ body.table-page {
   offset-anchor: center;
   offset-rotate: 0deg;
   animation-name: deal-packet-flight;
-  animation-timing-function: ease-in-out;
+  animation-timing-function: linear;
   animation-fill-mode: forwards;
 }
 
@@ -222,6 +222,51 @@ body.table-page {
 }
 
 .seat.right .bid-call {
+  top: 50%;
+  right: calc(100% + 12px);
+  transform: translateY(-50%);
+}
+
+/* Public meld is laid face-up just inside each player's hand. The cards use a
+   compact overlap so even a large meld remains a single readable spread. */
+.meld-cards {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  height: 88px;
+  pointer-events: none;
+}
+
+.meld-card {
+  width: 62px;
+  height: 87px;
+  margin-left: -43px;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.meld-card:first-child { margin-left: 0; }
+
+.seat.top .meld-cards {
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.seat.bottom .meld-cards {
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.seat.left .meld-cards {
+  top: 50%;
+  left: calc(100% + 12px);
+  transform: translateY(-50%);
+}
+
+.seat.right .meld-cards {
   top: 50%;
   right: calc(100% + 12px);
   transform: translateY(-50%);

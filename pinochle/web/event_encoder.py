@@ -161,16 +161,10 @@ def _cards_passed(event: CardsPassed) -> tuple[str, dict]:
 
 
 def _meld_exposed(event: MeldExposed) -> tuple[str, dict]:
-    """Build the payload for ``meld_exposed`` (FR-44, FR-45).
-
-    ``MeldUnit`` does not record which specific cards make up a combination
-    (only its name and point value), so a unit's cards aren't in this
-    payload. Attributing exact cards would mean reworking
-    ``pinochle.domain.meld.detect_meld`` to track them, which is deferred
-    until the front end actually needs to highlight them.
-    """
+    """Build the public combinations and face-up cards (FR-44, FR-45)."""
     return "meld_exposed", {
         "player_id": event.player_id,
+        "cards": [encode_card(card) for card in event.cards],
         "units": [{"name": u.name, "points": u.points} for u in event.units],
         "total": event.total,
     }

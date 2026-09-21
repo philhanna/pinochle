@@ -20,6 +20,7 @@ from pinochle.domain.game import (
     GameEvent,
     GameOver,
     HoldEnded,
+    MeldExposed,
     PlayBegun,
     RoundScored,
     RoundStarted,
@@ -192,6 +193,19 @@ def test_round_started_precedes_the_hands(table):
     started = notifier.of_type(RoundStarted)[0]
     assert started.round_number == 1
     assert started.dealer_player_id == state.load(started.game_id).dealer_id
+
+
+def test_meld_events_carry_each_players_face_up_cards(table):
+    """Only the physical cards participating in meld become public."""
+    service, state, notifier = table
+    game_id, _ = expose_meld(service, state)
+    round_state = state.load(game_id).current_round
+    exposed = notifier.of_type(MeldExposed)
+
+    assert len(exposed) == 4
+    for event in exposed:
+        assert event.cards == round_state.meld_cards(event.player_id)
+        assert all(card in round_state.hand(event.player_id) for card in event.cards)
 
 
 def test_the_table_holds_on_the_round_summary(table):

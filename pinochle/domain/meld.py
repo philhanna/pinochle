@@ -98,3 +98,51 @@ def detect_meld(cards: list[Card], trump: Suit) -> list[MeldUnit]:
 def total_meld(cards: list[Card], trump: Suit) -> int:
     """Return the total meld points available in ``cards``."""
     return sum(u.points for u in detect_meld(cards, trump))
+
+
+def cards_in_meld(cards: list[Card], trump: Suit) -> list[Card]:
+    """Return the physical cards a player lays face-up for their meld.
+
+    A card can support several combinations at once — the queen of spades can
+    be both part of queens around and a pinochle — but is laid down only once.
+    Duplicate cards are retained when a double combination actually needs
+    both physical copies.
+    """
+    held = Counter((card.rank, card.suit) for card in cards)
+    needed: Counter[tuple[Rank, Suit]] = Counter()
+
+    def require(rank: Rank, suit: Suit, count: int) -> None:
+        key = (rank, suit)
+        needed[key] = max(needed[key], count)
+
+    run_ranks = [Rank.ACE, Rank.TEN, Rank.KING, Rank.QUEEN, Rank.JACK]
+    runs = min(held[(rank, trump)] for rank in run_ranks)
+    for rank in run_ranks:
+        require(rank, trump, runs)
+
+    for suit in Suit:
+        pairs = min(held[(Rank.KING, suit)], held[(Rank.QUEEN, suit)])
+        require(Rank.KING, suit, pairs)
+        require(Rank.QUEEN, suit, pairs)
+
+    pinochles = min(
+        held[(Rank.QUEEN, Suit.SPADES)], held[(Rank.JACK, Suit.DIAMONDS)],
+    )
+    require(Rank.QUEEN, Suit.SPADES, pinochles)
+    require(Rank.JACK, Suit.DIAMONDS, pinochles)
+
+    for rank in (Rank.ACE, Rank.KING, Rank.QUEEN, Rank.JACK):
+        around = min(held[(rank, suit)] for suit in Suit)
+        for suit in Suit:
+            require(rank, suit, around)
+
+    require(Rank.NINE, trump, held[(Rank.NINE, trump)])
+
+    remaining = needed.copy()
+    exposed: list[Card] = []
+    for card in cards:
+        key = (card.rank, card.suit)
+        if remaining[key] > 0:
+            exposed.append(card)
+            remaining[key] -= 1
+    return exposed
