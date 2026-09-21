@@ -3,6 +3,20 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.0.0] - 2026-09-21
+
+First full release.
+
+### Changed
+- The Docker deployment reads its whole configuration from `.env` at the
+  repository root rather than from settings baked into `docker/compose.yaml`,
+  so a deployment is configured by editing one file. The published port and
+  its host binding are now `PINOCHLE_BIND_ADDRESS` and `PINOCHLE_PORT`,
+  defaulting to loopback on 8000, and the `make docker` targets run compose
+  from the repository root with that env file
+- The meld cards on the table are drawn larger, so a face-up meld can be read
+  at a glance
+
 ## [1.0.0-RC1] - 2026-09-21
 
 First release candidate.
@@ -411,7 +425,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/1.0.0-RC1..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.0.0..HEAD
+[1.0.0]: https://github.com/philhanna/pinochle/compare/1.0.0-RC1..1.0.0
 [1.0.0-RC1]: https://github.com/philhanna/pinochle/compare/0.5.0..1.0.0-RC1
 [0.5.0]: https://github.com/philhanna/pinochle/compare/0.4.0..0.5.0
 [0.4.0]: https://github.com/philhanna/pinochle/compare/0.3.0..0.4.0
