@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 
 import {
   bidCall, bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
-  seatLabel, statusLine, summaryHeadline, summaryRows, trumpText,
+  seatLabel, statusLine, summaryHeadline, summaryRows, trumpText, winningBidText,
 } from "../dist/view.js";
 import { notice } from "../dist/notice.js";
 import { applyEvent, initialState } from "../dist/state.js";
@@ -85,6 +85,24 @@ test("an offered contract is shown as offered until it is accepted (FR-32)", () 
     seated(), frame("contract_offered", { player_id: "p-south", amount: 250 }),
   );
   assert.equal(contractText(state), "250 offered");
+  assert.equal(winningBidText(state), "Phil — 250");
+});
+
+test("the lower-left plaque shows the winner when the auction reaches trump", () => {
+  const trumpTurn = { ...TURN, phase: "TRUMP", current_player_id: "p-north" };
+  const state = [
+    frame("bid_placed", { player_id: "p-north", amount: 270, current_high: 270 }),
+    frame("bid_placed", { player_id: "p-east", amount: null, current_high: 270 }, trumpTurn),
+  ].reduce(applyEvent, seated());
+  assert.equal(winningBidText(state), "North — 270");
+});
+
+test("the auction plaque remains after trump is named", () => {
+  const state = [
+    frame("bid_placed", { player_id: "p-east", amount: 300, current_high: 300 }),
+    frame("trump_named", { suit: "DIAMONDS" }),
+  ].reduce(applyEvent, seated());
+  assert.equal(winningBidText(state), "East — 300");
 });
 
 test("the bid history keeps every bid and pass in order (UI-10, UI-14a)", () => {

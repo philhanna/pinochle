@@ -35,6 +35,9 @@ let connection: ConnectionState = "connecting";
 /** The cosmetic deal currently being shown, if any. */
 let dealPacketsShown: number | null = null;
 
+/** The packet currently travelling from the dealer to a hand. */
+let dealPacketInFlight: number | null = null;
+
 /** Frames that arrived while the visible deal was catching up. */
 const queuedFrames: Frame[] = [];
 
@@ -89,6 +92,7 @@ function receiveFrame(frame: Frame): void {
 /** Reveal one clockwise packet at a human dealer's pace. */
 function beginVisibleDeal(): void {
   dealPacketsShown = 0;
+  dealPacketInFlight = 0;
   render();
 
   const nextPacket = () => {
@@ -96,13 +100,15 @@ function beginVisibleDeal(): void {
       return;
     }
     dealPacketsShown += 1;
-    render();
     if (dealPacketsShown < DEAL_PACKET_COUNT) {
+      dealPacketInFlight = dealPacketsShown;
+      render();
       window.setTimeout(nextPacket, DEAL_PACKET_MS);
       return;
     }
 
     dealPacketsShown = null;
+    dealPacketInFlight = null;
     while (queuedFrames.length > 0 && dealPacketsShown === null) {
       const frame = queuedFrames.shift();
       if (frame !== undefined) {
@@ -192,7 +198,7 @@ function afterFrame(frame: Frame): void {
 function render(): void {
   if (callbacks !== null) {
     const shown = dealPacketsShown === null ? state : dealingView(state, dealPacketsShown);
-    renderTable(shown, callbacks);
+    renderTable(shown, callbacks, dealPacketInFlight);
   }
 }
 

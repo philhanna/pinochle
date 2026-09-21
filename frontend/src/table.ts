@@ -5,9 +5,12 @@
 // exceptions are the two things a pointer can be holding — a card in the hand
 // and a card in the spread — which must not be pulled out from under it.
 
-import { faceUrl } from "./cards.js";
+import { backUrl, faceUrl } from "./cards.js";
+import { DEAL_PACKET_MS, dealOrder } from "./deal.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
-import { isPaused, placement, playHasBegun, suitGlyph, trickCards } from "./layout.js";
+import {
+  isPaused, placement, playHasBegun, suitGlyph, trickCards, type Spot,
+} from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import { notice } from "./notice.js";
 import { isMovingCard, renderSpread } from "./spread.js";
@@ -15,7 +18,7 @@ import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
 import {
   bidCall, bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
-  statusLine, summaryHeadline, summaryRows, trumpText,
+  statusLine, summaryHeadline, summaryRows, trumpText, winningBidText,
 } from "./view.js";
 
 /** Everything the table can ask of the player. */
@@ -31,11 +34,15 @@ let showingLastTrick = false;
 let scoreboardOpen = true;
 
 /** Draw the whole table. */
-export function renderTable(state: GameState, callbacks: TableCallbacks): void {
+export function renderTable(
+  state: GameState, callbacks: TableCallbacks, dealPacket: number | null = null,
+): void {
   renderSeats(state);
+  renderDealFlight(state, dealPacket);
   renderSpreadInto(state, callbacks);
   renderCentre(state, callbacks);
   renderScoreboard(state);
+  renderContract(state);
   renderTrump(state);
   renderNotice(state, callbacks);
   renderStatus(state);
@@ -51,6 +58,77 @@ export function renderTable(state: GameState, callbacks: TableCallbacks): void {
       markResorted(hand);
     }
   }
+}
+
+/** Keep the auction winner and contract amount visible in the lower-left. */
+function renderContract(state: GameState): void {
+  const element = byId("contract-indicator");
+  if (element === null) {
+    return;
+  }
+  const contract = winningBidText(state);
+  element.textContent = contract;
+  element.hidden = contract === "";
+}
+
+const DEAL_SOURCE = {
+  top: ["50%", "7%"],
+  left: ["5%", "46%"],
+  right: ["95%", "46%"],
+  bottom: ["50%", "95%"],
+} as const;
+
+const DEAL_TARGET = {
+  top: ["50%", "23%"],
+  left: ["16%", "46%"],
+  right: ["84%", "46%"],
+  bottom: ["50%", "79%"],
+} as const;
+
+/** Send one visible three-card packet from the dealer to its recipient. */
+function renderDealFlight(state: GameState, packetIndex: number | null): void {
+  const root = byId("deal-flight");
+  if (root === null) {
+    return;
+  }
+  const spots = placement(state);
+  const spotFor = (playerId: string | null): Spot | null => {
+    for (const spot of ["bottom", "left", "top", "right"] as const) {
+      if (spots[spot]?.playerId === playerId) {
+        return spot;
+      }
+    }
+    return null;
+  };
+  const order = dealOrder(state);
+  const recipientId = packetIndex === null || order.length === 0
+    ? null
+    : order[packetIndex % order.length] ?? null;
+  const from = spotFor(state.dealerPlayerId);
+  const to = spotFor(recipientId);
+  if (packetIndex === null || from === null || to === null) {
+    root.replaceChildren();
+    root.hidden = true;
+    return;
+  }
+
+  const packet = document.createElement("div");
+  packet.className = "deal-packet";
+  packet.style.animationDuration = `${DEAL_PACKET_MS}ms`;
+  packet.style.setProperty("--deal-from-x", DEAL_SOURCE[from][0]);
+  packet.style.setProperty("--deal-from-y", DEAL_SOURCE[from][1]);
+  packet.style.setProperty("--deal-to-x", DEAL_TARGET[to][0]);
+  packet.style.setProperty("--deal-to-y", DEAL_TARGET[to][1]);
+  for (let cardIndex = 0; cardIndex < 3; cardIndex += 1) {
+    const card = document.createElement("img");
+    card.className = "deal-card";
+    card.src = backUrl();
+    card.alt = "";
+    card.style.setProperty("--packet-card", String(cardIndex));
+    packet.append(card);
+  }
+  root.replaceChildren(packet);
+  root.hidden = false;
 }
 
 /** Keep the named trump visible in the lower-right corner of the table. */

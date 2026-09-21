@@ -50,6 +50,21 @@ export function contractText(state: GameState): string {
   return `${contract.amount} — ${nameOf(state, contract.playerId)}`;
 }
 
+/** The auction winner and amount for the persistent lower-left plaque. */
+export function winningBidText(state: GameState): string {
+  let winner = state.contract ?? state.offer;
+  if (winner === null && state.phase === "TRUMP") {
+    for (let index = state.bids.length - 1; index >= 0; index -= 1) {
+      const bid = state.bids[index];
+      if (bid !== undefined && bid.amount !== null) {
+        winner = { playerId: bid.playerId, amount: bid.amount };
+        break;
+      }
+    }
+  }
+  return winner === null ? "" : `${nameOf(state, winner.playerId)} — ${winner.amount}`;
+}
+
 /** The trump suit, with its symbol (UI-14). */
 export function trumpText(state: GameState): string {
   if (state.trump === null) {

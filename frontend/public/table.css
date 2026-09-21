@@ -86,6 +86,57 @@ body.table-page {
   box-shadow: inset 0 0 0 10px rgba(0, 0, 0, 0.28), 0 18px 48px rgba(0, 0, 0, 0.55);
 }
 
+/* One three-card packet in flight during the visible deal. Each packet starts
+   at the dealer, crosses the middle of the table, and lands at the next hand
+   before those three cards join that hand's fan. */
+#deal-flight {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.deal-packet {
+  position: absolute;
+  width: 62px;
+  height: 78px;
+  animation-name: deal-packet-flight;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: forwards;
+}
+
+.deal-card {
+  position: absolute;
+  top: calc(var(--packet-card) * 3px);
+  left: calc(var(--packet-card) * 7px);
+  width: 44px;
+  height: 62px;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes deal-packet-flight {
+  0% {
+    left: var(--deal-from-x);
+    top: var(--deal-from-y);
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(0.82) rotate(-5deg);
+  }
+  45% {
+    left: 50%;
+    top: 44%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(3deg);
+  }
+  100% {
+    left: var(--deal-to-x);
+    top: var(--deal-to-y);
+    opacity: 0.92;
+    transform: translate(-50%, -50%) scale(0.86) rotate(0deg);
+  }
+}
+
 /* --- Seats (UI-1, UI-3, UI-5, UI-7) ------------------------------------- */
 
 .seat {
@@ -409,12 +460,10 @@ body.table-page {
 
 .scoreboard-toggle:hover { background: rgba(255, 255, 255, 0.07); }
 
-/* Trump stays visible even when the scoreboard is closed. A light plaque
-   keeps black suits legible against the dark felt while preserving the
-   traditional red/black suit colours. */
-#trump-indicator {
+/* The auction result and trump stay visible even when the scoreboard is
+   closed. Light plaques keep black text and suits legible on the dark felt. */
+#contract-indicator, #trump-indicator {
   position: absolute;
-  right: 18px;
   bottom: 16px;
   z-index: 7;
   padding: 5px 12px;
@@ -428,6 +477,8 @@ body.table-page {
   white-space: nowrap;
 }
 
+#contract-indicator { left: 18px; color: #111; }
+#trump-indicator { right: 18px; }
 #trump-indicator.red { color: #c5222a; }
 #trump-indicator.black { color: #111; }
 

@@ -7,7 +7,7 @@
 import type { GameState } from "./state.js";
 
 /** A deliberate but comfortable human rhythm for placing one packet. */
-export const DEAL_PACKET_MS = 400;
+export const DEAL_PACKET_MS = 300;
 
 const CLOCKWISE = ["NORTH", "EAST", "SOUTH", "WEST"] as const;
 const CARDS_PER_PACKET = 3;
@@ -34,7 +34,7 @@ export function dealOrder(state: GameState): string[] {
  *
  * The authoritative state is untouched. Hiding its prompt also makes the
  * visible deal non-interactive; queued stream frames are applied after the
- * six-second presentation completes.
+ * five-second presentation completes.
  */
 export function dealingView(state: GameState, packetCount: number): GameState {
   const order = dealOrder(state);
