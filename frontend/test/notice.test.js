@@ -259,3 +259,25 @@ test("the round's hold says something before the summary arrives (UI-19a)", () =
   assert.equal(shown.text, "The round is over.");
   assert.equal(shown.release, 9);
 });
+
+test("the dealer announcement waits for a Continue click", () => {
+  const hold = { id: 7, reason: "dealer_selected", ackable: true };
+  const state = applyEvent(seated(), frame(
+    "dealer_selected",
+    { dealer_player_id: "p-east" },
+    holding(hold, "DEALER_SELECTION"),
+  ));
+  const shown = notice(state);
+  assert.equal(shown.text, "East deals.");
+  assert.equal(shown.release, 7);
+});
+
+test("a tied dealer draw waits for a Continue click", () => {
+  const hold = { id: 8, reason: "draw_tied", ackable: true };
+  const state = applyEvent(seated(), frame(
+    "draw_tied", { cards: {} }, holding(hold, "DEALER_SELECTION"),
+  ));
+  const shown = notice(state);
+  assert.match(shown.text, /Tied for high card/);
+  assert.equal(shown.release, 8);
+});

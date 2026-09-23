@@ -439,8 +439,8 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
     }],
   }),
 
-  /** A tie: the whole selection is repeated with a new spread (FR-14). */
-  draw_tied: (state) => ({ ...state, draws: [], dealerPlayerId: null }),
+  /** A tie: keep the cards visible until Continue lays out a new spread (FR-14). */
+  draw_tied: (state) => ({ ...state, dealerPlayerId: null }),
 
   dealer_selected: (state, p) => ({
     ...state,

@@ -113,10 +113,13 @@ test("a reshuffled spread is a different spread, with nothing drawn from it", ()
   assert.equal(first.spreadSize, 48);
   assert.equal(first.draws.length, 1);
 
-  const again = replay([
+  const tied = replay([
     frame("draw_tied", { cards: ["AS", "AH"] }, DRAWING),
-    frame("dealer_selection_started", { spread_size: 48, taken: [] }, DRAWING),
   ], first);
+  assert.deepEqual(tied.draws, first.draws, "the tied cards stay visible during the notice");
+  const again = replay([
+    frame("dealer_selection_started", { spread_size: 48, taken: [] }, DRAWING),
+  ], tied);
   assert.deepEqual(again.draws, [], "the new deck has been drawn from by nobody");
   assert.notEqual(again.spreadId, first.spreadId, "it is not the same spread");
 });

@@ -94,6 +94,10 @@ def deal(service: GameService, state: InMemoryGameState) -> str:
     for position, player_id in enumerate(["N", "E", "S", "W"]):
         service.draw_for_deal(game_id, player_id, position)
     while state.load(game_id).current_round is None:
+        hold = state.load(game_id).current_hold
+        if hold is not None:
+            service.acknowledge(game_id, "N", hold.id)
+            continue
         taken = service.positions_taken(game_id)
         free = (i for i in range(service.spread_size(game_id)) if i not in taken)
         for player_id in ["N", "E", "S", "W"]:
@@ -170,8 +174,8 @@ def test_each_draw_is_revealed_to_the_whole_table(table):
 
 
 def test_a_tied_draw_is_announced_with_a_fresh_spread(table):
-    """FR-14: a tie is public, and is followed by a whole new spread."""
-    service, _, notifier = table
+    """FR-14: a tie is public, then Continue lays out a fresh spread."""
+    service, state, notifier = table
     game_id = start(service)
     cards = service._spreads[game_id].cards
     cards[0] = Card(Rank.ACE, Suit.SPADES)
@@ -184,7 +188,34 @@ def test_a_tied_draw_is_announced_with_a_fresh_spread(table):
     tied = notifier.of_type(DrawTied)
     assert len(tied) == 1
     assert tied[0].cards["N"] == Card(Rank.ACE, Suit.SPADES)
+    hold = state.load(game_id).current_hold
+    assert hold is not None
+    assert hold.reason is HoldReason.DRAW_TIED
+    assert notifier.names()[-1] == "HoldBegun"
+
+    service.acknowledge(game_id, "N", hold.id)
     assert notifier.names()[-1] == "DealerSelectionStarted"
+
+
+def test_dealer_is_announced_and_waits_for_continue_before_the_round(table):
+    """The winning draw remains on screen until any seat clicks Continue."""
+    service, state, notifier = table
+    game_id = start(service)
+    cards = service._spreads[game_id].cards
+    for position, rank in enumerate([Rank.ACE, Rank.KING, Rank.QUEEN, Rank.JACK]):
+        cards[position] = Card(rank, Suit.SPADES)
+    for position, player_id in enumerate(["N", "E", "S", "W"]):
+        service.draw_for_deal(game_id, player_id, position)
+
+    game = state.load(game_id)
+    assert game.current_round is None
+    assert game.current_hold is not None
+    assert game.current_hold.reason is HoldReason.DEALER_SELECTED
+    assert "RoundStarted" not in notifier.names()
+
+    service.acknowledge(game_id, "E", game.current_hold.id)
+    assert state.load(game_id).current_round is not None
+    assert notifier.names().index("HoldEnded") < notifier.names().index("RoundStarted")
 
 
 # ---------------------------------------------------------------------------

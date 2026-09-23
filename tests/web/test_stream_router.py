@@ -121,6 +121,10 @@ async def test_a_private_event_is_not_sent_to_the_wrong_seat(container):
     for position, player_id in enumerate(["p-north", "p-east", "p-south", "p-west"]):
         container.actions.draw_for_deal(game_id, player_id, position)
     while container.state.load(game_id).current_round is None:
+        hold = container.state.load(game_id).current_hold
+        if hold is not None:
+            container.actions.acknowledge(game_id, "p-north", hold.id)
+            continue
         taken = container.admin.positions_taken(game_id)
         free = (i for i in range(container.admin.spread_size(game_id)) if i not in taken)
         for player_id in ["p-north", "p-east", "p-south", "p-west"]:
@@ -154,6 +158,10 @@ async def test_a_mid_game_join_is_rebuilt_from_the_replay_buffer(container):
     for position, player_id in enumerate(["p-north", "p-east", "p-south", "p-west"]):
         container.actions.draw_for_deal(game_id, player_id, position)
     while container.state.load(game_id).current_round is None:
+        hold = container.state.load(game_id).current_hold
+        if hold is not None:
+            container.actions.acknowledge(game_id, "p-north", hold.id)
+            continue
         taken = container.admin.positions_taken(game_id)
         free = (i for i in range(container.admin.spread_size(game_id)) if i not in taken)
         for player_id in ["p-north", "p-east", "p-south", "p-west"]:
@@ -191,6 +199,10 @@ async def test_admin_stream_never_receives_a_private_event(container):
     for position, player_id in enumerate(["p-north", "p-east", "p-south", "p-west"]):
         container.actions.draw_for_deal(game_id, player_id, position)
     while container.state.load(game_id).current_round is None:
+        hold = container.state.load(game_id).current_hold
+        if hold is not None:
+            container.actions.acknowledge(game_id, "p-north", hold.id)
+            continue
         taken = container.admin.positions_taken(game_id)
         free = (i for i in range(container.admin.spread_size(game_id)) if i not in taken)
         for player_id in ["p-north", "p-east", "p-south", "p-west"]:
@@ -216,6 +228,10 @@ async def _play_to_the_deal(container, game_id: str) -> None:
     for position, player_id in enumerate(["p-north", "p-east", "p-south", "p-west"]):
         container.actions.draw_for_deal(game_id, player_id, position)
     while container.state.load(game_id).current_round is None:
+        hold = container.state.load(game_id).current_hold
+        if hold is not None:
+            container.actions.acknowledge(game_id, "p-north", hold.id)
+            continue
         taken = container.admin.positions_taken(game_id)
         free = (i for i in range(container.admin.spread_size(game_id)) if i not in taken)
         for player_id in ["p-north", "p-east", "p-south", "p-west"]:

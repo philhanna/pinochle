@@ -13,6 +13,7 @@ from pinochle.domain.errors import (
     UnknownGameError,
     WrongPhaseError,
 )
+from pinochle.domain.hold import HoldReason
 from pinochle.domain.game import GamePhase
 from pinochle.services.round import Round, RoundPhase
 from pinochle.domain.player import Player, PlayerType, Position
@@ -238,6 +239,8 @@ def test_a_draw_after_the_dealer_is_settled_is_refused():
         cards[position] = Card(rank, Suit.SPADES)
     for position, pid in enumerate(["N", "E", "S", "W"]):
         service.draw_for_deal(game_id, pid, position)
+    hold = state.load(game_id).current_hold
+    service.acknowledge(game_id, "N", hold.id)
     assert state.load(game_id).phase == GamePhase.IN_ROUND
 
     with pytest.raises(WrongPhaseError):
@@ -278,6 +281,10 @@ def test_tie_lays_out_a_fresh_spread_for_all_four():
         service.draw_for_deal(game_id, pid, position)
 
     assert state.load(game_id).dealer_id is None
+    hold = state.load(game_id).current_hold
+    assert hold is not None
+    assert hold.reason is HoldReason.DRAW_TIED
+    service.acknowledge(game_id, "N", hold.id)
     assert service.positions_taken(game_id) == set()
 
 
@@ -420,6 +427,10 @@ def _deal_via_dealer_selection(service: GameService, state: InMemoryGameState) -
     for position, pid in enumerate(["N", "E", "S", "W"]):
         service.draw_for_deal(game_id, pid, position)
     while state.load(game_id).current_round is None:
+        hold = state.load(game_id).current_hold
+        if hold is not None:
+            service.acknowledge(game_id, "N", hold.id)
+            continue
         taken = service.positions_taken(game_id)
         free = (i for i in range(service.spread_size(game_id)) if i not in taken)
         for pid in ["N", "E", "S", "W"]:

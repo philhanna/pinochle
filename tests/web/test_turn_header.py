@@ -36,6 +36,10 @@ def deal_a_round(service: GameService, state: InMemoryGameState, game_id: str):
     for position, player_id in enumerate(["N", "E", "S", "W"]):
         service.draw_for_deal(game_id, player_id, position)
     while state.load(game_id).current_round is None:
+        hold = state.load(game_id).current_hold
+        if hold is not None:
+            service.acknowledge(game_id, "N", hold.id)
+            continue
         taken = service.positions_taken(game_id)
         free = (i for i in range(service.spread_size(game_id)) if i not in taken)
         for player_id in ["N", "E", "S", "W"]:

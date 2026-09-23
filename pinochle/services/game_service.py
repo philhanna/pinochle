@@ -360,7 +360,15 @@ class GameService(AdminPort, PlayerActionPort):
         identically; a table played on by four computers has to arrive at
         the same place as the table it was a moment ago.
         """
-        if released.reason is HoldReason.ROUND_SCORED:
+        if released.reason is HoldReason.DRAW_TIED:
+            self._reset_spread(game.id)
+            game.emit(DealerSelectionStarted(
+                game_id=game.id,
+                spread_size=self.spread_size(game.id),
+            ))
+        elif released.reason is HoldReason.DEALER_SELECTED:
+            self._start_round(game)
+        elif released.reason is HoldReason.ROUND_SCORED:
             self._finish_or_deal(game)
         elif released.reason is HoldReason.MELD_EXPOSED:
             winner = game.current_round.bid_winner
@@ -597,16 +605,20 @@ class GameService(AdminPort, PlayerActionPort):
         return spread
 
     def _resolve_dealer_selection(self, game_id: str, spread: "_DealerSpread") -> None:
-        """Settle a completed round of draws, redealing the spread on a tie."""
+        """Announce a completed draw, then wait before advancing the table."""
         drawn = spread.cards_drawn()
         winner = self._resolve_draw(drawn)
         if winner is None:
-            # FR-14: a tie restarts the whole draw, all four players included.
-            self._reset_spread(game_id)
-
             def _announce_tie(g: Game) -> None:
-                """Show the tied draw, then the spread replacing it."""
+                """Show the tied draw before replacing its spread."""
                 g.emit(DrawTied(game_id=g.id, cards=drawn))
+                if self._has_human_seat(g):
+                    g.begin_hold(HoldReason.DRAW_TIED, ackable=True)
+                    return
+
+                # With nobody to click Continue, an all-computer table moves
+                # directly to the fresh spread (RT-13).
+                self._reset_spread(g.id)
                 g.emit(DealerSelectionStarted(
                     game_id=g.id,
                     spread_size=self.spread_size(g.id),
@@ -618,9 +630,12 @@ class GameService(AdminPort, PlayerActionPort):
         self._spreads.pop(game_id, None)
 
         def _set_dealer_and_deal(g: Game) -> None:
-            """Persist the dealer selection result and begin the round."""
+            """Persist and announce the dealer before beginning the round."""
             g.set_dealer(winner)
             g.emit(DealerSelected(game_id=g.id, dealer_player_id=winner))
+            if self._has_human_seat(g):
+                g.begin_hold(HoldReason.DEALER_SELECTED, ackable=True)
+                return
             self._start_round(g)
 
         self._load_save(game_id, _set_dealer_and_deal)

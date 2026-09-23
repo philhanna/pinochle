@@ -256,6 +256,9 @@ def _stall_at_the_human_seat(service, state, scheduler, game_id) -> str:
     for _ in range(2000):
         scheduler.advance(0)
         game = state.load(game_id)
+        if game.current_hold is not None:
+            service.acknowledge(game_id, "S", game.current_hold.id)
+            continue
         if game.current_round is not None:
             break
         if game.phase == GamePhase.DEALER_SELECTION and "S" in service.players_awaiting_draw(game_id):
