@@ -78,6 +78,32 @@ export async function startGame(adminToken: string, gameId: string): Promise<voi
   await send(adminToken, "POST", `/api/admin/games/${encodeURIComponent(gameId)}/start`);
 }
 
+/**
+ * Cut a player loose from their seat (RT-12a).
+ *
+ * The seat keeps its cards and its turn; what stops working is the link the
+ * player was sent and the stream it opened. Play blocks there until a
+ * computer is seated in it.
+ */
+export async function unlinkSeat(
+  adminToken: string, gameId: string, playerId: string,
+): Promise<void> {
+  await send(adminToken, "POST", seatPath(gameId, playerId, "unlink"));
+}
+
+/** Seat a computer where a player has gone, and let play resume (RT-12a). */
+export async function seatComputer(
+  adminToken: string, gameId: string, playerId: string,
+): Promise<void> {
+  await send(adminToken, "POST", seatPath(gameId, playerId, "computer"));
+}
+
+/** The route for one command against one seat. */
+function seatPath(gameId: string, playerId: string, command: string): string {
+  return `/api/admin/games/${encodeURIComponent(gameId)}`
+    + `/seats/${encodeURIComponent(playerId)}/${command}`;
+}
+
 /** End a game that cannot be completed, revoking its seat tokens. */
 export async function abandonGame(
   adminToken: string, gameId: string, reason: string,

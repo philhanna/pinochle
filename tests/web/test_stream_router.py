@@ -2,6 +2,8 @@
 import asyncio
 import json
 
+import pytest
+
 from starlette.requests import Request
 
 from pinochle.adapters.sse_notification import SseNotification
@@ -290,3 +292,51 @@ async def test_the_opening_frame_carries_no_id_line(container):
     assert _frame_type(started) == "stream_started"
     assert "id:" not in started
     await it.aclose()
+
+
+async def test_unlinking_a_seat_ends_its_open_stream(container):
+    """RT-12a: the administrator's unlink reaches a connection already open."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+
+    response = await stream_router.player_stream(
+        game_id, _request(), container=container, player_id="p-north",
+    )
+    it = response.body_iterator
+    await _anext(it)  # retry
+    await _anext(it)  # stream_started
+    await _anext(it)  # seat_rejoined, from opening this very connection
+
+    container.sse.close_seat(game_id, "p-north")
+
+    # The generator ends rather than yielding another frame, and unsubscribes
+    # on its way out, so the seat is no longer connected.
+    with pytest.raises(StopAsyncIteration):
+        await _anext(it)
+    assert container.sse.seats_connected(game_id) == set()
+
+
+async def test_ending_a_seats_stream_tells_the_table_the_seat_is_gone(container):
+    """RT-12: the remaining players are told, so they can wait or move on."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    watching = container.sse.subscribe(game_id, "p-east")
+
+    response = await stream_router.player_stream(
+        game_id, _request(), container=container, player_id="p-north",
+    )
+    it = response.body_iterator
+    await _anext(it)  # retry
+    await _anext(it)  # stream_started
+    await _anext(it)  # seat_rejoined, from opening this very connection
+    container.sse.close_seat(game_id, "p-north")
+    with pytest.raises(StopAsyncIteration):
+        await _anext(it)
+
+    seen = [type(event).__name__ for _, event in _queued(watching)]
+    assert seen[-1] == "SeatLost"
+
+
+def _queued(queue) -> list:
+    """Return everything sitting on a queue, oldest first."""
+    return [queue.get_nowait() for _ in range(queue.qsize())]

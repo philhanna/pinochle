@@ -3,6 +3,21 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [Unreleased]
+
+### Added
+- A seat whose player has gone can be given to the computer, and the game goes
+  on from the point it stopped (RT-12a). The console offers two controls per
+  human seat: **Unlink**, which revokes that player's credential and ends the
+  streams opened with it, and **Seat computer**, which does the same and then
+  hands the seat to the computer. The seat is replaced rather than re-created
+  — same id, same place at the table, same cards — so a round in progress
+  carries on, and if the seat was the one on the clock its move follows a
+  moment later. A new `seat_replaced` frame tells the table which seat changed
+  hands, and the client marks it computer-played from then on (UI-3)
+- Seating a computer in the last human seat releases any hold that was waiting
+  to be read, since there is no longer anybody to read it (RT-13)
+
 ## [1.0.0] - 2026-09-21
 
 First full release.

@@ -570,10 +570,29 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   shall be able to run ahead of or behind the others.
 - **RT-12** Nothing acts for a seat whose player is absent (FR-2a), so play
   blocks there until they return. A seat that reconnects within the replay
-  window resumes and play continues (RT-5a); one that does not leaves the game
-  unable to be completed. The remaining players shall be told when a seat is
-  lost and when it comes back, so they can wait or abandon the game
-  deliberately rather than sit in front of a table that has simply stopped.
+  window resumes and play continues (RT-5a); one that does not leaves the table
+  waiting on a seat nothing will ever act for, and the game is then finished
+  only by giving that seat to the computer (RT-12a) or by abandoning it. The
+  remaining players shall be told when a seat is lost and when it comes back,
+  so they can wait, or ask for one of those two deliberately, rather than sit
+  in front of a table that has simply stopped.
+- **RT-12a** A seat whose player has gone shall be able to be given to the
+  computer, and the game shall carry on from where it stopped. The
+  administrator shall be able to do two things to a seat: unlink its player,
+  which stops that player's credential working and ends the streams opened
+  with it; and seat a computer in their place, which is available whether the
+  player was unlinked, dropped their connection, or never joined at all.
+  The seat is replaced, never re-created. It keeps its identity, its place at
+  the table, its partnership and the cards in its hand, so a round in progress
+  resumes at the exact point it stopped rather than being dealt again; if the
+  seat was the one on the clock, the computer plays it as it would any other
+  (RT-6, RT-7). The table shall be told that the seat has changed hands, and
+  shall mark it as computer-played thereafter (UI-3).
+  Seating a computer in the last human seat leaves a table that can no longer
+  release a hold, so any hold then awaiting release shall end at once, by
+  RT-13's rule for a table with nobody at it.
+  Only a seat a person plays may be unlinked or replaced, and neither is
+  offered once the game is over.
 - **RT-13** A pause shall be modelled as a *hold*: a named state the game
   occupies, counted by the server (RT-8) and delimited by published events
   (RT-10). A hold shall end in one of exactly two ways, fixed at the moment it

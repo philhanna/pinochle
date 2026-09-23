@@ -10,7 +10,10 @@ class AdminPort(ABC):
 
     Provides the operations needed to configure a game before play begins:
     creating the game record, registering players and team assignments, and
-    transitioning to dealer selection once all four players are seated.
+    transitioning to dealer selection once all four players are seated — plus
+    the two an administrator needs once it has begun: seating a computer in
+    place of a player who has left (RT-12a), and ending a game that cannot be
+    finished at all (RT-12).
     """
 
     @abstractmethod
@@ -28,6 +31,10 @@ class AdminPort(ABC):
     @abstractmethod
     def start_game(self, game_id: str) -> None:
         """Shuffle the deck and begin dealer selection."""
+
+    @abstractmethod
+    def seat_computer(self, game_id: str, player_id: str) -> None:
+        """Put a computer in the seat of a player who has gone (RT-12a)."""
 
     @abstractmethod
     def abandon_game(self, game_id: str) -> None:

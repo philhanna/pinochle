@@ -22,6 +22,7 @@ from pinochle.domain.game import (
     RoundAbandoned,
     RoundScored,
     RoundStarted,
+    SeatReplaced,
     SeatThinking,
     TrickCleared,
     TrickCompleted,
@@ -187,6 +188,19 @@ def _contract_tossed_in(event: ContractTossedIn) -> tuple[str, dict]:
     return "contract_tossed_in", {"player_id": event.player_id}
 
 
+def _seat_replaced(event: SeatReplaced) -> tuple[str, dict]:
+    """Build the payload for ``seat_replaced`` (RT-12a).
+
+    The same three fields ``game_configured`` gives a seat, minus the ones
+    that cannot change: a client folds this over the seat it already has.
+    """
+    return "seat_replaced", {
+        "player_id": event.player_id,
+        "name": event.name,
+        "type": event.type.name.lower(),
+    }
+
+
 def _seat_thinking(event: SeatThinking) -> tuple[str, dict]:
     """Build the payload for ``seat_thinking`` (RT-7, RT-10)."""
     return "seat_thinking", {"player_id": event.player_id}
@@ -316,6 +330,7 @@ _ENCODERS = {
     MeldExposed: _meld_exposed,
     PlayBegun: _play_begun,
     ContractTossedIn: _contract_tossed_in,
+    SeatReplaced: _seat_replaced,
     SeatThinking: _seat_thinking,
     CardPlayed: _card_played,
     TrickCompleted: _trick_completed,

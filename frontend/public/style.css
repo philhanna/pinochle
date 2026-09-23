@@ -229,6 +229,9 @@ button.danger { border-color: var(--alarm); color: var(--alarm); }
 button:hover { border-color: var(--ink); }
 
 .seats .copy { margin-left: 0.5rem; padding: 0.15rem 0.4rem; font-size: 0.75rem; }
+/* The per-seat controls of RT-12a, sized to sit inside a row rather than
+   compete with the game-wide buttons below the table. */
+.seats .seat-action { margin-right: 0.4rem; padding: 0.15rem 0.4rem; font-size: 0.75rem; }
 
 #events .frames { max-height: 28rem; overflow-y: auto; }
 

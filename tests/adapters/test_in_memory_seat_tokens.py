@@ -41,3 +41,23 @@ def test_revoking_one_game_leaves_others_untouched():
     tokens.revoke_game("g1")
     assert tokens.resolve("g1", t1) is None
     assert tokens.resolve("g2", t2) == "N"
+
+
+def test_revoking_a_seat_takes_every_token_that_seat_holds():
+    """RT-12a: an unlinked player keeps no working link, however many they had."""
+    tokens = InMemorySeatTokens()
+    first = tokens.mint("g1", "N")
+    second = tokens.mint("g1", "N")
+    others = tokens.mint("g1", "E")
+    tokens.revoke_seat("g1", "N")
+    assert tokens.resolve("g1", first) is None
+    assert tokens.resolve("g1", second) is None
+    assert tokens.resolve("g1", others) == "E"
+
+
+def test_revoking_a_seat_of_an_unknown_game_changes_nothing():
+    """A console acting on a game this process never had is not an error."""
+    tokens = InMemorySeatTokens()
+    token = tokens.mint("g1", "N")
+    tokens.revoke_seat("gone", "N")
+    assert tokens.resolve("g1", token) == "N"

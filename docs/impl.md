@@ -129,22 +129,27 @@ A stream opens with one frame the domain knows nothing about,
 position, player id, name, and a `partial` flag saying whether it joined a
 round already in progress. It is how a client learns which seat it is.
 
-Then the 22 game event types, in the order a round produces them:
+Then the game event types, in the order a round produces them:
 
 | Phase | Events |
 |---|---|
-| Setup | `game_configured` |
+| Setup | `game_configured`, `seat_replaced` |
 | Dealer selection | `dealer_selection_started`, `draw_made`, `draw_tied`, `dealer_selected` |
 | Deal | `round_started`, `cards_dealt` *(private, NFR-6)* |
 | Bidding | `bid_placed`, `contract_offered`, `round_abandoned` |
 | Trump & pass | `trump_named`, `cards_passed` *(team-private)* |
 | Meld | `meld_exposed` |
 | Play | `play_begun`, `contract_tossed_in`, `seat_thinking`, `card_played`, `trick_completed`, `trick_cleared`, `turn_prompt` |
+| Pause | `hold_begun`, `hold_ended` |
 | End | `round_scored`, `game_over` |
+
+`seat_replaced` amends the table rather than opening it: a computer has taken
+a seat over from a player who left (RT-12a), and the client folds it over the
+seat it already has.
 
 Three further types — `seat_lost`, `seat_rejoined`, `game_abandoned` — are
 also published by the transport rather than the domain. **The client does not
-handle them in this plan** (§6). With `stream_started`, that makes 26 names in
+handle them in this plan** (§6). With `stream_started`, that makes 29 names in
 all; `EventSource` has no wildcard listener and every frame is named on its
 `event:` line, so a client must subscribe to each name individually and a name
 it omits is a frame it silently never receives.
@@ -271,7 +276,9 @@ supersedes.
   `game_abandoned`; the reducer ignores them beyond logging, and no banner or
   recovery UI is built. RT-12's requirement that the remaining players be told
   a seat is gone is therefore **not met by this plan** and is left to a later
-  release.
+  release. The *recovery* half of it is built: the console can unlink a player
+  and seat a computer in their place, and the table is told which seat changed
+  hands (RT-12a).
 - **Reconnection** — already out of scope by RT-5. A client that loses its
   stream cannot rebuild its view.
 - **TLS, reverse proxy, public DNS, VPS deployment.** The VPS sections of

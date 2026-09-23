@@ -19,5 +19,9 @@ class SeatTokenPort(ABC):
         """Return the player id the token seats, or None if it is not valid."""
 
     @abstractmethod
+    def revoke_seat(self, game_id: str, player_id: str) -> None:
+        """Forget every token issued for one seat, unlinking its player (RT-12a)."""
+
+    @abstractmethod
     def revoke_game(self, game_id: str) -> None:
         """Forget every token issued for a finished or abandoned game."""

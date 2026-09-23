@@ -29,6 +29,19 @@ class InMemorySeatTokens(SeatTokenPort):
         """Return the player id ``token`` seats in ``game_id``, or ``None``."""
         return self._tokens.get(game_id, {}).get(token)
 
+    def revoke_seat(self, game_id: str, player_id: str) -> None:
+        """Discard every token seating ``player_id`` in ``game_id`` (RT-12a).
+
+        Every one of them: a seat may have been issued more than one token
+        over a long evening, and unlinking a player that left one of them
+        still working would leave the seat open to whoever holds it.
+        """
+        issued = self._tokens.get(game_id)
+        if issued is None:
+            return
+        for token in [t for t, seated in issued.items() if seated == player_id]:
+            del issued[token]
+
     def revoke_game(self, game_id: str) -> None:
         """Discard every token issued for ``game_id``."""
         self._tokens.pop(game_id, None)

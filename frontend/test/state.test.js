@@ -460,6 +460,43 @@ test("a gap in sequence numbers is normal and changes nothing", () => {
   assert.equal(state.hand.length, 1);
 });
 
+test("seat_replaced marks the seat as computer-played without moving it", () => {
+  const state = replay([
+    frame("seat_replaced", { player_id: "p-south", name: "Phil", type: "computer" }),
+  ], seated());
+
+  const south = seatOf(state, "p-south");
+  assert.equal(south.type, "computer");
+  assert.equal(south.name, "Phil");
+  assert.equal(south.seat, "SOUTH");
+  assert.equal(south.teamId, "NS");
+  assert.equal(state.seats.length, 4);
+});
+
+test("seat_replaced leaves every other seat alone", () => {
+  const before = seated();
+  const after = replay([
+    frame("seat_replaced", { player_id: "p-south", name: "Phil", type: "computer" }),
+  ], before);
+
+  assert.deepEqual(
+    after.seats.filter((s) => s.playerId !== "p-south"),
+    before.seats.filter((s) => s.playerId !== "p-south"),
+  );
+});
+
+test("seat_replaced keeps the round it arrives in the middle of", () => {
+  const state = replay([
+    frame("cards_dealt", { cards: ["AS", "KS"] }),
+    frame("bid_placed", { player_id: "p-east", amount: 250, current_high: 250 }),
+    frame("seat_replaced", { player_id: "p-west", name: "W", type: "computer" }),
+  ], seated());
+
+  assert.deepEqual(state.hand, ["AS", "KS"]);
+  assert.equal(state.bids.length, 1);
+  assert.equal(state.highBid, 250);
+});
+
 test("the transport's seat frames are accepted and ignored (impl.md §6)", () => {
   const before = seated();
   const after = replay([

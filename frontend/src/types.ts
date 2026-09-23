@@ -51,6 +51,9 @@ export const FRAME_TYPES = [
   "stream_started",
   // Setup and dealer selection.
   "game_configured",
+  // An amendment to the table: a computer has taken a seat over from a
+  // player who left (RT-12a).
+  "seat_replaced",
   "dealer_selection_started",
   "draw_made",
   "draw_tied",

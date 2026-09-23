@@ -399,6 +399,27 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
     };
   },
 
+  /**
+   * A computer has taken a seat over from a player who left (RT-12a).
+   *
+   * Folded over the seat already there rather than replacing the table: the
+   * id, the position and the partnership are the same seat they always were,
+   * and the cards in front of it on screen belong to the round in progress.
+   * What changes is `type`, which is what marks a seat as computer-played
+   * (UI-3) — the same mark a table that started with computers in it carries.
+   */
+  seat_replaced: (state, p) => {
+    const playerId = p["player_id"] as string;
+    return {
+      ...state,
+      seats: state.seats.map((seat) => (
+        seat.playerId === playerId
+          ? { ...seat, name: p["name"] as string, type: p["type"] as SeatInfo["type"] }
+          : seat
+      )),
+    };
+  },
+
   /** A fresh face-down spread, with nothing drawn from it yet (FR-11a). */
   dealer_selection_started: (state, p) => ({
     ...state,

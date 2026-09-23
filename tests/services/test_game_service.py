@@ -107,6 +107,55 @@ def test_note_seat_thinking_broadcasts_without_a_turn_prompt(capsys):
     assert "TurnPrompt" not in output
 
 
+def test_seat_computer_replaces_the_seat_without_moving_it():
+    """RT-12a: the id, the seat and the partnership all survive the swap."""
+    service, state = make_service()
+    game_id = _advance_to_bidding(service, state)
+    service.seat_computer(game_id, "E")
+    seated = state.load(game_id).players["E"]
+    assert seated.type == PlayerType.COMPUTER
+    assert (seated.id, seated.name, seated.position) == ("E", "East", Position.EAST)
+
+
+def test_seat_computer_refuses_a_seat_the_computer_already_plays():
+    """A console acting on a stale table is told which seat it meant."""
+    service, state = make_service()
+    game_id = _advance_to_bidding(service, state)
+    service.seat_computer(game_id, "E")
+    with pytest.raises(IllegalActionError, match="EAST"):
+        service.seat_computer(game_id, "E")
+
+
+def test_seat_computer_refuses_an_unknown_player():
+    """An id that seats nobody is an illegal action, not an unknown game."""
+    service, state = make_service()
+    game_id = _advance_to_bidding(service, state)
+    with pytest.raises(IllegalActionError, match="nobody"):
+        service.seat_computer(game_id, "nobody")
+
+
+def test_seat_computer_refuses_a_finished_game():
+    """There is nothing left for a computer to take over once it is over."""
+    service, state = make_service()
+    game_id = _advance_to_bidding(service, state)
+    service.abandon_game(game_id)
+    with pytest.raises(WrongPhaseError):
+        service.seat_computer(game_id, "E")
+
+
+def test_seat_computer_before_the_game_starts_is_allowed():
+    """FR-10b: a seat whose player never opened their link can be filled."""
+    service, state = make_service()
+    game_id = service.create_game()
+    service.assign_teams(game_id, TEAMS[0], TEAMS[1])
+    for player in PLAYERS:
+        service.add_player(game_id, player)
+    service.seat_computer(game_id, "W")
+    assert state.load(game_id).players["W"].type == PlayerType.COMPUTER
+    service.start_game(game_id)
+    assert state.load(game_id).phase == GamePhase.DEALER_SELECTION
+
+
 def test_abandon_game_marks_it_finished():
     """RT-12: an abandoned game must not accept further play."""
     service, state = make_service()

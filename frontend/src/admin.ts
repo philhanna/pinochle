@@ -4,6 +4,11 @@
 // a live view of the public event stream, which for an all-computer table is
 // the only way to watch a game at all, since such a table issues no join
 // links.
+//
+// It also repairs a table mid-game (RT-12a): a player who has dropped their
+// connection, or who is unlinked from here, leaves a seat nothing can act for,
+// and seating a computer in it is what lets the other three play on from the
+// point the game stopped.
 
 import {
   ApiError,
@@ -11,7 +16,9 @@ import {
   createGame,
   getDefaults,
   getStatus,
+  seatComputer,
   startGame,
+  unlinkSeat,
   type CreatedGame,
   type SeatStatus,
   type TableDefaults,
@@ -117,14 +124,14 @@ async function create(state: Console_, form: HTMLFormElement): Promise<void> {
   }
 
   say(`Game ${state.game.game_id} created.`);
-  renderSeats(state.game.seats.map(asStatus));
+  renderSeats(state, state.game.seats.map(asStatus));
   reveal("game");
   watch(state);
   await refresh(state);
 }
 
-/** Show a seat's join link, its kind, and whether it has joined yet. */
-function renderSeats(seats: SeatStatus[]): void {
+/** Show a seat's join link, its kind, whether it has joined, and what may be done to it. */
+function renderSeats(state: Console_, seats: SeatStatus[]): void {
   const rows = document.getElementById("seats");
   if (rows === null) {
     return;
@@ -138,9 +145,85 @@ function renderSeats(seats: SeatStatus[]): void {
       cell(seat.type),
       cell(seat.joined ? "joined" : "waiting", seat.joined ? "joined" : "waiting"),
       linkCell(seat),
+      actionCell(state, seat),
     );
     return row;
   }));
+}
+
+/**
+ * The two things an administrator can do to one seat (RT-12a).
+ *
+ * Only to a seat a person is playing: a computer seat is already being acted
+ * for, which is the state these controls exist to reach. "Seat computer" is
+ * offered whether or not the seat still shows as joined — a player who has
+ * walked away can leave a stream open behind them, and the table stops just
+ * the same.
+ */
+function actionCell(state: Console_, seat: SeatStatus): HTMLElement {
+  const td = document.createElement("td");
+  if (seat.type !== "human") {
+    td.textContent = "—";
+    td.className = "waiting";
+    return td;
+  }
+
+  td.append(
+    seatButton("Seat computer", "seat-action primary", () => {
+      const ok = window.confirm(
+        `Seat a computer in ${seat.seat} in place of ${seat.name}?\n\n`
+        + "Their link stops working, and the computer plays the seat out from "
+        + "wherever the game has stopped.",
+      );
+      return ok ? seatComputer(state.token(), gameId(state), seat.player_id) : null;
+    }, state, `A computer now plays ${seat.seat}.`),
+    seatButton("Unlink", "seat-action", () => {
+      const ok = window.confirm(
+        `Unlink ${seat.name} from ${seat.seat}?\n\n`
+        + "Their link stops working and their table goes quiet. The seat keeps "
+        + "its cards, and play blocks there until a computer is seated in it.",
+      );
+      return ok ? unlinkSeat(state.token(), gameId(state), seat.player_id) : null;
+    }, state, `${seat.seat} is unlinked.`),
+  );
+  return td;
+}
+
+/** One seat-level action button, which refreshes the board when it lands. */
+function seatButton(
+  label: string,
+  className: string,
+  act: () => Promise<void> | null,
+  state: Console_,
+  done: string,
+): HTMLElement {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.addEventListener("click", () => void run());
+
+  /** Run the action, report it, and re-read the board either way. */
+  async function run(): Promise<void> {
+    const pending = act();
+    if (pending === null) {
+      return;
+    }
+    try {
+      await pending;
+      say(done);
+    } catch (error) {
+      report(error);
+    }
+    await refresh(state);
+  }
+
+  return button;
+}
+
+/** The game these controls act on; they are only rendered once there is one. */
+function gameId(state: Console_): string {
+  return state.game?.game_id ?? "";
 }
 
 /** One plain table cell. */
@@ -186,6 +269,16 @@ function linkCell(seat: SeatStatus): HTMLElement {
   return td;
 }
 
+/**
+ * Frames that change who is at the table, and so what the seat board says.
+ *
+ * Read from the console's own stream so that a player dropping out shows up
+ * on the board by itself (RT-12, RT-12a). Waiting for the operator to press
+ * Refresh would mean the one thing they most need to notice — a seat nothing
+ * can act for — is the one thing the console does not tell them.
+ */
+const TABLE_FRAMES = new Set(["seat_lost", "seat_rejoined", "seat_replaced"]);
+
 /** Open the administrator's stream and log every public event. */
 function watch(state: Console_): void {
   const panel = document.getElementById("events");
@@ -194,7 +287,12 @@ function watch(state: Console_): void {
   }
   state.log = createLog(panel);
   openStream(adminStreamUrl(state.game.game_id, state.token()), {
-    onFrame: (frame) => state.log?.append(frame),
+    onFrame: (frame) => {
+      state.log?.append(frame);
+      if (TABLE_FRAMES.has(frame.type)) {
+        void refresh(state);
+      }
+    },
     onError: (message) => state.log?.note(message, "error"),
   });
 }
@@ -222,7 +320,7 @@ async function refresh(state: Console_): Promise<void> {
   }
   try {
     const status = await getStatus(state.token(), state.game.game_id);
-    renderSeats(status.map((seat) => withLink(seat, state.game)));
+    renderSeats(state, status.map((seat) => withLink(seat, state.game)));
   } catch (error) {
     report(error);
   }

@@ -1,5 +1,7 @@
 # tests.web.test_admin_router
 from pinochle.domain.game import GamePhase
+from pinochle.domain.player import Player, PlayerType, Position
+from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.web.container import (
     DEFAULT_SEATS,
     DEFAULT_TEAM_EW,
@@ -101,6 +103,202 @@ async def test_abandon_finishes_the_game_and_revokes_tokens(container, client):
     assert response.status_code == 204
     assert container.state.load(game_id).phase == GamePhase.FINISHED
     assert container.tokens.resolve(game_id, token) is None
+
+
+# ---------------------------------------------------------------------------
+# Unlinking a player, and seating a computer in their place (RT-12a)
+# ---------------------------------------------------------------------------
+
+async def test_unlink_revokes_the_seats_links_and_closes_its_streams(container, client):
+    """RT-12a: the player is cut loose, but the seat stays exactly as it was."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    token = container.tokens.mint(game_id, "p-north")
+    container.sse.subscribe(game_id, "p-north")
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-north/unlink", headers=admin_headers(),
+    )
+
+    assert response.status_code == 204
+    assert container.tokens.resolve(game_id, token) is None
+    assert container.sse.seats_connected(game_id) == set()
+    # The seat itself is untouched: play still blocks there (RT-12) until a
+    # computer is seated in it.
+    assert container.state.load(game_id).players["p-north"].type.name == "HUMAN"
+
+
+async def test_unlink_leaves_the_other_seats_alone(container, client):
+    """One player leaving is not three, however the console phrases it."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    kept = container.tokens.mint(game_id, "p-east")
+    container.sse.subscribe(game_id, "p-east")
+
+    await client.post(
+        f"/api/admin/games/{game_id}/seats/p-north/unlink", headers=admin_headers(),
+    )
+
+    assert container.tokens.resolve(game_id, kept) == "p-east"
+    assert container.sse.seats_connected(game_id) == {"p-east"}
+
+
+async def test_seating_a_computer_replaces_the_seat_and_unlinks_its_player(container, client):
+    """RT-12a: the computer takes the seat over, credential and all."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    token = container.tokens.mint(game_id, "p-west")
+    container.sse.subscribe(game_id, "p-west")
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/computer", headers=admin_headers(),
+    )
+
+    assert response.status_code == 204
+    seated = container.state.load(game_id).players["p-west"]
+    assert seated.type == PlayerType.COMPUTER
+    assert (seated.id, seated.name, seated.position.name) == ("p-west", "Turing", "WEST")
+    assert container.tokens.resolve(game_id, token) is None
+
+
+async def test_a_replaced_seat_reads_as_joined_on_the_console(container, client):
+    """The console's board stops waiting on a seat nobody is coming back to."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/computer", headers=admin_headers(),
+    )
+
+    response = await client.get(f"/api/admin/games/{game_id}", headers=admin_headers())
+    west = next(s for s in response.json()["seats"] if s["seat"] == "WEST")
+    assert (west["type"], west["joined"]) == ("computer", True)
+
+
+async def test_a_game_can_start_once_an_absent_seat_is_given_to_the_computer(container, client):
+    """FR-10b's block is lifted by filling the seat, not by ignoring it."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    for player_id in ("p-north", "p-east", "p-south"):
+        container.sse.subscribe(game_id, player_id)
+
+    refused = await client.post(f"/api/admin/games/{game_id}/start", headers=admin_headers())
+    assert refused.status_code == 409
+
+    await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/computer", headers=admin_headers(),
+    )
+    started = await client.post(f"/api/admin/games/{game_id}/start", headers=admin_headers())
+    assert started.status_code == 204
+    assert container.state.load(game_id).phase == GamePhase.DEALER_SELECTION
+
+
+async def test_seating_a_computer_twice_is_refused(container, client):
+    """The second call is a stale console, and is told which seat it means."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/computer", headers=admin_headers(),
+    )
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/computer", headers=admin_headers(),
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "illegal_action"
+
+
+async def test_unlinking_a_computer_seat_is_refused_before_anything_is_revoked(
+    container, client,
+):
+    """Nothing to unlink, and nothing changed by asking."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    container.admin.seat_computer(game_id, "p-west")
+    kept = container.tokens.mint(game_id, "p-north")
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-west/unlink", headers=admin_headers(),
+    )
+    assert response.status_code == 409
+    assert container.tokens.resolve(game_id, kept) == "p-north"
+
+
+async def test_seating_a_computer_in_an_unknown_seat_is_refused(container, client):
+    """A player id that seats nobody is an illegal action, not a missing game."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-nobody/computer", headers=admin_headers(),
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "illegal_action"
+
+
+async def test_seating_a_computer_in_an_unknown_game_is_a_404(client):
+    """A game this process never had is still reported as a missing game."""
+    response = await client.post(
+        "/api/admin/games/no-such-game/seats/p-west/computer", headers=admin_headers(),
+    )
+    assert response.status_code == 404
+
+
+async def test_unlink_requires_the_admin_token(container, client):
+    """Neither route is anything a player may reach (§5.1)."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+    token = container.tokens.mint(game_id, "p-north")
+
+    response = await client.post(f"/api/admin/games/{game_id}/seats/p-north/unlink")
+
+    assert response.status_code == 403
+    assert container.tokens.resolve(game_id, token) == "p-north"
+
+
+async def test_seating_a_computer_requires_the_admin_token(container, client):
+    """The same guard, on the route that actually changes the table."""
+    game_id = container.admin.create_game()
+    seat_players(container, game_id)
+
+    response = await client.post(f"/api/admin/games/{game_id}/seats/p-north/computer")
+
+    assert response.status_code == 403
+    assert container.state.load(game_id).players["p-north"].type == PlayerType.HUMAN
+
+
+async def test_the_table_plays_on_once_the_absent_seat_is_given_to_the_computer(
+    container, client,
+):
+    """RT-12a end to end: the console's button reaches the computer driver."""
+    game_id = container.admin.create_game()
+    container.admin.assign_teams(game_id, Team(NS_TEAM_ID, "Us"), Team(EW_TEAM_ID, "Them"))
+    for player_id, name, position, kind in [
+        ("p-north", "North", Position.NORTH, PlayerType.COMPUTER),
+        ("p-east", "East", Position.EAST, PlayerType.COMPUTER),
+        ("p-south", "Grace", Position.SOUTH, PlayerType.HUMAN),
+        ("p-west", "West", Position.WEST, PlayerType.COMPUTER),
+    ]:
+        container.admin.add_player(game_id, Player(player_id, name, kind, position))
+    container.sse.subscribe(game_id, "p-south")
+
+    await client.post(f"/api/admin/games/{game_id}/start", headers=admin_headers())
+    for _ in range(50):
+        container.scheduler.advance(0)
+    # South has not drawn, so dealer selection cannot settle: the table has
+    # stopped where its absent player left it (RT-12).
+    assert container.state.load(game_id).phase == GamePhase.DEALER_SELECTION
+
+    response = await client.post(
+        f"/api/admin/games/{game_id}/seats/p-south/computer", headers=admin_headers(),
+    )
+    assert response.status_code == 204
+
+    for _ in range(200):
+        if container.state.load(game_id).phase != GamePhase.DEALER_SELECTION:
+            break
+        container.scheduler.advance(0)
+    else:
+        raise AssertionError("the table never moved on after the seat was filled")
 
 
 # ---------------------------------------------------------------------------

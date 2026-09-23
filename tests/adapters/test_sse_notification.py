@@ -1,5 +1,5 @@
 # tests.adapters.test_sse_notification
-from pinochle.adapters.sse_notification import SseNotification
+from pinochle.adapters.sse_notification import STREAM_CLOSED, SseNotification
 from pinochle.domain.game import BidPlaced, DealerSelected
 from tests.ports.test_notification_port import run_contract
 
@@ -146,3 +146,50 @@ def test_history_for_a_game_this_process_never_saw():
 
     assert hub.history_since("g1", "N", after_seq=0) == ([], True)
     assert hub.history_since("g1", "N", after_seq=7) == ([], False)
+
+
+async def test_closing_a_seat_ends_every_stream_it_holds_open():
+    """RT-12a: an unlinked seat's connections are told to stop, not just dropped."""
+    hub = SseNotification()
+    first = hub.subscribe("g1", "N")
+    second = hub.subscribe("g1", "N")
+    other = hub.subscribe("g1", "E")
+
+    assert hub.close_seat("g1", "N") == 2
+
+    assert first.get_nowait() is STREAM_CLOSED
+    assert second.get_nowait() is STREAM_CLOSED
+    assert other.empty()
+    assert hub.seats_connected("g1") == {"E"}
+
+
+async def test_a_closed_seat_receives_nothing_further():
+    """The seat is gone from the fan-out, so later events pass it by."""
+    hub = SseNotification()
+    queue = hub.subscribe("g1", "N")
+    hub.close_seat("g1", "N")
+    queue.get_nowait()
+
+    hub.broadcast("g1", DealerSelected(game_id="g1", dealer_player_id="N"))
+
+    assert queue.empty()
+
+
+async def test_closing_a_seat_whose_client_stopped_reading_still_ends_it():
+    """§6.8: a full queue is precisely the client that most needs ending."""
+    hub = SseNotification(queue_maxsize=2)
+    queue = hub.subscribe("g1", "N")
+    for _ in range(2):
+        hub.broadcast("g1", DealerSelected(game_id="g1", dealer_player_id="N"))
+    assert queue.full()
+
+    hub.close_seat("g1", "N")
+
+    frames = [queue.get_nowait() for _ in range(queue.qsize())]
+    assert frames[-1] is STREAM_CLOSED
+
+
+async def test_closing_a_seat_that_has_no_streams_is_harmless():
+    """Unlinking a player who had already gone changes nothing and says so."""
+    hub = SseNotification()
+    assert hub.close_seat("g1", "N") == 0

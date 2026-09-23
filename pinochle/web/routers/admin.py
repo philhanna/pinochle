@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import StreamingResponse
 
-from pinochle.domain.errors import SetupError
+from pinochle.domain.errors import IllegalActionError, SetupError
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.web.container import Container
@@ -127,6 +127,69 @@ async def start_game(game_id: str, container: Container = Depends(get_container)
 
     container.admin.start_game(game_id)
     return Response(status_code=204)
+
+
+@router.post("/api/admin/games/{game_id}/seats/{player_id}/unlink", status_code=204)
+async def unlink_seat(
+    game_id: str, player_id: str, container: Container = Depends(get_container),
+) -> Response:
+    """Cut a player loose from their seat (RT-12a).
+
+    Revokes the seat's credentials and ends the streams held open with them,
+    so the link the player was sent stops working and their table stops being
+    told what happens.  The seat itself is untouched: it keeps its cards and
+    its turn, and play blocks there exactly as it does for a player whose
+    connection dropped (RT-12), until a computer is seated in it or the game
+    is abandoned.
+
+    The order matters.  The credential goes first, so that a tab still open
+    on the player's screen cannot slip an action in between the two.
+    """
+    _human_seat(container, game_id, player_id)
+    container.tokens.revoke_seat(game_id, player_id)
+    container.sse.close_seat(game_id, player_id)
+    return Response(status_code=204)
+
+
+@router.post("/api/admin/games/{game_id}/seats/{player_id}/computer", status_code=204)
+async def seat_computer(
+    game_id: str, player_id: str, container: Container = Depends(get_container),
+) -> Response:
+    """Seat a computer where a player has gone, and let play resume (RT-12a).
+
+    The whole point of RT-12a: a table that has stopped because one of four
+    people closed their laptop goes on for the three who are still at it,
+    from the point it stopped rather than from a fresh deal.  The seat keeps
+    its id, its place and its hand, so a round in progress carries on; if the
+    seat was the one on the clock, its move follows a moment later like any
+    other computer's.
+
+    Unlinks first, whether or not the player is still connected: an old tab
+    left open would otherwise still hold a working credential for a seat the
+    computer is now playing.
+    """
+    _human_seat(container, game_id, player_id)
+    container.tokens.revoke_seat(game_id, player_id)
+    container.sse.close_seat(game_id, player_id)
+    container.admin.seat_computer(game_id, player_id)
+    return Response(status_code=204)
+
+
+def _human_seat(container: Container, game_id: str, player_id: str) -> None:
+    """Refuse a seat that is not a human player's to unlink (RT-12a).
+
+    Checked before anything is revoked, so that a console acting on a stale
+    view of the table changes nothing at all.  An unknown id is not a lookup
+    failure of the game — the game is there — so it is refused as the illegal
+    action it is, naming what was asked for.
+    """
+    game = container.state.load(game_id)  # UnknownGameError -> 404 if missing
+    player = game.players.get(player_id)
+    if player is None:
+        raise IllegalActionError(f"Unknown player: {player_id}")
+    if player.type != PlayerType.HUMAN:
+        raise IllegalActionError(
+            f"{player.position.name} is played by the computer already.")
 
 
 @router.post("/api/admin/games/{game_id}/abandon", status_code=204)

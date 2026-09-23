@@ -35,7 +35,7 @@ from pinochle.domain.game import (
     TrumpNamed,
     TurnPrompt,
 )
-from pinochle.domain.hold import HoldReason
+from pinochle.domain.hold import Hold, HoldReason
 from pinochle.domain.player import Player, PlayerType
 from pinochle.domain.scoring import (
     LAST_TRICK_BONUS,
@@ -334,17 +334,45 @@ class GameService(AdminPort, PlayerActionPort):
                 # Already gone: another seat released it first, or this one
                 # clicked twice. RT-13 makes that a no-op, not an error.
                 return
-            if released.reason is HoldReason.ROUND_SCORED:
-                self._deal_next_round(g)
-            elif released.reason is HoldReason.MELD_EXPOSED:
-                winner = g.current_round.bid_winner
-                if winner is None:
-                    raise IllegalActionError("The exposed meld has no bid winner.")
-                g.current_round.begin_play(winner)
-                g.emit(PlayBegun(game_id=g.id, leader_player_id=winner))
+            self._resume_from(g, released)
 
         self._load_save(game_id, _acknowledge)
 
+    def _resume_from(self, game: Game, released: Hold) -> None:
+        """Do what the hold that has just ended was standing in front of.
+
+        Written once and called from both ends, because a hold that ends by
+        a player's release and one that ends because nobody is left to
+        release it (``_release_unattended_hold``) must resume the game
+        identically; a table played on by four computers has to arrive at
+        the same place as the table it was a moment ago.
+        """
+        if released.reason is HoldReason.ROUND_SCORED:
+            self._deal_next_round(game)
+        elif released.reason is HoldReason.MELD_EXPOSED:
+            winner = game.current_round.bid_winner
+            if winner is None:
+                raise IllegalActionError("The exposed meld has no bid winner.")
+            game.current_round.begin_play(winner)
+            game.emit(PlayBegun(game_id=game.id, leader_player_id=winner))
+
+    def _release_unattended_hold(self, game: Game) -> None:
+        """End a hold that no longer has anybody left to release it (RT-13).
+
+        A hold awaiting release waits indefinitely, and only a player ends
+        it.  Seating a computer in the last human seat therefore turns such a
+        hold from a pause into a stop — which is exactly the case RT-13 rules
+        out for an all-computer table, where the game proceeds as though the
+        hold had been released at once.  It is released here for that reason
+        and in that way, so that the round the departed player was reading
+        when they left goes on rather than standing on its summary forever.
+        """
+        hold = game.current_hold
+        if hold is None or not hold.ackable or self._has_human_seat(game):
+            return
+        released = game.end_hold(hold.id)
+        if released is not None:
+            self._resume_from(game, released)
 
     def _trick_points(
         self, game: Game, round_state: Round
@@ -461,6 +489,27 @@ class GameService(AdminPort, PlayerActionPort):
             ))
 
         self._load_save(game_id, _start)
+
+    def seat_computer(self, game_id: str, player_id: str) -> None:
+        """Hand an absent player's seat to the computer, and play on (RT-12a).
+
+        The game is not restarted and nothing is dealt again: the seat keeps
+        its id, its place at the table and the cards in its hand, so the round
+        resumes from the exact point the departed player stopped it.  If it
+        was their turn, the computer driver sees the ``SeatReplaced``
+        broadcast like any other event and schedules the move that had been
+        waiting for them.
+
+        Available at any point up to the end of the game, including before it
+        starts: a seat whose player never opened their link is the same
+        problem one round in, and the same answer ends the wait (FR-10b).
+        """
+        def _seat_computer(g: Game) -> None:
+            """Replace the seat, then free a hold it may have been holding."""
+            g.seat_computer(player_id)
+            self._release_unattended_hold(g)
+
+        self._load_save(game_id, _seat_computer)
 
     def note_seat_thinking(self, game_id: str, player_id: str) -> None:
         """Announce that a computer seat's move delay has begun (RT-7, RT-10).

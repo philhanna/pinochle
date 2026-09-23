@@ -11,10 +11,12 @@ from pinochle.domain.game import (
     HoldBegun,
     HoldEnded,
     MeldExposed,
+    SeatReplaced,
     TrumpNamed,
 )
 from pinochle.domain.hold import HoldReason
 from pinochle.domain.meld import MeldUnit
+from pinochle.domain.player import PlayerType
 from pinochle.domain.trick import TrickPlay
 from pinochle.domain.game import TrickCompleted
 from pinochle.web.event_encoder import encode_event
@@ -108,6 +110,16 @@ def test_a_newline_embedded_in_a_field_does_not_split_the_frame():
     assert lines[1] == "event: card_played"
     assert lines[2].startswith("data: ")
     assert lines[3:] == ["", ""]
+
+
+def test_seat_replaced_carries_the_seat_s_new_kind_in_snake_case():
+    """RT-12a: the client folds this over the seat it already has."""
+    event = SeatReplaced(
+        game_id="g1", player_id="N", name="Phil", type=PlayerType.COMPUTER,
+    )
+    assert _payload_of(encode_event(event, 1, TURN)) == {
+        "player_id": "N", "name": "Phil", "type": "computer",
+    }
 
 
 def test_transport_level_events_encode_too():

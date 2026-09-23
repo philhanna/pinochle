@@ -233,3 +233,129 @@ def test_dealer_selection_draws_in_a_seat_determined_order():
         if type(event).__name__ == "DrawMade"
     ]
     assert drawn == ["W", "S", "E", "N"]
+
+
+ONE_HUMAN_PLAYERS = [
+    Player("N", "North", PlayerType.COMPUTER, Position.NORTH),
+    Player("E", "East", PlayerType.COMPUTER, Position.EAST),
+    Player("S", "Grace", PlayerType.HUMAN, Position.SOUTH),
+    Player("W", "West", PlayerType.COMPUTER, Position.WEST),
+]
+
+
+def _stall_at_the_human_seat(service, state, scheduler, game_id) -> str:
+    """Drive a one-human table as far as the computers can take it alone.
+
+    The human draws for the deal — once per spread, since a tie throws the
+    whole draw again (FR-14) — so the table gets into a dealt round; from
+    there the computers play up to the point where South is on the clock, and
+    stop.  Returns the round's current player, which is the seat the table is
+    now waiting on.
+    """
+    service.start_game(game_id)
+    for _ in range(2000):
+        scheduler.advance(0)
+        game = state.load(game_id)
+        if game.current_round is not None:
+            break
+        if game.phase == GamePhase.DEALER_SELECTION and "S" in service.players_awaiting_draw(game_id):
+            taken = service.positions_taken(game_id)
+            service.draw_for_deal(game_id, "S", next(
+                i for i in range(service.spread_size(game_id)) if i not in taken))
+    else:
+        raise AssertionError("the deal never began")
+
+    for _ in range(2000):
+        scheduler.advance(0)
+    return state.load(game_id).current_round.current_player
+
+
+def test_a_table_stops_where_its_absent_player_left_it():
+    """RT-12: nothing acts for an absent seat, so play blocks there."""
+    service, _, state, scheduler, game_id = make_table(
+        ONE_HUMAN_PLAYERS, delay_seconds=0, seed=7,
+    )
+    assert _stall_at_the_human_seat(service, state, scheduler, game_id) == "S"
+    assert state.load(game_id).phase == GamePhase.IN_ROUND
+
+
+def test_seating_a_computer_resumes_the_round_from_where_it_stopped():
+    """RT-12a: the seat keeps its cards and its turn; only who decides changes."""
+    service, _, state, scheduler, game_id = make_table(
+        ONE_HUMAN_PLAYERS, delay_seconds=0, seed=7,
+    )
+    _stall_at_the_human_seat(service, state, scheduler, game_id)
+
+    game = state.load(game_id)
+    round_number = game.round_number
+    hand = list(game.current_round.hand("S"))
+
+    service.seat_computer(game_id, "S")
+
+    game = state.load(game_id)
+    assert game.players["S"].type == PlayerType.COMPUTER
+    assert game.players["S"].name == "Grace"
+    # Nothing is dealt again: the same round, with the same cards in the
+    # seat that was waiting on its player.
+    assert game.round_number == round_number
+    assert list(game.current_round.hand("S")) == hand
+
+    scheduler.advance(0)
+    assert state.load(game_id).current_round.current_player != "S"
+
+
+def test_a_table_seated_entirely_by_computers_plays_the_game_out():
+    """RT-12a: the three who are left get a finished game, not a stopped one."""
+    service, _, state, scheduler, game_id = make_table(
+        ONE_HUMAN_PLAYERS, delay_seconds=0, seed=7,
+    )
+    _stall_at_the_human_seat(service, state, scheduler, game_id)
+    service.seat_computer(game_id, "S")
+
+    for _ in range(20000):
+        if state.load(game_id).phase == GamePhase.FINISHED:
+            break
+        scheduler.advance(0)
+    else:
+        raise AssertionError("the game never finished after the seat was replaced")
+
+
+def test_seating_a_computer_releases_a_hold_nobody_is_left_to_read():
+    """RT-13: an ackable hold at an all-computer table is a stop, not a pause."""
+    service, _, state, scheduler, game_id = make_table(
+        ONE_HUMAN_PLAYERS, delay_seconds=0, seed=7,
+    )
+    _stall_at_the_human_seat(service, state, scheduler, game_id)
+
+    # Drive to the meld hold, which waits on the one human seat, by acting
+    # for South until the table stops on a hold rather than on its turn.
+    game = state.load(game_id)
+    for _ in range(200):
+        if game.current_hold is not None and game.current_hold.ackable:
+            break
+        round_state = game.current_round
+        if round_state.current_player == "S":
+            _act_for(service, game_id, round_state)
+        scheduler.advance(0)
+        game = state.load(game_id)
+    else:
+        raise AssertionError("the table never reached a hold awaiting release")
+
+    service.seat_computer(game_id, "S")
+    assert state.load(game_id).current_hold is None
+
+
+def _act_for(service, game_id, round_state) -> None:
+    """Play the absent seat's turn the way a plain human client would."""
+    player_id = round_state.current_player
+    phase = round_state.phase
+    if phase == RoundPhase.BIDDING:
+        service.place_bid(game_id, player_id, None)
+    elif phase == RoundPhase.CONFIRMING:
+        service.confirm_contract(game_id, player_id, accept=True)
+    elif phase == RoundPhase.TRUMP:
+        service.name_trump(game_id, player_id, list(round_state.hand(player_id))[0].suit)
+    elif phase == RoundPhase.PASSING:
+        service.pass_cards(game_id, player_id, list(round_state.hand(player_id))[:4])
+    elif phase == RoundPhase.PLAYING:
+        service.play_card(game_id, player_id, round_state.legal_plays(player_id)[0])

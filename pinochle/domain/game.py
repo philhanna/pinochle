@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 # pinochle.domain.game
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
@@ -10,7 +10,7 @@ from pinochle.domain.cards.suit import Suit
 from pinochle.domain.errors import IllegalActionError, SetupError, WrongPhaseError
 from pinochle.domain.hold import Hold, HoldReason
 from pinochle.domain.meld import MeldUnit
-from pinochle.domain.player import Player
+from pinochle.domain.player import Player, PlayerType
 from pinochle.domain.team import Team
 from pinochle.domain.team_round_score import TeamRoundScore
 from pinochle.domain.trick import TrickPlay
@@ -286,6 +286,34 @@ class ContractTossedIn:
 
 
 @dataclass
+class SeatReplaced:
+    """Emitted when a computer takes over a seat whose player has gone (RT-12a).
+
+    A seat is replaced, never re-created: the id, the position and the
+    partnership all stay as they were, so the round in progress — the hand
+    dealt to that seat, its bids, its meld — carries on belonging to it.  What
+    changes is who decides its moves, which is exactly what ``type`` says.
+
+    The name stays too.  It is the name the other three players have been
+    calling that seat all evening, and a computer taking the cards over does
+    not make them stop; clients mark the seat as computer-played from
+    ``type``, which is the same mark an all-computer table already carries
+    (UI-3).
+
+    Attributes:
+        game_id: The game whose table has changed.
+        player_id: The seat now played by the computer.
+        name: The seat's display name, unchanged by the replacement.
+        type: Who plays the seat now — always ``computer``.
+    """
+
+    game_id: str
+    player_id: str
+    name: str
+    type: PlayerType
+
+
+@dataclass
 class SeatThinking:
     """Emitted when a computer seat's move delay begins (FR-75c, RT-7).
 
@@ -482,7 +510,7 @@ GameEvent = (
     GameConfigured | DealerSelectionStarted | DrawMade | DrawTied
     | DealerSelected | RoundStarted | CardsDealt | BidPlaced | ContractOffered
     | RoundAbandoned | TrumpNamed | CardsPassed | MeldExposed | PlayBegun
-    | ContractTossedIn | SeatThinking | CardPlayed | TrickCompleted
+    | ContractTossedIn | SeatReplaced | SeatThinking | CardPlayed | TrickCompleted
     | TrickCleared | TurnPrompt | RoundScored | GameOver
     | HoldBegun | HoldEnded
 )
@@ -594,6 +622,39 @@ class Game:
         not pretend the game has re-entered that phase.
         """
         self._dealer_id = self.next_dealer()
+
+    def seat_computer(self, player_id: str) -> Player:
+        """Hand a seat to the computer, and announce that it has changed (RT-12a).
+
+        The seat itself is untouched: same id, same position, same
+        partnership, same cards.  Only who decides its moves changes, which
+        is what lets a round carry on from where the departed player left it
+        rather than being dealt again.
+
+        Refused once the game is over, because there is nothing left for the
+        computer to play; refused for a seat already played by the computer,
+        because that is an administrator acting on a stale console and the
+        honest answer is that the seat they meant is not the one they are
+        looking at.
+        """
+        if self.phase == GamePhase.FINISHED:
+            raise WrongPhaseError("The game is over; there is nothing left to play.")
+        player = self._players.get(player_id)
+        if player is None:
+            raise IllegalActionError(f"Unknown player: {player_id}")
+        if player.type == PlayerType.COMPUTER:
+            raise IllegalActionError(
+                f"{player.position.name} is already played by the computer.")
+
+        seated = replace(player, type=PlayerType.COMPUTER)
+        self._players[player_id] = seated
+        self.emit(SeatReplaced(
+            game_id=self.id,
+            player_id=seated.id,
+            name=seated.name,
+            type=seated.type,
+        ))
+        return seated
 
     def set_finished(self) -> None:
         """Mark the game as finished."""

@@ -5,6 +5,11 @@ from collections import deque
 from pinochle.domain.game import GameEvent
 from pinochle.ports.notification_port import NotificationPort
 
+# Put on a queue in place of an event to end that stream from this side
+# (RT-12a).  A queue otherwise only ever carries ``(seq, event)`` pairs, so a
+# reader tells the two apart by identity and needs no wrapper type.
+STREAM_CLOSED = object()
+
 
 class SseNotification(NotificationPort):
     """``NotificationPort`` that fans events out to per-seat SSE subscriber queues.
@@ -64,6 +69,28 @@ class SseNotification(NotificationPort):
     def unsubscribe_admin(self, game_id: str, queue: asyncio.Queue) -> None:
         """Remove ``queue`` from the admin subscribers, if still present."""
         self._admins.get(game_id, set()).discard(queue)
+
+    def close_seat(self, game_id: str, player_id: str) -> int:
+        """End every stream ``player_id`` holds open, and say how many (RT-12a).
+
+        Unsubscribing on its own would not do it.  A stream is held open by a
+        generator waiting on its queue, and one that is never told to stop
+        waits forever — it would go on holding the seat open for a player the
+        administrator has just unlinked, and go on being resumable with the
+        credential that opened it.  So each queue is handed the sentinel that
+        ends its generator, which then unsubscribes itself by the ordinary
+        route and lets the table hear that the seat is gone.
+
+        A queue with no room left is one whose client stopped reading long
+        ago; the oldest frame on it is dropped to make room, since a stream
+        being closed has no use for it.
+        """
+        queues = self._seats.get(game_id, {}).pop(player_id, set())
+        for queue in queues:
+            if queue.full():
+                queue.get_nowait()
+            queue.put_nowait(STREAM_CLOSED)
+        return len(queues)
 
     def seats_connected(self, game_id: str) -> set[str]:
         """Return the seats that currently have at least one open queue."""
