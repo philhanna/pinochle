@@ -3,6 +3,17 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.2.0] - 2026-09-23
+
+### Added
+- The dealer selection draw is now held so the table can read it before the
+  cards move (RT-13). When the four drawn cards tie, they stay face up in front
+  of their seats until a Continue click lays out the fresh spread FR-14 calls
+  for, instead of vanishing the instant the tie was announced; and when one
+  player draws highest, the announcement of who deals is held before the round
+  begins. A table with nobody at it goes straight through both pauses, as
+  RT-13 requires
+
 ## [1.1.0] - 2026-09-22
 
 ### Added
