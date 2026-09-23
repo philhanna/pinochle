@@ -3,7 +3,7 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
-## [Unreleased]
+## [1.1.0] - 2026-09-22
 
 ### Added
 - A seat whose player has gone can be given to the computer, and the game goes
@@ -450,7 +450,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/1.0.0..HEAD
+[1.1.0]: https://github.com/philhanna/pinochle/compare/1.0.0..1.1.0
 [1.0.0]: https://github.com/philhanna/pinochle/compare/1.0.0-RC1..1.0.0
 [1.0.0-RC1]: https://github.com/philhanna/pinochle/compare/0.5.0..1.0.0-RC1
 [0.5.0]: https://github.com/philhanna/pinochle/compare/0.4.0..0.5.0
