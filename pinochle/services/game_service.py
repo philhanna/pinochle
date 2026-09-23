@@ -282,26 +282,18 @@ class GameService(AdminPort, PlayerActionPort):
             net=net,
         ))
 
-        winner = self._check_winner(game, round_state.bid_winner)
-        if winner:
-            game.set_finished()
-            game.emit(GameOver(
-                game_id=game.id,
-                winning_team_id=winner,
-                ns_score=self._team_score(game, NS_TEAM_ID),
-                ew_score=self._team_score(game, EW_TEAM_ID),
-            ))
-            return
-
-        # The next deal waits on a seat rather than on a clock (RT-13). The
-        # summary has arithmetic in it that players read and argue about, and
-        # dealing over the top of that is the thing the hold exists to stop.
-        # Any one of them moves the table on; a finished game needs no hold,
-        # because there is no next deal to hold back.
+        # What happens next waits on a seat rather than on a clock (RT-13).
+        # The summary has arithmetic in it that players read and argue about,
+        # and putting anything over the top of that is the thing the hold
+        # exists to stop.  That holds for the round that ends the game as
+        # much as for any other: the arithmetic that won it is the arithmetic
+        # they most want to see, and announcing a winner over it would take
+        # the last round's figures off the screen before anyone had read them
+        # (FR-66, FR-71).  Any one of them moves the table on.
         if self._has_human_seat(game):
             game.begin_hold(HoldReason.ROUND_SCORED, ackable=True)
-        else:
-            self._deal_next_round(game)
+            return
+        self._finish_or_deal(game)
 
     @staticmethod
     def _has_human_seat(game: Game) -> bool:
@@ -317,6 +309,27 @@ class GameService(AdminPort, PlayerActionPort):
         """
         return any(
             player.type == PlayerType.HUMAN for player in game.players.values())
+
+    def _finish_or_deal(self, game: Game) -> None:
+        """Announce the winner, or deal the next round (FR-70, FR-71).
+
+        Which of the two is re-read from the scores rather than remembered
+        from when the summary was published.  Nothing between the two can
+        change them — no action is accepted while a hold stands — and a hold
+        that may stand for as long as the players care to talk is no place to
+        carry a decision taken before it began.
+        """
+        winner = self._check_winner(game, game.current_round.bid_winner)
+        if winner is None:
+            self._deal_next_round(game)
+            return
+        game.set_finished()
+        game.emit(GameOver(
+            game_id=game.id,
+            winning_team_id=winner,
+            ns_score=self._team_score(game, NS_TEAM_ID),
+            ew_score=self._team_score(game, EW_TEAM_ID),
+        ))
 
     def _deal_next_round(self, game: Game) -> None:
         """Move the deal on one seat and deal again (FR-16)."""
@@ -348,7 +361,7 @@ class GameService(AdminPort, PlayerActionPort):
         the same place as the table it was a moment ago.
         """
         if released.reason is HoldReason.ROUND_SCORED:
-            self._deal_next_round(game)
+            self._finish_or_deal(game)
         elif released.reason is HoldReason.MELD_EXPOSED:
             winner = game.current_round.bid_winner
             if winner is None:

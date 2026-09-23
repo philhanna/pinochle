@@ -19,6 +19,7 @@ from pinochle.domain.game import (
     GameConfigured,
     GameEvent,
     GameOver,
+    GamePhase,
     HoldEnded,
     MeldExposed,
     PlayBegun,
@@ -533,14 +534,61 @@ def test_a_tossed_in_contract_scores_no_tricks(table):
 def test_game_over_carries_the_final_scores(table):
     """FR-71: the result is announced with both cumulative totals."""
     service, state, notifier = table
-    game_id, winner = expose_meld(service, state)
-    game = state.load(game_id)
-    idle_team = "NS" if game.team_id_for_player(winner) == "EW" else "EW"
-    game.add_score(idle_team, WINNING_SCORE)
-    service.toss_in(game_id, winner)
+    game_id, idle_team = reach_last_round(service, state)
+    service.acknowledge(game_id, "N", state.load(game_id).current_hold.id)
 
     over = notifier.of_type(GameOver)
     assert len(over) == 1
     assert over[0].winning_team_id == idle_team
     scores = {"NS": over[0].ns_score, "EW": over[0].ew_score}
     assert scores[idle_team] >= WINNING_SCORE
+
+
+def test_the_last_rounds_summary_is_read_before_the_winner_is_announced(table):
+    """FR-66, FR-71: the arithmetic that won the game is shown like any other."""
+    service, state, notifier = table
+    game_id, _ = reach_last_round(service, state)
+
+    # The summary is up and the table is holding on it; nothing has been
+    # announced yet, and the game is not over until it is.
+    assert notifier.of_type(RoundScored)
+    assert not notifier.of_type(GameOver)
+    hold = state.load(game_id).current_hold
+    assert hold is not None and hold.ackable
+    assert state.load(game_id).phase is not GamePhase.FINISHED
+
+    service.acknowledge(game_id, "S", hold.id)
+
+    assert notifier.of_type(GameOver)
+    assert state.load(game_id).phase is GamePhase.FINISHED
+    # The result comes after the summary, and no further round is dealt.
+    names = notifier.names()
+    assert names.index("RoundScored") < names.index("GameOver")
+    assert [e.round_number for e in notifier.of_type(RoundStarted)] == [1]
+
+
+def test_the_last_round_is_held_on_before_nothing_else_happens(table):
+    """RT-13: the final hold ends the game rather than dealing over it."""
+    service, state, notifier = table
+    game_id, _ = reach_last_round(service, state)
+    service.acknowledge(game_id, "N", state.load(game_id).current_hold.id)
+
+    assert state.load(game_id).current_hold is None
+    assert len(notifier.of_type(GameOver)) == 1
+
+
+def reach_last_round(
+    service: GameService, state: InMemoryGameState,
+) -> tuple[str, str]:
+    """Score a round that ends the game, and stop on its summary.
+
+    The idle team is handed the winning score outright, so that the round
+    played here settles the game whatever the cards did.  Returns the game
+    and the team that has won it.
+    """
+    game_id, winner = expose_meld(service, state)
+    game = state.load(game_id)
+    idle_team = "NS" if game.team_id_for_player(winner) == "EW" else "EW"
+    game.add_score(idle_team, WINNING_SCORE)
+    service.toss_in(game_id, winner)
+    return game_id, idle_team

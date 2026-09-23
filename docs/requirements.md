@@ -380,6 +380,13 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   the deal passing clockwise.
 - **FR-71** The result shall be announced to all four players, and the game
   shall accept no further play actions.
+  The round that ends the game shall first be summarised and held exactly as
+  any other round is (FR-66, RT-13), and the result announced only when a seat
+  releases that hold. The arithmetic that decided the game is the arithmetic
+  the table most wants to read, and announcing a winner over the top of it
+  would take it off the screen before anyone had. Where there is nobody to
+  read it — a table of computers alone — the result follows at once, by
+  RT-13's rule for such a table.
 
 ---
 

@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog].
   hands, and the client marks it computer-played from then on (UI-3)
 - Seating a computer in the last human seat releases any hold that was waiting
   to be read, since there is no longer anybody to read it (RT-13)
+- The round that ends the game is now summarised and held like any other
+  before the winner is announced (FR-66, FR-71): the table reads whether the
+  auction winner made the contract, and a Continue click brings up the result.
+  An all-computer table has nobody to read it, so it goes straight through as
+  before
 - A **Play** button on the contract panel, to the left of **Toss in**, so the
   auction winner can begin play from the panel that offers them the choice.
   It does exactly what the notice area's Continue does — the exposed meld is

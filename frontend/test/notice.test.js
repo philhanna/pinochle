@@ -100,6 +100,35 @@ test("a hold awaiting release carries the id to release (UI-19a, RT-13)", () => 
   assert.equal(shown.release, 41);
 });
 
+test("the last round is read before the winner is announced (FR-66, FR-71)", () => {
+  const hold = { id: 41, reason: "round_scored", ackable: true };
+  const scored = applyEvent(seated(), frame("round_scored", {
+    round_number: 7,
+    bid_team_id: "NS",
+    bid_winner_player_id: "p-south",
+    contract: 300,
+    made_contract: true,
+    tossed_in: false,
+    teams: [],
+  }, holding(hold, "SCORING")));
+
+  // The round that ends the game is summarised and held like any other.
+  const recap = notice(scored);
+  assert.equal(recap.text, "Round 7: Phil made the 300 contract.");
+  assert.equal(recap.release, 41);
+
+  const over = [
+    frame("hold_ended", { hold_id: 41, reason: "round_scored" }, holding(null, "SCORING")),
+    frame("game_over", { winning_team_id: "NS", ns_score: 2010, ew_score: 1240 }, {
+      phase: "FINISHED", current_player_id: null, paused: null, hold: null, round_number: 7,
+    }),
+  ].reduce(applyEvent, scored);
+
+  const shown = notice(over);
+  assert.equal(shown.kind, "final");
+  assert.equal(shown.text, "Us team wins, 2010 to 1240.");
+});
+
 test("exposed meld waits for a Continue click", () => {
   const hold = { id: 42, reason: "meld_exposed", ackable: true };
   const state = applyEvent(seated(), frame("hold_begun", {
