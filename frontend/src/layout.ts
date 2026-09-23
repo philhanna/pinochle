@@ -161,6 +161,21 @@ export function isPaused(state: GameState): boolean {
 }
 
 /**
+ * The hold that stands between this seat and the opening lead, if any.
+ *
+ * Play begins by releasing the hold the exposed meld is behind (RT-13): the
+ * server refuses `begin-play` while it stands, so releasing it *is* how play
+ * begins, and a Play control has to do what the notice area's Continue does
+ * rather than ask directly. Null means there is no hold in the way and the
+ * direct request is the one to make — a table sitting in the melding phase
+ * with nothing held shows no Continue either.
+ */
+export function holdBeforePlay(state: GameState): number | null {
+  const hold = state.hold;
+  return hold !== null && hold.ackable && hold.id !== null ? hold.id : null;
+}
+
+/**
  * Whether this seat still has to draw for the deal (FR-11).
  *
  * Dealer selection has no turn, so the prompt says nothing: a seat has a draw

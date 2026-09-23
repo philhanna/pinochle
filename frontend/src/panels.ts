@@ -5,7 +5,7 @@
 // seat whose turn it is, so a client never shows another seat's controls.
 
 import { faceUrl, type CardCode, type SuitName } from "./cards.js";
-import { SUITS, minimumBid, passCount, suitGlyph } from "./layout.js";
+import { SUITS, holdBeforePlay, minimumBid, passCount, suitGlyph } from "./layout.js";
 import { dropIntoSelection, selectedCards, type HandCallbacks } from "./hand.js";
 import type { GameState } from "./state.js";
 
@@ -17,6 +17,14 @@ export interface PanelCallbacks extends HandCallbacks {
   onPass: (cards: CardCode[]) => void;
   onBeginPlay: () => void;
   onTossIn: () => void;
+  /**
+   * Release the hold the table is stopped on (RT-13, UI-19a).
+   *
+   * A panel control needs this because the meld panel's Play button does
+   * exactly what the notice area's Continue does, and the notice is where
+   * that hold is otherwise released from.
+   */
+  onAcknowledge: (holdId: number) => void;
 }
 
 /**
@@ -171,7 +179,7 @@ function passPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   return panel;
 }
 
-/** The auction winner may still concede while everyone reviews the meld. */
+/** The auction winner plays it out, or concedes, while the meld is reviewed. */
 function meldPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   const panel = box("Your contract");
   const mine = state.teamMeld[state.me?.teamId ?? ""] ?? 0;
@@ -179,13 +187,33 @@ function meldPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   panel.append(
     hint(
       `Your side has ${mine} in meld; ${needed > 0 ? `${needed} more` : "nothing more"} `
-      + `is needed in cards. Use Continue above to play, or toss it in and concede the contract.`,
+      + `is needed in cards. Play it out, or toss it in and concede the contract.`,
     ),
     row(
+      button("Play", "primary", () => beginPlay(state, callbacks)),
       button("Toss in", "danger", () => callbacks.onTossIn()),
     ),
   );
   return panel;
+}
+
+/**
+ * Begin trick play, by whichever route is open (FR-50a, UI-19a).
+ *
+ * The meld is on the table behind a hold while it is read (RT-13), and the
+ * server refuses `begin-play` until that hold is released — so releasing it
+ * *is* how play begins, and this button does exactly what the Continue
+ * control in the notice area does. The direct call is the fallback for a
+ * table sitting in the melding phase with no hold in front of it, where
+ * Continue would not be on screen either.
+ */
+function beginPlay(state: GameState, callbacks: PanelCallbacks): void {
+  const hold = holdBeforePlay(state);
+  if (hold === null) {
+    callbacks.onBeginPlay();
+    return;
+  }
+  callbacks.onAcknowledge(hold);
 }
 
 /** A titled panel. */

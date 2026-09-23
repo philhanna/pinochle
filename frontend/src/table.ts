@@ -24,7 +24,6 @@ import {
 /** Everything the table can ask of the player. */
 export interface TableCallbacks extends PanelCallbacks {
   onDraw: (position: number) => void;
-  onAcknowledge: (holdId: number) => void;
 }
 
 /** Whether the last completed trick is being shown (UI-14b). */

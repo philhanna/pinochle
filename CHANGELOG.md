@@ -17,6 +17,11 @@ The format is based on [Keep a Changelog].
   hands, and the client marks it computer-played from then on (UI-3)
 - Seating a computer in the last human seat releases any hold that was waiting
   to be read, since there is no longer anybody to read it (RT-13)
+- A **Play** button on the contract panel, to the left of **Toss in**, so the
+  auction winner can begin play from the panel that offers them the choice.
+  It does exactly what the notice area's Continue does — the exposed meld is
+  held while it is read (RT-13), and releasing that hold is how play begins
+  (FR-50a)
 
 ## [1.0.0] - 2026-09-21
 

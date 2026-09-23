@@ -3,8 +3,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  fanAngles, isLegalPlay, isMyTurn, minimumBid, mustDraw, passCount, placement,
-  playHasBegun, scatter, spotOf, takenPositions, trickCards,
+  fanAngles, holdBeforePlay, isLegalPlay, isMyTurn, minimumBid, mustDraw,
+  passCount, placement, playHasBegun, scatter, spotOf, takenPositions, trickCards,
 } from "../dist/layout.js";
 import { applyEvent, initialState } from "../dist/state.js";
 
@@ -136,6 +136,46 @@ test("a prompt for another phase makes no card playable", () => {
 test("isMyTurn follows the turn header", () => {
   assert.equal(isMyTurn(seated("SOUTH")), true);
   assert.equal(isMyTurn(seated("NORTH")), false);
+});
+
+// ---------------------------------------------------------------------------
+// Beginning play (FR-50a, UI-19a)
+// ---------------------------------------------------------------------------
+
+/** A turn header holding the table on the exposed meld (RT-13). */
+function melding(hold) {
+  return {
+    phase: "MELDING", current_player_id: "p-south", paused: null,
+    round_number: 1, hold,
+  };
+}
+
+test("the Play control releases the hold the meld is behind", () => {
+  const state = applyEvent(seated(), frame(
+    "turn_prompt",
+    { phase: "MELDING", may_begin_play: true, may_toss_in: true },
+    melding({ id: 4, reason: "meld_exposed", ackable: true }),
+  ));
+  assert.equal(holdBeforePlay(state), 4);
+});
+
+test("with no hold in the way, play is asked for directly", () => {
+  const state = applyEvent(seated(), frame(
+    "turn_prompt",
+    { phase: "MELDING", may_begin_play: true, may_toss_in: true },
+    melding(null),
+  ));
+  assert.equal(holdBeforePlay(state), null);
+});
+
+test("a timed hold is not something a seat may release", () => {
+  // Only an ackable hold has a control; nothing shortens a timed one (UI-19a).
+  const state = applyEvent(seated(), frame(
+    "trick_completed",
+    { winner_player_id: "p-south", cards: [] },
+    { ...TURN, paused: "trick_clear" },
+  ));
+  assert.equal(holdBeforePlay(state), null);
 });
 
 // ---------------------------------------------------------------------------
