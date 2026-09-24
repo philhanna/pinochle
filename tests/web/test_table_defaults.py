@@ -16,8 +16,9 @@ from pinochle.web.container import (
 
 ROOT = Path(__file__).resolve().parents[2]
 
-# Every variable the server reads. A setting added without a line in
-# .env.example is a setting nobody can discover, which is what this pins.
+# Every variable read by the server or Docker Compose. A setting added without
+# a line in .env.example is a setting nobody can discover, which is what this
+# pins.
 DOCUMENTED_KEYS = {
     "PINOCHLE_TEAM_NS",
     "PINOCHLE_TEAM_EW",
@@ -28,6 +29,8 @@ DOCUMENTED_KEYS = {
     ),
     "PINOCHLE_ADMIN_TOKEN",
     "PINOCHLE_PUBLIC_BASE_URL",
+    "PINOCHLE_BIND_ADDRESS",
+    "PINOCHLE_PORT",
     "PINOCHLE_CARD_BACK",
     "PINOCHLE_TRICK_CLEAR_SECONDS",
     "PINOCHLE_COMPUTER_DELAY_SECONDS",

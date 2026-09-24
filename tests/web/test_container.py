@@ -10,6 +10,7 @@ from pinochle.web.container import Settings, build_container
 def test_from_env_generates_a_token_when_none_is_set(monkeypatch):
     """§9.1: no PINOCHLE_ADMIN_TOKEN means one is minted for this run."""
     monkeypatch.delenv("PINOCHLE_ADMIN_TOKEN", raising=False)
+    monkeypatch.setattr(container, "load_dotenv", lambda: False)
     settings = Settings.from_env()
     assert settings.admin_token
     assert settings.admin_token_generated is True
