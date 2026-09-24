@@ -229,7 +229,9 @@ body.table-page {
 
 /* Public meld is laid face-up just inside each player's hand. Each scoring
    combination gets its own labeled group; compact overlap keeps all four
-   players' displays out of the centre of the table. */
+   players' displays out of the centre of the table. Each player's meld sits
+   on its own panel, edged in the partnership's colour, so that where one
+   player's meld ends and the next one's begins is plain at a glance. */
 .meld-cards {
   position: absolute;
   z-index: 3;
@@ -238,9 +240,18 @@ body.table-page {
   justify-content: center;
   align-items: flex-start;
   gap: 7px 12px;
-  width: 520px;
+  width: max-content;
+  max-width: 520px;
+  padding: 8px 10px 7px;
+  border: 2px solid var(--rule);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   pointer-events: none;
 }
+
+.seat.team-ns .meld-cards { border-color: rgba(255, 212, 121, 0.6); }
+.seat.team-ew .meld-cards { border-color: rgba(143, 214, 255, 0.6); }
 
 .meld-group {
   display: flex;
@@ -283,17 +294,21 @@ body.table-page {
   transform: translateX(-50%);
 }
 
-.seat.left .meld-cards {
+/* The side seats' meld stands in a column beside the hand rather than a
+   row reaching across the felt toward the other side's, and hugs the hand it
+   belongs to. */
+.seat.left .meld-cards,
+.seat.right .meld-cards {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
   top: 50%;
-  left: calc(100% + 12px);
   transform: translateY(-50%);
 }
 
-.seat.right .meld-cards {
-  top: 50%;
-  right: calc(100% + 12px);
-  transform: translateY(-50%);
-}
+.seat.left .meld-cards { left: calc(100% + 4px); }
+.seat.right .meld-cards { right: calc(100% + 4px); }
 
 /* --- Fans of cards ------------------------------------------------------- */
 
