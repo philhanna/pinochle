@@ -307,8 +307,8 @@ body.table-page {
   transform: translateY(-50%);
 }
 
-.seat.left .meld-cards { left: calc(100% + 4px); }
-.seat.right .meld-cards { right: calc(100% + 4px); }
+.seat.left .meld-cards { left: calc(100% + 19px); }
+.seat.right .meld-cards { right: calc(100% + 19px); }
 
 /* --- Fans of cards ------------------------------------------------------- */
 
