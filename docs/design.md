@@ -1,33 +1,30 @@
 # Pinochle — Design
 
-**Status:** Draft
-**Last updated:** 2026-09-06
+**Status:** Describes the code as of version 1.3.0
+**Last updated:** 2026-09-24
 **Implements:** `docs/requirements.md`
 
 ---
 
 ## 1. Purpose and scope
 
-`docs/requirements.md` says *what* the system must do. This document says *how*
-it will be built. Every section cites the requirement identifiers it satisfies,
-so that the two documents can be read side by side and any drift between them is
-visible.
+`docs/requirements.md` says *what* the system does. This document says *how*
+it is built. Sections cite the requirement identifiers they satisfy, so the
+two documents can be read side by side. Source files cite sections of this
+document by number (`design.md §6.4`), so the numbering is kept stable.
 
 It covers:
 
-- the split of the code base into a Python **server** and a TypeScript
-  **front end** that live in separate top-level directories (§3);
+- the design principles and the dependency rule (§2);
+- the split between the Python server and the TypeScript front end (§3);
 - the server's internal structure as a ports-and-adapters application (§4);
-- the HTTP surface for commands (§5);
-- the Server-Sent Events architecture that pushes state to clients (§6);
+- the HTTP surface (§5) and the Server-Sent Events stream (§6);
 - how computer players are driven (§7);
-- the browser client (§8);
-- the administrator's workflow for standing up and running a game (§9);
-- packaging and deployment with Docker (§10);
-- testing, dependencies, and a suggested build order (§11–§13).
-
-Where the design has had to make a decision the requirements did not settle, or
-where implementing a requirement exposed a gap in another, §14 records it.
+- the browser client and the administrator's console (§8);
+- the administrator's workflow (§9);
+- packaging and configuration (§10);
+- testing, dependencies, and tooling (§11–§13);
+- design decisions (§14) and known limitations (§15).
 
 ---
 
@@ -39,137 +36,135 @@ where implementing a requirement exposed a gap in another, §14 records it.
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║  DRIVING SIDE (INBOUND)                                                  ║
 ║                                                                          ║
-║   Browser client (TypeScript)      Admin console (TypeScript)            ║
-║              │  HTTP POST                    │  HTTP POST                ║
-║              ▼                               ▼                           ║
-║   ┌──────────────────────────────────────────────────────┐               ║
-║   │  pinochle/web/  — FastAPI driving adapter            │               ║
-║   │  routers: admin · player · stream                    │               ║
-║   │  (no game logic; translates HTTP ⇄ ports)            │               ║
-║   └──────────────────────────────────────────────────────┘               ║
-╚═══════════════════════════════│══════════════════════════════════════════╝
-                                │ calls
-                                ▼
+║   Player table (frontend/src/main.ts)   Admin console (admin.ts)         ║
+║        │ HTTP POST + SSE GET                  │ HTTP + SSE GET           ║
+║        ▼                                      ▼                          ║
+║   ┌──────────────────────────────────────────────────────────┐           ║
+║   │  pinochle/web/ — FastAPI driving adapter                 │           ║
+║   │  routers: admin · player · stream · cards                │           ║
+║   │  (no game logic; translates HTTP ⇄ ports, events → SSE)  │           ║
+║   └──────────────────────────────────────────────────────────┘           ║
+╚══════════════════════════════│═══════════════════════════════════════════╝
+                               │ calls
+                               ▼
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  APPLICATION LAYER                                                       ║
+║  APPLICATION LAYER  (pinochle/services/, pinochle/strategies/)           ║
 ║                                                                          ║
-║   GameService  (implements AdminPort + PlayerActionPort)                 ║
-║   ComputerDriver (decorates PlayerActionPort; observes NotificationPort) ║
-║   Round        (round state machine)                                     ║
+║   GameService     implements AdminPort + PlayerActionPort                ║
+║   ComputerDriver  decorates PlayerActionPort; observes NotificationPort  ║
+║   Round           the per-round state machine                            ║
+║   SeatView        what one seat may see (FR-74)                          ║
+║   ComputerPlayerStrategy                                                 ║
 ║                                                                          ║
-║   depends only on these ABCs:                                            ║
-║     AdminPort · PlayerActionPort          (driving)                      ║
-║     GameStatePort · NotificationPort ·    (driven)                       ║
-║     SchedulerPort · SeatTokenPort                                        ║
-╚═══════════════════════════════│══════════════════════════════════════════╝
-                                │ implemented by
-                                ▼
+║   Ports (pinochle/ports/, one ABC per module):                           ║
+║     driving: AdminPort · PlayerActionPort                                ║
+║     driven:  GameStatePort · NotificationPort · SchedulerPort ·          ║
+║              SeatTokenPort · CardImagePort                               ║
+╚══════════════════════════════│═══════════════════════════════════════════╝
+                               │ implemented by
+                               ▼
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  DRIVEN SIDE (OUTBOUND ADAPTERS)                                         ║
+║  DRIVEN SIDE (OUTBOUND ADAPTERS)  (pinochle/adapters/)                   ║
 ║                                                                          ║
 ║   InMemoryGameState      → GameStatePort                                 ║
-║   SseNotification        → NotificationPort   (fan-out to seat queues)   ║
-║   LoggingNotification    → NotificationPort   (NFR-9 audit log)          ║
-║   CompositeNotification  → NotificationPort   (tees to the above)        ║
-║   AsyncioScheduler       → SchedulerPort      (production)               ║
-║   FakeScheduler          → SchedulerPort      (tests, virtual clock)     ║
+║   SseNotification        → NotificationPort  (per-seat queues + replay)  ║
+║   LoggingNotification    → NotificationPort  (NFR-9 audit log)           ║
+║   CompositeNotification  → NotificationPort  (tees to the others)        ║
+║   PrintNotification      → NotificationPort  (headless wiring only)      ║
+║   AsyncioScheduler       → SchedulerPort     (production)                ║
+║   FakeScheduler          → SchedulerPort     (tests, virtual clock)      ║
+║   ImmediateScheduler     → SchedulerPort     (headless wiring only)      ║
 ║   InMemorySeatTokens     → SeatTokenPort                                 ║
-╚═══════════════════════════════│══════════════════════════════════════════╝
-                                │ uses
-                                ▼
+║   SvgCardImage           → CardImagePort     (pinochle/card_images/)     ║
+╚══════════════════════════════│═══════════════════════════════════════════╝
+                               │ uses
+                               ▼
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  DOMAIN LAYER (pure; no I/O, no frameworks)                              ║
+║  DOMAIN LAYER  (pinochle/domain/ — pure; no I/O, no frameworks)          ║
 ║                                                                          ║
-║   Card · Rank · Suit · Deck · Hand · Trick                               ║
-║   Player · Position · Team · BiddingRound · MeldUnit                     ║
-║   Game (aggregate root + domain events) · scoring functions              ║
+║   Card · Rank · Suit · Deck · Hand · Trick · TrickPlay                   ║
+║   Player · PlayerType · Position · Team · TeamRoundScore                 ║
+║   BiddingRound · BidEntry · MeldUnit · detect_meld · scoring functions   ║
+║   Hold · HoldReason · PinochleError hierarchy                            ║
+║   Game (aggregate root, GamePhase, and every domain event)               ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-**Data flow:** browser gesture → `POST /api/games/{id}/…` → web router
-authenticates the seat token and decodes the body → `PlayerActionPort` method →
-`ComputerDriver` delegates to `GameService` → `GameService` loads the `Game`,
-executes the requested domain operation through `Round`, drains the emitted
-events → the
-composite notifier logs them and hands each one to the SSE hub → the hub places
-it on every subscribed queue that the event's recipient list permits → each
-`GET /api/games/{id}/stream` generator serialises it as an SSE frame → the
-client reduces the frame into its table state and re-renders. The HTTP response
-to the original POST carries no game data: it is `204 No Content` (RT-2).
+**Data flow:** browser gesture → `POST /api/games/{id}/…` with `X-Seat-Token` →
+the web router resolves the token to a player id and decodes the body → the
+`PlayerActionPort` method on `ComputerDriver` → delegated to `GameService` →
+`GameService` loads the `Game`, runs the domain operation through `Round`,
+appends the acting seat's `TurnPrompt`, and dispatches the pending events →
+`CompositeNotification` hands each one to the SSE hub, the audit log, and the
+computer driver → the hub numbers it, records it for replay, and places it on
+every queue the recipient list permits → each stream generator encodes it as
+an SSE frame with the current turn header → the client folds the frame into
+its state and redraws. The POST itself answers `204 No Content` (RT-2).
 
-**Dependency rule:** the application layer (`pinochle/services/`) may import
-from `pinochle/domain/` and `pinochle/ports/`, and nothing else. It may not
-import FastAPI, Starlette, `asyncio`, `time`, `logging` handlers, `json`,
-`uuid`-over-the-wire formats, or any module under `pinochle/adapters/` or
-`pinochle/web/` (ARC-1, ARC-9).
+**Dependency rule:** the application layer (`pinochle/services/`,
+`pinochle/strategies/`) imports from `pinochle/domain/` and `pinochle/ports/`
+and nothing else. It does not import FastAPI, Starlette, `asyncio`, `time`,
+`json`, or any module under `pinochle/adapters/` or `pinochle/web/` (ARC-1,
+ARC-9).
 
 ### 2.2 The client renders; it never decides
 
-ARC-2 and RT-8 are enforced by three habits, applied throughout §6 and §8:
+ARC-2 and RT-8 are enforced by three habits:
 
 1. Every command endpoint returns `204`. The client learns the outcome only when
    the corresponding event arrives on its stream.
-2. The client holds no timers that affect what it displays. Both timed pauses —
-   the trick clear (UI-15) and the computer delay (FR-75c) — are counted by the
-   server and delimited by a pair of events (RT-10).
-3. The client is *told* what is legal rather than deriving it. The server sends
-   the acting seat a private `turn_prompt` event carrying the legal plays, the
-   minimum bid, or whichever options that phase offers (UI-9, §6.5).
+2. The client holds no timer that affects the game. Every pause — the trick
+   clear, a computer's delay, and every hold — is owned by the server and
+   delimited by events (RT-10). The client's only timers are presentational
+   (§8.6).
+3. The client is *told* what is legal. The acting seat receives a private
+   `turn_prompt` carrying the legal plays, the minimum bid, or whatever that
+   phase offers (§6.5), and every frame carries a public turn header saying
+   whose turn it is and what the game is paused on (§6.4).
 
 ---
 
 ## 3. Repository layout
 
-The server and the front end are kept in separate top-level trees. The Python
-package contains application code only; every browser-facing asset, including
-card artwork, belongs under `frontend/`. Nothing under `frontend/` is imported
-by Python, and nothing under `pinochle/` is compiled by `tsc`. The runtime
-contract between them is the HTTP + SSE surface described in §5 and §6.
+The server and the front end are separate top-level trees. Nothing under
+`frontend/` is imported by Python, and nothing under `pinochle/` is compiled by
+`tsc`. The runtime contract between them is the HTTP + SSE surface of §5 and
+§6. The one browser-facing asset inside the Python package is the card
+artwork, which the server serves through `CardImagePort` (UI-16, ARC-8).
 
 ```
 $PROJECT_ROOT/
-├── pinochle/                  # SERVER — the Python package (unchanged root)
-│   ├── domain/                # pure game logic
-│   ├── ports/                 # ABCs, one per module
-│   ├── services/              # application layer
-│   ├── adapters/              # driven adapters
-│   ├── web/                   # FastAPI driving adapter  (new)
-│   └── app.py                 # composition root
+├── pinochle/                     # SERVER — the Python package
+│   ├── domain/                   # pure game logic (cards/ subpackage for Card, Rank, Suit, Deck)
+│   ├── ports/                    # ABCs, one per module
+│   ├── services/                 # application layer: GameService, Round, ComputerDriver, SeatView
+│   ├── strategies/               # ComputerPlayerStrategy
+│   ├── adapters/                 # driven adapters
+│   ├── web/                      # FastAPI driving adapter
+│   │   └── routers/              # admin, player, stream, cards
+│   ├── card_images/              # artwork: fronts/, backs/, each with png_96_dpi/
+│   └── app.py                    # headless wiring (create_default_app)
 │
-├── frontend/                  # FRONT END — everything the browser runs
-│   ├── package.json           # devDependency: typescript (build-time only)
+├── frontend/                     # FRONT END — everything the browser runs
+│   ├── package.json              # devDependency: typescript only
 │   ├── tsconfig.json
-│   ├── public/                # hand-written static assets, served as-is
-│   │   ├── index.html         # the player's table page
-│   │   ├── admin.html         # the administrator's console
-│   │   ├── cards/             # all card artwork (browser-owned, §5.4)
-│   │   │   ├── fronts/        # card faces, named by wire code (e.g. QS.svg)
-│   │   │   └── backs/         # card backs (e.g. blue.svg)
-│   │   └── styles/
-│   ├── src/                   # TypeScript sources
-│   └── dist/                  # tsc output — generated, git-ignored
+│   ├── public/                   # hand-written, served at /assets/
+│   │   ├── index.html            # the player's table
+│   │   ├── admin.html            # the administrator's console
+│   │   ├── table.css             # the table's stylesheet
+│   │   └── style.css             # the console's stylesheet
+│   ├── src/                      # TypeScript sources (§8.1)
+│   ├── dist/                     # tsc output, served at /static/ — git-ignored
+│   └── test/                     # node --test suites, fixtures, browser harness
 │
-├── tests/                     # server tests (pytest), mirrors pinochle/
-├── docker/
-│   ├── Dockerfile
-│   └── compose.yaml
-├── docs/
-│   ├── requirements.md
-│   └── design.md              # this document
+├── tests/                        # server tests (pytest), mirrors pinochle/
+├── scripts/                      # dev.sh, seed.py, record_frames.py, hit_test.py
+├── docker/                       # Dockerfile, compose.yaml
+├── docs/                         # requirements, design, impl, docker-usage
+├── Makefile
+├── .env.example
 └── pyproject.toml
 ```
-
-Two boundary notes:
-
-- **Card artwork belongs to the front end.** Faces and backs live only under
-  `frontend/public/cards/` alongside the other browser-facing static assets.
-  The browser loads them directly from `/assets/cards/…` (§5.4); the Python
-  application neither resolves nor packages image files.
-- **The served document root is `frontend/`.** The server serves the HTML pages
-  from `frontend/public/`, mounts that directory at `/assets/`, and mounts
-  `frontend/dist/` at `/static/`. The path is configurable
-  (`PINOCHLE_FRONTEND_DIR`) so that the container can place the built assets
-  wherever it likes without the Python code caring.
 
 ---
 
@@ -177,237 +172,235 @@ Two boundary notes:
 
 ### 4.1 Domain layer
 
-The domain is already largely in place: `Card`, `Rank`, `Suit`, `Deck`, `Hand`,
-`Trick`, `Player`/`Position`, `Team`, `BiddingRound`, `detect_meld`, the scoring
-functions, and the `Game` aggregate with its event list. Partnership membership
-is derived from `Position.team_id` and never stored, which is what makes FR-4a
-hold by construction.
+`pinochle/domain/` holds the rules and the aggregate:
 
-The design adds the following to `pinochle/domain/game.py`, each because a
-requirement needs a client to be told something the current event set does not
-carry. Each is a frozen dataclass in the same style as the existing events:
-
-| New event | Why |
+| Module | Contents |
 | --- | --- |
-| `GameConfigured` | The client cannot draw the table (UI-1, UI-3) without the four seats, names, human/computer flags, and team names. |
-| `DealerSelectionStarted` | Carries the spread size so the client can lay out the 48 face-down positions (FR-11a). |
-| `DrawMade` | FR-15: each drawn card is revealed to all players. `draw_for_deal` currently returns the card to the caller and tells nobody else. |
-| `DrawTied` | FR-14: everyone must see that the draw is being repeated, and with a fresh spread. |
-| `RoundStarted` | Round number and dealer, so the client can reset the table between rounds. |
-| `ContractOffered` | FR-32: the lone bidder's client must know to show accept/decline, and the other three must know why play has paused. |
-| `PlayBegun` | FR-50a: ends the meld display for all four clients. |
-| `CardPlayed` | FR-57 and RT-4 both require it; only `TrickCompleted` exists today, which would leave three of the four cards invisible until the trick ended. `Trick`'s internal record of the same name is renamed `TrickPlay` so the event can own the name. |
-| `TrickCleared` | RT-10: the closing bracket of the trick-clear pause (UI-15). `_clear_trick` currently emits nothing. Its `next_leader_player_id` is the winner (FR-56), or `None` after the twelfth trick. |
-| `SeatThinking` | RT-10 again: the opening bracket of a computer player's delay (FR-75c, RT-7). |
+| `cards/card.py`, `rank.py`, `suit.py`, `deck.py` | `Card` (equal by rank and suit, so the two copies are interchangeable — FR-19), `Rank` in Pinochle order (FR-18), `Suit`, and the 48-card `Deck` with a seedable `shuffle(rng)` (NFR-7). |
+| `hand.py` | `Hand`, including `legal_plays(trick, trump)`, the single implementation of FR-53's follow-and-beat, trump-and-overtrump rule. |
+| `trick.py` | `Trick` and `TrickPlay`; `winner()` implements FR-54 and, by keeping the first of two identical cards, FR-55. |
+| `bid.py` | `BiddingRound` and `BidEntry`, `MINIMUM_BID = 250`, `BID_INCREMENT = 10`. The auction ends when one bidder remains after a bid, or when all four have passed (FR-24–FR-31). |
+| `meld.py` | `MeldUnit`, `detect_meld(cards, trump)` (FR-47–FR-49), `total_meld`, and `cards_in_meld`, which returns the physical cards to lay face up, each once (FR-44). |
+| `scoring.py` | Card values, `LAST_TRICK_BONUS`, `WINNING_SCORE = 2000`, `score_card_points`, `resolve_round` (FR-62–FR-64) and `resolve_toss_in` (FR-50c). |
+| `player.py` | `Player`, `PlayerType`, `Position`. `Position.team_id` derives the partnership, so FR-4a holds by construction. |
+| `team.py` | `Team` and the fixed ids `NS_TEAM_ID`, `EW_TEAM_ID`. |
+| `team_round_score.py` | `TeamRoundScore`, one team's line of FR-66 arithmetic. |
+| `hold.py` | `Hold` and `HoldReason` (RT-13). A `Hold` is either timed or awaiting release, never both; `__post_init__` enforces it. |
+| `errors.py` | The `PinochleError` hierarchy (§4.8). |
+| `game.py` | The `Game` aggregate, `GamePhase`, and every domain event. |
 
-Two existing events are enriched:
+`Game` stores the long-lived state — teams, players in seat order, dealer,
+round number, the current `Round`, the current `Hold` — and an event list that
+the service drains after each operation. Its operations are setup
+(`add_team`, `add_player`, `start_dealer_selection`), dealer bookkeeping
+(`set_dealer`, `rotate_dealer`), `begin_round`, `add_score`, `seat_computer`
+(which emits `SeatReplaced`), `set_finished`, and the hold pair:
 
-- **`RoundScored`** must carry, per team, the recorded meld, the captured card
-  points, the last-trick bonus, the round total, the points actually applied,
-  and the new cumulative score, together with a flag for whether the bidding
-  team made the contract or went set (FR-66). Its present `ns_score`/`ew_score`
-  pair is not enough to render the round summary. Each team's line is a
-  `TeamRoundScore`, a frozen dataclass in its own module
-  `pinochle/domain/team_round_score.py` (ARC-3). The round total and the points
-  applied are separate figures because they diverge precisely when the round is
-  interesting: a team that goes set has a positive round total and a negative
-  application (FR-63), and a non-bidding team that took no trick has a positive
-  round total and applies zero (FR-64). `scoring.py` gains one pure function,
-  `score_card_points`, so that captured points and the last-trick bonus can be
-  reported separately; `score_tricks` is refactored to compose it and keeps its
-  behaviour.
-- **`GameOver`** carries both final cumulative scores alongside the winning team
-  id (FR-71).
+- `begin_hold(reason, seconds=…, ackable=…)` assigns the next per-game hold id,
+  stores the hold, and emits `HoldBegun`;
+- `end_hold(hold_id)` clears the hold and emits `HoldEnded` only if the id
+  names the hold in force, and otherwise returns `None` and emits nothing —
+  which is what makes a release idempotent (RT-13).
 
-`GamePhase` and `RoundPhase` already model the phase machine of §3 of the
-requirements, including `CONFIRMING` and `ABANDONED`.
+`GamePhase` is `SETUP → DEALER_SELECTION → IN_ROUND → FINISHED`. The finer
+round phases live on `Round` (§4.3).
 
 ### 4.2 Ports
 
-Existing server ports retained by this design: `AdminPort`, `PlayerActionPort`,
-`GameStatePort`, `NotificationPort`, and `SchedulerPort`.
+| Port | Kind | Methods |
+| --- | --- | --- |
+| `AdminPort` | driving | `create_game`, `add_player`, `assign_teams`, `start_game`, `seat_computer`, `abandon_game` |
+| `PlayerActionPort` | driving | `draw_for_deal`, `place_bid`, `confirm_contract`, `name_trump`, `pass_cards`, `begin_play`, `toss_in`, `play_card`, `acknowledge` |
+| `GameStatePort` | driven | `save`, `load` (raises `UnknownGameError`), `delete` |
+| `NotificationPort` | driven | `notify(player_id, event)`, `broadcast(game_id, event)` |
+| `SchedulerPort` | driven | `call_later(delay_seconds, callback)` |
+| `SeatTokenPort` | driven | `mint`, `resolve`, `revoke_seat`, `revoke_game` |
+| `CardImagePort` | driven | `get_image_path(card, fmt)`, `get_back_path(fmt, name)` |
 
-`CardImagePort` is retired. Card artwork is presentation data owned and resolved
-by the browser, so it does not cross an application-layer boundary and does not
-need a server port. The existing `SvgCardImage` adapter and
-`pinochle/card_images/` package are removed when the front end is introduced;
-the artwork moves to `frontend/public/cards/`.
-
-One port is added, in its own module per ARC-3/ARC-4:
-
-```python
-# pinochle.ports.seat_token_port
-class SeatTokenPort(ABC):
-    """Mints and resolves the opaque per-seat credentials of FR-10."""
-
-    @abstractmethod
-    def mint(self, game_id: str, player_id: str) -> str:
-        """Create and store an unguessable token for one seat."""
-
-    @abstractmethod
-    def resolve(self, game_id: str, token: str) -> str | None:
-        """Return the player id the token seats, or None if it is not valid."""
-
-    @abstractmethod
-    def revoke_game(self, game_id: str) -> None:
-        """Forget every token issued for a finished or abandoned game."""
-```
-
-Token generation belongs behind a port for the same reason shuffling does
-(NFR-7): tests need it deterministic, production needs it unguessable.
+Token generation sits behind a port for the same reason shuffling takes an
+`rng`: tests need it deterministic, production needs it unguessable.
 
 ### 4.3 Application layer
 
-**`GameService`** keeps its present shape and its `load → execute domain
-operation → dispatch events → save` discipline. Its `_recipients` static
-method is the single place where event privacy is decided (RT-1, NFR-6), and it
-already routes `CardsDealt` to one player and `CardsPassed` to the two partners.
-The new events fit the same rule: all are public except `turn_prompt` (§6.5),
-which is addressed to one seat.
+**`Round`** (`pinochle/services/round.py`) is the per-round state machine:
 
-Changes needed:
+```
+DEALING → BIDDING → [CONFIRMING] → TRUMP → PASSING → MELDING → PLAYING → SCORING
+                  ↘ ABANDONED    ↘ ABANDONED                  ↘ SCORING (toss-in)
+```
 
-- emit the new events listed in §4.1 at the points where they occur;
-- accept `trick_clear_seconds` as a constructor argument rather than reading the
-  module constant, so §10.4's environment variable can reach it;
-- accept a `Random` instance for shuffling, so NFR-7's seeding is wired rather
-  than global.
+It deals three at a time from the dealer's left (FR-21), runs the
+`BiddingRound`, enforces that only the bid winner names trump, orders the pass
+(partner first, FR-42), captures every player's meld once both passes are in
+(FR-46), and plays tricks. A completed trick is not cleared by `play_card`:
+it sets a pending winner, and `play_card` refuses with `WrongPhaseError`
+until `clear_trick()` runs — that is RT-9's "the next leader cannot play into
+the last trick". `current_player` answers whose turn it is in every phase that
+has one, including `MELDING`, where it is the auction winner.
 
-**`ComputerDriver`** (new, `pinochle/services/computer_driver.py`) drives the
-computer seats. It is described in full in §7.
+**`GameService`** implements both driving ports. Every operation follows one
+cycle in `_load_save`:
 
-**`Round`** is unchanged except for the events its callers now emit.
+```
+load Game → apply the operation → append TurnPrompt for whoever is on the clock
+          → dispatch every pending event → save Game
+```
+
+- `_recipients(event)` is the single place event privacy is decided (RT-1,
+  NFR-6): `CardsDealt` and `TurnPrompt` go to one seat, `CardsPassed` to the
+  two partners, everything else is broadcast.
+- The dealer-selection spread (`_DealerSpread`: 48 cards and who drew which
+  position) is transient application state held by the service, not the
+  aggregate. Its absence is the phase check for `draw_for_deal` (FR-11a).
+- `play_card` schedules `_clear_trick` through `SchedulerPort` *after* the
+  save, so the callback's own cycle never nests inside the one that scheduled
+  it. `_clear_trick` emits `TrickCleared` and, after the twelfth trick, scores
+  the round.
+- Holds (§6.7) are begun at five points — a tied draw, a settled dealer, an
+  all-pass throw-in, the exposed meld, a scored round — but only when
+  `_has_human_seat(game)`; an all-computer table goes straight on.
+  `acknowledge` releases the named hold and calls `_resume_from`, which does
+  whatever the hold was standing in front of. `_release_unattended_hold`
+  reuses `_resume_from` when `seat_computer` removes the last human seat
+  (RT-12a).
+- `note_seat_thinking` publishes `SeatThinking` without the turn-prompt step,
+  because the seat on the clock has not changed.
+- The constructor takes an optional `Random` (NFR-7) and
+  `trick_clear_seconds` (UI-15).
+
+**`ComputerDriver`** drives the computer seats (§7).
+
+**`SeatView`** is the frozen slice of a round one seat may see (FR-74).
 
 ### 4.4 Driven adapters
 
 | Adapter | Port | Notes |
 | --- | --- | --- |
-| `InMemoryGameState` | `GameStatePort` | Exists. NFR-8: state is memory-only and a restart loses the game. |
-| `SseNotification` | `NotificationPort` | New. Owns the per-seat subscriber queues; see §6.3. Deals in `GameEvent` objects, not JSON — serialisation is the web layer's job. |
-| `LoggingNotification` | `NotificationPort` | New. NFR-9: logs every published event tagged with the game id, at `INFO`. Redacts `CardsDealt.cards` and `CardsPassed.cards` to counts, so the log is not itself a leak. |
-| `CompositeNotification` | `NotificationPort` | New. Holds a list of notifiers and forwards to each in order, so the service still depends on exactly one port. |
-| `AsyncioScheduler` | `SchedulerPort` | New. `loop.call_later(delay, callback)`; a delay of `0` becomes `loop.call_soon`, which still defers to a later tick (this matters — see §7). |
-| `FakeScheduler` | `SchedulerPort` | New, used by tests. Holds `(due_at, callback)` pairs against a virtual clock and runs them when `advance(seconds)` is called (ARC-10). |
-| `ImmediateScheduler` | `SchedulerPort` | Exists. Kept for headless domain-level drivers only; it is *not* suitable once the computer driver is wired, because running a callback synchronously re-enters an in-flight `load/dispatch/save` cycle. |
-| `InMemorySeatTokens` | `SeatTokenPort` | New. `secrets.token_urlsafe(32)`, stored in a nested dict keyed by game id. Constructor takes a token factory so tests can inject a deterministic one. |
+| `InMemoryGameState` | `GameStatePort` | A dict of live `Game` objects; no copying, so every caller shares one reference per game. NFR-8: a restart loses the game. |
+| `SseNotification` | `NotificationPort` | The hub: per-seat and admin subscriber queues, a per-game sequence number, and a bounded per-game replay history. Deals in `GameEvent` objects; serialisation is the web layer's job. See §6.3. |
+| `LoggingNotification` | `NotificationPort` | NFR-9: one `event.published` record per delivery on the `pinochle.events` logger, with game id and recipient (`*` for broadcast). `CardsDealt` and `CardsPassed` are redacted to counts. |
+| `CompositeNotification` | `NotificationPort` | Forwards each call to a list of notifiers, in order, so the service depends on one port. |
+| `PrintNotification` | `NotificationPort` | Prints events; used only by `create_default_app`. |
+| `AsyncioScheduler` | `SchedulerPort` | `loop.call_later`; a delay of `0` or less becomes `loop.call_soon`, which still defers to a later tick (§7.2). |
+| `FakeScheduler` | `SchedulerPort` | Virtual clock for tests. `advance(seconds)` runs only callbacks already pending and now due; anything they schedule waits for the next `advance` (ARC-10). |
+| `ImmediateScheduler` | `SchedulerPort` | Runs the callback synchronously. Used only by `create_default_app`; unsafe with the computer driver, which must not re-enter a cycle in progress. |
+| `InMemorySeatTokens` | `SeatTokenPort` | `secrets.token_urlsafe(32)` by default, via an injectable factory; tokens stored per game. |
+| `SvgCardImage` | `CardImagePort` | Resolves `pinochle/card_images/fronts/<suit>_<rank>.svg` (or `png_96_dpi/…png`) and `backs/<name>.svg`. Holds the configured default back. Raises `FileNotFoundError` for missing artwork. |
 
 ### 4.5 The web layer (driving adapter)
 
 ```
 pinochle/web/
-├── __init__.py
-├── main.py            # ASGI app factory; lifespan; static mounts
-├── container.py       # the wired object graph for the process
-├── dependencies.py    # FastAPI dependencies: admin auth, seat auth, game id
-├── security.py        # token extraction from header or query string
-├── errors.py          # domain exception → HTTP response mapping
-├── card_codec.py      # Card ⇄ wire string ("AS", "TH", "9C")
-├── event_encoder.py   # GameEvent → SSE frame (name, id, JSON data)
-├── schemas.py         # pydantic request/response models
+├── main.py              # create_app(container); lifespan; pages; static mounts
+├── container.py         # Settings, TableDefaults, Container, build_container
+├── dependencies.py      # get_container, require_admin, require_admin_stream, require_seat
+├── security.py          # token extraction; constant-time admin comparison
+├── errors.py            # exception → HTTP status and JSON envelope
+├── card_codec.py        # Card ⇄ "TS"; Suit ⇄ "SPADES"
+├── event_encoder.py     # event → SSE frame
+├── turn_header.py       # the public turn header on every frame
+├── sse_stream.py        # retry line, stream headers, the queue → frame loop
+├── transport_events.py  # SeatLost, SeatRejoined, GameAbandoned
+├── schemas.py           # pydantic request and response bodies
 └── routers/
-    ├── admin.py       # §5.2
-    ├── player.py      # §5.3
-    └── stream.py      # §6
+    ├── admin.py         # §5.2
+    ├── player.py        # §5.3
+    ├── stream.py        # §6
+    └── cards.py         # §5.4
 ```
 
-No module in `pinochle/web/` contains a game rule. Routers do exactly four
-things: authenticate, decode, call a port method, and return `204` or a small
-JSON document. ARC-7 requires it of the SSE endpoint specifically; the design
-applies it to the whole package.
+No module in `pinochle/web/` contains a game rule. Routers authenticate,
+decode, call a port method, and return `204` or a small JSON document. The
+admin router's `start` check (every human seat has an open stream, FR-10b) and
+its human-seat check before unlinking are transport facts, not rules: only the
+web layer knows about connections.
 
-`main.py` exposes `create_app(container: Container | None = None) -> FastAPI`
-so that tests can substitute a container built with `FakeScheduler` and a seeded
-`Random`. The module-level `app = create_app()` is what uvicorn imports.
+`create_app(container=None)` builds the app; tests pass a container wired with
+a `FakeScheduler` and a seeded shuffle. The module-level `app = create_app()`
+is what uvicorn imports.
 
 ### 4.6 Composition root and configuration
 
-`pinochle/app.py` grows a `Settings` dataclass, read once from the environment
-(§10.4), and a `build_container(settings)` function that wires the graph:
+`pinochle/web/container.py` holds the production wiring. `Settings.from_env()`
+reads `.env` (via python-dotenv, never overriding the real environment) and the
+`PINOCHLE_*` variables of §10.4; `build_container(settings, scheduler)` wires:
 
 ```python
-state      = InMemoryGameState()
-tokens     = InMemorySeatTokens()
-scheduler  = AsyncioScheduler()
-sse        = SseNotification()
-notifier   = CompositeNotification([sse, LoggingNotification()])
-service    = GameService(state, notifier, scheduler,
-                         trick_clear_seconds=settings.trick_clear_seconds,
-                         rng=Random(settings.shuffle_seed))
-driver     = ComputerDriver(service, state, scheduler, ComputerPlayerStrategy(),
-                            delay_seconds=settings.computer_delay_seconds)
-notifier.append(driver)          # the driver observes events (§7)
-actions    = driver              # the web layer's PlayerActionPort
+state     = InMemoryGameState()
+tokens    = InMemorySeatTokens()
+scheduler = scheduler or AsyncioScheduler()
+sse       = SseNotification(queue_maxsize=settings.sse_queue_maxsize)
+notifier  = CompositeNotification([sse, LoggingNotification()])
+rng       = Random(settings.shuffle_seed) if settings.shuffle_seed is not None else None
+service   = GameService(state, notifier, scheduler, rng=rng,
+                        trick_clear_seconds=settings.trick_clear_seconds)
+driver    = ComputerDriver(service, state, scheduler, ComputerPlayerStrategy(rng=rng),
+                           delay_seconds=settings.computer_delay_seconds)
+notifier.append(driver)              # the driver observes every event (§7.1)
+cards     = SvgCardImage(default_back=settings.card_back)
 ```
 
-`create_default_app()` is kept as the headless wiring used by CLI drivers and
-integration tests.
+The `Container` exposes `admin` (the service), `actions` (the driver, so the
+routers never know a seat is a computer), `state`, `sse`, `notifier`,
+`tokens`, `scheduler`, `cards`, and `settings`. One `Random` feeds both the
+shuffle and the computers' dealer-selection draws, which is what makes a
+seeded game reproducible end to end (NFR-7).
+
+`pinochle/app.py`'s `create_default_app()` is an older headless wiring
+(`ImmediateScheduler`, `PrintNotification`, no driver). The web app does not
+use it.
 
 ### 4.7 Concurrency model
 
-The whole server runs on **one asyncio event loop in one process**. This is a
-deliberate constraint, not an accident:
+The server runs on **one asyncio event loop in one process**:
 
-- `GameStatePort` is in-memory and unsynchronised (NFR-8), and `NFR-5` limits the
-  system to one game at a time, so there is nothing to gain from more workers and
-  a great deal to lose.
-- The container **must** be run as `uvicorn --workers 1`. A second worker would
-  get its own empty `InMemoryGameState` and its own SSE hub, and half the seats
-  would silently see a different game.
-
-Consequences the implementation must respect:
-
-1. **Every route handler is `async def`.** A `def` handler is run by Starlette in
-   a thread-pool worker, which would let two mutations of the same `Game` overlap
-   and would make `queue.put_nowait` a cross-thread call. There is no
-   synchronisation anywhere in the domain or services, and none is wanted.
-2. **Service calls are made directly from the handler.** They are pure in-memory
-   work — a deal, a meld detection, a trick resolution — measured in microseconds,
-   so they do not need to be pushed off the loop.
-3. **Scheduler callbacks run on the same loop thread**, via `loop.call_later`, so
-   they never race with a request handler.
-4. Because everything is serialised on one thread, `GameService`'s
-   `load → execute domain operation → dispatch events → save` cycle is atomic
-   by construction. NFR-4's "the game state shall be left exactly as it was"
-   then reduces to: raise before changing state, which the domain already does.
+- `GameStatePort` is in-memory and unsynchronised (NFR-8), and NFR-5 limits the
+  system to one game, so there is nothing to gain from more workers. uvicorn
+  must run with `--workers 1`: a second worker would hold a second, empty game
+  store and a second SSE hub (NFR-11).
+- Every route handler is `async def`, so no handler runs on a thread-pool
+  worker, and service calls are made directly from the handler.
+- Scheduler callbacks run on the same loop, so they never race a request.
+- Because everything is serialised on one thread, the service's load → apply
+  → dispatch → save cycle is atomic by construction. NFR-4's "left exactly as
+  it was" reduces to raising before mutating, which the domain does.
 
 ### 4.8 Error handling
 
-Domain and service code raises `ValueError` with a human-readable message today.
-The design introduces a small exception hierarchy in `pinochle/domain/errors.py`
-so that the web layer can map failures to status codes without string-matching:
-
 ```
 PinochleError
-├── UnknownGameError        → 404  unknown_game
-├── NotYourTurnError        → 409  not_your_turn
-├── WrongPhaseError         → 409  wrong_phase
-├── IllegalActionError      → 409  illegal_action   (illegal card, bad bid, …)
-└── SetupError              → 409  setup_incomplete
+├── UnknownGameError    → 404  unknown_game
+├── NotYourTurnError    → 409  not_your_turn
+├── WrongPhaseError     → 409  wrong_phase       (includes any action during a pause)
+├── IllegalActionError  → 409  illegal_action    (illegal card, bad bid, bad pass, taken position)
+└── SetupError          → 409  setup_incomplete
 ```
 
-`errors.py` in the web layer registers one exception handler that renders every
-`PinochleError` as
+`errors.py` registers handlers that render every failure as
 
 ```json
-{ "error": { "code": "not_your_turn", "message": "It is South's turn to play." } }
+{ "error": { "code": "not_your_turn", "message": "It is p-south's turn to play." } }
 ```
 
-Authentication failures are `403 forbidden_seat`; a malformed body is FastAPI's
-own `422`. In every case the game state is untouched, because the exception is
-raised before any mutation and no partial state is saved (NFR-4).
+A failed credential is `ForbiddenError` → `403 forbidden_seat` or
+`forbidden_admin`. A malformed body is `422 invalid_request`, and so is any
+`ValueError` a router raises — an unparseable card or suit code, an unknown
+image format, a bad card-back name. Missing artwork is `404 not_found`.
 
 ### 4.9 Logging
 
-A single `pinochle` logger tree, configured in `main.py`'s lifespan from
-`PINOCHLE_LOG_LEVEL` (NFR-9). Three record types, each carrying `game_id`:
+`main.py`'s lifespan configures the root logger at `PINOCHLE_LOG_LEVEL` and
+writes two startup lines: which `.env` was read, and — as a warning — the
+admin token if it was generated. Thereafter:
 
-- `action.accepted` — the port method, the seat, and the decoded arguments.
-- `action.rejected` — the same, plus the error code and message.
-- `event.published` — the event name and its recipients.
+- `pinochle.events` — `event.published game_id=… recipient=… event=…` for every
+  delivery, from `LoggingNotification`, with hands redacted;
+- `pinochle.stream` — `stream.opened` (with resume mode and replay length),
+  `stream.closed`, `stream.replay_incomplete`, `stream.bad_last_event_id`;
+- `pinochle.security` — `action.rejected reason=… path=… method=…` for every
+  refused credential. The credential itself is never logged.
 
-`LoggingNotification` redacts card lists in `CardsDealt` and `CardsPassed`, and
-`security.py` never logs a token. Both rules are part of NFR-9's requirement that
-the log not become a leak of private state.
+uvicorn runs with `--no-access-log`, because the stream URL carries a token.
 
 ---
 
@@ -415,452 +408,439 @@ the log not become a leak of private state.
 
 ### 5.1 Conventions
 
-- All command endpoints live under `/api/`, take JSON, and return **`204 No
-  Content`** on success. Nothing about the resulting game state comes back in the
-  response; it arrives on the client's event stream (RT-2, RT-3).
-- **Seat authentication.** Every player endpoint requires the seat token of
-  FR-10a. Commands carry it in an `X-Seat-Token` header. The SSE endpoint carries
-  it in the `?t=` query parameter, because `EventSource` cannot set request
-  headers — see §6.2 for the consequences.
-- **Admin authentication.** Admin endpoints require `X-Admin-Token`, compared
-  against `PINOCHLE_ADMIN_TOKEN` with `secrets.compare_digest`.
-- **Card wire format.** A two-character code: rank in `9 J Q K T A` followed by
-  suit in `S H D C`. `"TS"` is the ten of spades. The two physical copies of a
-  card are interchangeable (FR-19), so a card needs no instance identity on the
-  wire. `card_codec.py` owns the encoding in both directions.
+- Command endpoints live under `/api/`, take JSON, and return **`204 No
+  Content`**; the result arrives on the event stream (RT-2, RT-3). Game
+  creation returns `201` with the join links.
+- **Seat authentication.** Player commands carry the seat token in an
+  `X-Seat-Token` header. The stream carries it in `?t=`, because `EventSource`
+  cannot set headers. The token is resolved against the path's `{game_id}`, so
+  a token for another game is `403`.
+- **Admin authentication.** Admin commands require `X-Admin-Token`, compared
+  with `secrets.compare_digest`. Only the admin *stream* also accepts `?t=`; no
+  mutating route does.
+- **Card wire format.** Two characters: rank in `9 J Q K T A`, then suit in
+  `S H D C`. `"TS"` is the ten of spades. The two copies of a card share a code
+  (FR-19). `card_codec.py` owns both directions.
 - **Suit wire format.** `"SPADES" | "HEARTS" | "DIAMONDS" | "CLUBS"`.
-- **Seat wire format.** `"NORTH" | "EAST" | "SOUTH" | "WEST"`.
+- **Seat wire format.** `"NORTH" | "EAST" | "SOUTH" | "WEST"`; player ids are
+  `p-north` … `p-west` (FR-5).
 
 ### 5.2 Administrator endpoints
 
+All require `X-Admin-Token` unless noted.
+
 | Method | Path | Body | Effect |
 | --- | --- | --- | --- |
-| `POST` | `/api/admin/games` | seats + team names | Creates the game and seats all four players in one call (FR-6, FR-7). Returns the game id and, for each human seat, its token and join URL (FR-10). |
-| `GET` | `/api/admin/games/{game_id}` | — | Setup status: the four seats, and for each human seat whether a stream is currently open. |
-| `POST` | `/api/admin/games/{game_id}/start` | — | Validates seating and begins dealer selection (FR-9). |
-| `POST` | `/api/admin/games/{game_id}/abandon` | `{reason}` | Ends a game that cannot be completed; broadcasts `game_abandoned` and revokes the tokens (RT-12). |
-| `GET` | `/api/admin/games/{game_id}/stream` | — | The admin's own SSE stream: public events plus seat join/loss notices. Carries no hand. |
+| `GET` | `/api/admin/defaults` | — | The configured table the setup form starts from (FR-7a). |
+| `POST` | `/api/admin/games` | teams + four seats | Creates the game, assigns teams, adds the four players, and mints a token per human seat. `201` with the game id and each seat's `join_url` (FR-6, FR-7, FR-10). |
+| `GET` | `/api/admin/games/{id}` | — | The four seats: seat, player id, name, type, and `joined` (a computer, or a human with an open stream). |
+| `POST` | `/api/admin/games/{id}/start` | — | `409 setup_incomplete` naming the seat unless every human seat has joined (FR-10b); then begins dealer selection (FR-9). |
+| `POST` | `/api/admin/games/{id}/seats/{player_id}/unlink` | — | Human seats only. Revokes the seat's tokens, then closes its streams (RT-12a). |
+| `POST` | `/api/admin/games/{id}/seats/{player_id}/computer` | — | Human seats only. Unlinks as above, then `AdminPort.seat_computer` (RT-12a). |
+| `POST` | `/api/admin/games/{id}/abandon` | `{reason}` | Marks the game finished, broadcasts `game_abandoned`, revokes every token (RT-12b). |
+| `GET` | `/api/admin/games/{id}/stream` | — | The console's SSE stream: broadcasts only. Token by header or `?t=`. |
 
-`POST /api/admin/games` composes the existing `AdminPort` methods —
-`create_game`, `assign_teams`, four `add_player` calls — inside one request. The
-port keeps its fine-grained shape; the router provides the convenient surface.
-
-Request:
+Create request and response:
 
 ```json
 {
-  "teams": { "ns": "Us", "ew": "Them" },
+  "teams": { "ns": "North-South", "ew": "East-West" },
   "seats": [
-    { "seat": "NORTH", "name": "Phil",   "type": "human" },
-    { "seat": "EAST",  "name": "Ada",    "type": "computer" },
-    { "seat": "SOUTH", "name": "Grace",  "type": "human" },
-    { "seat": "WEST",  "name": "Turing", "type": "computer" }
+    { "seat": "NORTH", "name": "North", "type": "computer" },
+    { "seat": "EAST",  "name": "East",  "type": "computer" },
+    { "seat": "SOUTH", "name": "South", "type": "human" },
+    { "seat": "WEST",  "name": "West",  "type": "computer" }
   ]
 }
 ```
-
-Response `201`:
 
 ```json
 {
   "game_id": "5c1f…",
   "seats": [
-    { "seat": "NORTH", "name": "Phil",  "type": "human",
-      "player_id": "p-north",
-      "join_url": "https://pinochle.example/join/5c1f…?t=8Qk3…" },
-    { "seat": "EAST",  "name": "Ada",   "type": "computer", "player_id": "p-east" },
+    { "seat": "NORTH", "name": "North", "type": "computer", "player_id": "p-north", "join_url": null },
+    { "seat": "SOUTH", "name": "South", "type": "human",    "player_id": "p-south",
+      "join_url": "http://localhost:8000/join/5c1f…?t=8Qk3…" },
     …
   ]
 }
 ```
 
-The join URL's host comes from `PINOCHLE_PUBLIC_BASE_URL` (§10.4) so that the
-links work behind a reverse proxy. The tokens are returned exactly once, at
-creation; they are not retrievable afterwards.
-
-`start` rejects with `409 setup_incomplete` unless there are four distinct seats
-and two teams (FR-9) **and** every human seat has at least one open stream
-(FR-10b). The admin's console shows the join board so this is never a surprise
-(§9).
+The join URL's host is `PINOCHLE_PUBLIC_BASE_URL`. Tokens are returned exactly
+once and cannot be retrieved afterwards.
 
 ### 5.3 Player endpoints
 
-All require `X-Seat-Token`; all return `204`. The path's `{game_id}` must match
-the token's game, or the request is `403`.
+All require `X-Seat-Token` and return `204`.
 
 | Method | Path | Body | Port method | Requirements |
 | --- | --- | --- | --- | --- |
-| `POST` | `/api/games/{id}/draw` | `{"position": 17}` | `draw_for_deal` | FR-11, FR-11a, FR-12 |
-| `POST` | `/api/games/{id}/bid` | `{"amount": 260}` or `{"amount": null}` | `place_bid` | FR-24–FR-30 |
+| `POST` | `/api/games/{id}/draw` | `{"position": 17}` | `draw_for_deal` | FR-11, FR-11a |
+| `POST` | `/api/games/{id}/bid` | `{"amount": 260}`, or `null`/omitted to pass | `place_bid` | FR-24–FR-30 |
 | `POST` | `/api/games/{id}/contract` | `{"accept": true}` | `confirm_contract` | FR-32 |
 | `POST` | `/api/games/{id}/trump` | `{"suit": "HEARTS"}` | `name_trump` | FR-34 |
 | `POST` | `/api/games/{id}/pass` | `{"cards": ["AS","TS","KH","9C"]}` | `pass_cards` | FR-37–FR-43 |
 | `POST` | `/api/games/{id}/begin-play` | — | `begin_play` | FR-50a |
 | `POST` | `/api/games/{id}/toss-in` | — | `toss_in` | FR-50b |
 | `POST` | `/api/games/{id}/play` | `{"card": "QS"}` | `play_card` | FR-51–FR-53 |
+| `POST` | `/api/games/{id}/acknowledge` | `{"hold_id": 7}` | `acknowledge` | RT-13, UI-19a |
 | `GET` | `/api/games/{id}/stream` | — | (SSE) | §6 |
 
-`draw_for_deal` returns the drawn card to its caller in the port signature; the
-router discards that return value and lets the resulting `DrawMade` event carry
-it to all four clients, so that the drawing player and the watchers learn it by
-the same route (FR-15).
+`draw_for_deal` returns the card in its port signature; the router discards it
+and the public `draw_made` event carries it to everyone, the drawer included
+(FR-15). `begin-play` is refused while the meld hold stands; releasing that
+hold is how play begins (FR-50a). There is no `GET` returning game state (RT-5).
 
-Note what is **not** here: there is no `GET` that returns the game state. That
-absence is RT-5 and it is deliberate — see §6.9.
+### 5.4 Pages, static files, and artwork
 
-### 5.4 Static and asset endpoints
+| Path | Serves | Caching |
+| --- | --- | --- |
+| `GET /` | `frontend/public/index.html`; without a join link the page explains how to get one | `no-cache` |
+| `GET /join/{game_id}` | the same page; the client reads `?t=` itself | `no-cache` |
+| `GET /admin` | `admin.html`, with the setup form pre-filled from the configured table, and the token field filled when `?t=` is the valid admin token | `no-cache` |
+| `GET /assets/*` | `frontend/public/` — HTML and CSS | `no-cache` (ETag revalidation) |
+| `GET /static/*` | `frontend/dist/` — the compiled ES modules | `no-cache` |
+| `GET /cards/faces/{code}?fmt=svg\|png` | a face by wire code | `immutable`, one year |
+| `GET /cards/back?fmt=svg\|png` | the configured back (`PINOCHLE_CARD_BACK`) | `no-cache` |
+| `GET /cards/backs/{name}?fmt=svg\|png` | a named back | `immutable`, one year |
+| `GET /healthz` | `{"status":"ok"}` | — |
 
-| Path | Serves |
-| --- | --- |
-| `GET /` | `frontend/public/index.html` |
-| `GET /join/{game_id}` | The same table page; the `?t=` token is read by the client from `location.search` and then removed from the address bar with `history.replaceState`. |
-| `GET /admin` | `frontend/public/admin.html` |
-| `GET /static/*` | `frontend/dist/` — the compiled ES modules |
-| `GET /assets/*` | `frontend/public/` — stylesheets, fonts, and card artwork |
-| `GET /healthz` | `{"status":"ok"}` for the container health check (§10) |
-
-Card faces and backs are ordinary static front-end assets under
-`frontend/public/cards/`. They do not have a Python route or pass through an
-application port. Requests below `/assets/cards/` are served with
-`Cache-Control: public, max-age=31536000, immutable`; an artwork filename must
-therefore change whenever its contents change.
+Pages, CSS and modules are unhashed file names (no bundler), so they are served
+`no-cache` to force revalidation. Faces never change for a URL and are cached
+for a year; a hand plus three fans of backs is about fifty images per render.
+The configured back's URL is fixed while its content follows configuration, so
+it revalidates. A missing page answers a JSON `404` telling the operator to run
+`make build`.
 
 ### 5.5 Error catalogue
 
 | Status | `code` | Raised when |
 | --- | --- | --- |
-| 403 | `forbidden_seat` | Missing, unknown, or wrong-game seat token |
-| 403 | `forbidden_admin` | Bad admin token |
+| 403 | `forbidden_seat` | Missing, unknown, revoked, or wrong-game seat token |
+| 403 | `forbidden_admin` | Missing or wrong admin token |
 | 404 | `unknown_game` | No such game id |
-| 409 | `wrong_phase` | Action submitted outside its phase, including during a timed pause (RT-9) |
+| 404 | `not_found` | Artwork or a page missing from disk |
+| 409 | `wrong_phase` | Action outside its phase, including during a trick clear, before dealer selection opens, or `begin-play` while the meld hold stands (RT-9) |
 | 409 | `not_your_turn` | Right phase, wrong seat |
-| 409 | `illegal_action` | Illegal card, invalid bid, wrong number of cards passed, position already taken |
-| 409 | `setup_incomplete` | `start` before seating or joining is finished |
-| 422 | — | Malformed JSON or an unparseable card/suit code (FastAPI) |
+| 409 | `illegal_action` | Illegal card, invalid bid, wrong pass, position taken or out of range, second draw, unknown player, admin action on a computer seat |
+| 409 | `setup_incomplete` | `start` before four players and two teams, or before every human seat has joined |
+| 422 | `invalid_request` | Malformed body; unparseable card or suit code; unknown image format or back name |
 
 ---
 
-## 6. Server-Sent Events architecture
+## 6. Server-Sent Events
 
-### 6.1 Why SSE, and what it costs
+### 6.1 Why SSE
 
-ARC-7 mandates SSE, and the shape of the game justifies it: traffic is almost
-entirely server → client, commands are small and infrequent, and HTTP semantics
-(auth, proxies, logging) come free. The costs the design must pay for are:
+ARC-7 mandates SSE, and the shape of the game suits it: traffic is almost all
+server → client, commands are small and infrequent, and HTTP's auth, proxy and
+logging behaviour come free. No SSE library is used; a `StreamingResponse`
+over an async generator is the whole implementation. The costs:
 
-- one long-lived response per connection, so the server must not buffer it;
-- no client → server channel on the same connection, so commands go over separate
-  POSTs (§5.3), and their ordering relative to the stream matters (§6.7);
-- `EventSource` cannot set headers, which forces the token into the query string
-  (§6.2);
-- `EventSource` reconnects automatically on a drop, which the design must
-  actively suppress, because reconnection is out of scope (§6.9).
+- one long-lived response per connection, which proxies must not buffer (§10.5);
+- commands travel as separate POSTs, so their result is learned from the stream;
+- `EventSource` cannot set headers, which puts the token in the query string;
+- `EventSource` reconnects on its own, which the server turns to advantage by
+  replaying what the seat missed (§6.9).
 
 ### 6.2 Connection lifecycle
 
 ```
-client                                   server
-  │  GET /api/games/{id}/stream?t=…       │
-  ├──────────────────────────────────────►│  security.py resolves the token
-  │                                       │  → player_id, or 403 and done
-  │                                       │
-  │                                       │  hub.subscribe(game_id, player_id)
-  │                                       │    → a new asyncio.Queue
-  │  200, text/event-stream               │
-  │◄──────────────────────────────────────┤  retry: 86400000
-  │  event: stream_started                │  (suppress auto-reconnect, §6.9)
-  │◄──────────────────────────────────────┤
-  │                                       │
-  │  event: … (for the life of the game)  │
-  │◄──────────────────────────────────────┤
-  │                                       │
-  │  (tab closed / network drop)          │
-  ├──────────────────────────────────────►│  generator cancelled
-  │                                       │  hub.unsubscribe(...)
-  │                                       │  if that was the seat's last stream:
-  │                                       │    broadcast seat_lost (RT-12)
+client                                    server
+  │ GET /api/games/{id}/stream?t=…         │
+  │   [Last-Event-ID: 812 on a reconnect]  │
+  ├───────────────────────────────────────►│ require_seat: token → player_id, or 403
+  │                                        │ queue = hub.subscribe(game, player)     ┐ nothing awaited
+  │                                        │ missed = hub.history_since(…, 812)      ┘ between these
+  │                                        │ if the seat had no stream: broadcast seat_rejoined
+  │ 200 text/event-stream                  │
+  │◄───────────────────────────────────────┤ retry: 2000
+  │◄───────────────────────────────────────┤ event: stream_started   (no id: line)
+  │◄───────────────────────────────────────┤ the missed frames, in order
+  │◄───────────────────────────────────────┤ live frames, and ": keepalive" when idle
+  │                                        │
+  │ (tab closed / network drop)            │
+  ├───────────────────────────────────────►│ generator closes → hub.unsubscribe
+  │                                        │ if that was the seat's last stream:
+  │                                        │   broadcast seat_lost (RT-12)
 ```
 
-The response carries `Content-Type: text/event-stream`,
-`Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, and
-`X-Accel-Buffering: no` — the last so that an nginx in front of the container
-does not buffer the stream into uselessness (§10.5).
+Subscribing before reading the history, with no `await` between the two, means
+the replay and the live queue meet exactly — no duplicate and no gap. That
+matters because the client's reducer is not idempotent (a replayed `bid_placed`
+would append a second bid).
 
-**On the token in the query string.** It is the only option `EventSource` leaves
-open without inventing a second credential, which FR-10a forbids. The design
-mitigates it: the server never logs query strings (§4.9), §10.5 configures the
-reverse proxy to strip `t` from its access log, and the client removes the token
-from the address bar immediately after reading it. Deployments that terminate TLS
-are the assumed case; over plain HTTP the token is exposed exactly as any bearer
-credential would be.
+Response headers: `Content-Type: text/event-stream`,
+`Cache-Control: no-cache, no-transform`, `Connection: keep-alive`, and
+`X-Accel-Buffering: no` so that nginx does not buffer the stream.
+
+`stream_started` payload:
+
+```json
+{ "seat": "SOUTH", "player_id": "p-south",
+  "you": { "name": "South", "type": "human" },
+  "partial": false, "resume": "fresh" }
+```
+
+`resume` is `fresh` (no `Last-Event-ID`), `resumed` (the history reached back
+far enough), or `incomplete` (it did not). `partial` is true when a round is in
+progress and the replay was not whole.
+
+The admin stream (`GET /api/admin/games/{id}/stream`) subscribes an admin
+queue, sends `stream_started` with an empty payload, and then relays live
+broadcasts. It does no replay.
+
+The server ends a stream itself when the administrator unlinks the seat: the
+hub puts a `STREAM_CLOSED` sentinel on each of the seat's queues, and the
+generator returns and unsubscribes as if the client had left.
 
 ### 6.3 The hub
 
-`SseNotification` implements `NotificationPort` and owns the subscriber
-registry. It handles `GameEvent` objects; it does no serialisation, so the
-domain's event types never acquire a wire representation.
+`SseNotification` owns the subscriber registry and the replay history:
 
 ```python
 class SseNotification(NotificationPort):
-    def __init__(self, queue_maxsize: int = 256):
-        # game_id → player_id → set of queues (FR-10c: several per seat)
-        self._seats: dict[str, dict[str, set[Queue[Envelope]]]] = {}
-        self._admins: dict[str, set[Queue[Envelope]]] = {}
-
-    def subscribe(self, game_id, player_id) -> Queue: ...
+    def __init__(self, queue_maxsize=256, history_maxlen=20000): ...
+    # game_id → player_id → set of queues (FR-10c: several per seat)
+    def subscribe(self, game_id, player_id) -> asyncio.Queue: ...
     def unsubscribe(self, game_id, player_id, queue) -> None: ...
+    def subscribe_admin(self, game_id) -> asyncio.Queue: ...
+    def unsubscribe_admin(self, game_id, queue) -> None: ...
+    def close_seat(self, game_id, player_id) -> int: ...       # RT-12a
     def seats_connected(self, game_id) -> set[str]: ...
-
-    def notify(self, player_id: str, event: GameEvent) -> None:
-        """Deliver to every queue belonging to one seat."""
-
-    def broadcast(self, game_id: str, event: GameEvent) -> None:
-        """Deliver to every queue in the game, plus the admin queues."""
+    def history_since(self, game_id, player_id, after_seq) -> (list, bool): ...
+    def notify(self, player_id, event) -> None: ...             # one seat's queues
+    def broadcast(self, game_id, event) -> None: ...            # every seat + admin
 ```
 
-Three properties fall out of this shape:
-
-- **FR-10c holds by construction.** A seat's subscribers are a *set* of queues.
-  Opening the seat in a second tab adds a queue; it does not displace the first,
-  and both receive every event addressed to the seat. Either tab may then act,
-  because authorisation is by token, not by connection.
-- **Privacy is decided upstream.** The hub never inspects an event to decide who
-  may see it. `GameService._recipients` has already made that call by choosing
-  `notify` over `broadcast` (RT-1, NFR-6). The hub only routes.
-- **The admin's stream sees exactly the broadcasts.** Since every private event
-  goes out through `notify`, subscribing the admin queues to `broadcast` alone
-  guarantees the admin console can never receive a hand, whatever it asks for.
+- Each dispatched event gets the next **per-game sequence number**, once,
+  before fan-out, so `seq` is a single order shared by every seat and the
+  console. A seat sees gaps where frames went to other seats.
+- Queues carry `(seq, event)` pairs; encoding happens in the stream generator.
+- **FR-10c holds by construction.** A seat's subscribers are a set of queues; a
+  second tab adds one and displaces nothing. Either tab may act, because
+  authorisation is by token.
+- **Privacy is decided upstream.** The hub never inspects an event to decide
+  who may see it; the service chose `notify` or `broadcast`.
+- **The console sees exactly the broadcasts,** so it can never receive a hand.
+- The history records each event's recipient (`None` for a broadcast), and
+  `history_since` returns only broadcasts and the asking seat's own frames.
 
 ### 6.4 Frame format
 
-Each frame is produced by `event_encoder.py`:
+Built by `event_encoder.py`:
 
 ```
 id: 42
 event: card_played
-data: {"seq":42,"type":"card_played","turn":{...},"payload":{...}}
+data: {"seq":42,"type":"card_played","turn":{…},"payload":{"player_id":"p-west","card":"KS"}}
 
 ```
 
-- `event:` is the snake_case event name, so the client attaches one listener per
-  type rather than switching inside a single handler.
-- `id:` is a per-game monotonic sequence number, assigned by the encoder as it
-  serialises. It exists for ordering assertions in tests and for reading logs. It
-  is **not** a resume cursor: the server ignores `Last-Event-ID` entirely (§6.9).
-- `data:` is one line of compact JSON. The encoder must escape any embedded
-  newline, since a newline would terminate the frame.
+- `event:` is the snake_case name, so the client subscribes per type.
+- `id:` is the sequence number, which the browser sends back as
+  `Last-Event-ID` when it reconnects. `stream_started` is sent with `seq` 0
+  and no `id:` line, so a reconnect never winds the browser's marker back.
+- `data:` is one line of JSON; `json.dumps` escapes embedded newlines.
 
-**The turn header.** Every frame carries a `turn` object describing public,
-non-private table state as it stands *after* the event:
+**The turn header** is on every frame and says, publicly, where the game
+stands *now*:
 
 ```json
 "turn": {
   "phase": "PLAYING",
   "current_player_id": "p-south",
   "paused": "trick_clear",
+  "hold": { "id": 7, "reason": "meld_exposed", "ackable": true },
   "round_number": 3
 }
 ```
 
-This is the smallest thing that keeps the client honest. Without it, a client
-would have to re-derive whose turn it is from the rules — which is exactly what
-ARC-2 forbids. Everything in the header is information a player at a physical
-table can see, so it is safe on a broadcast frame. `paused` is `null`, or the
-name of the pause the game is currently sitting in (§6.7).
+- `phase` is the round phase while a round is in progress, else the game phase
+  (`SETUP`, `DEALER_SELECTION`, `FINISHED`).
+- `current_player_id` is `Round.current_player`, or `null`.
+- `paused` is `"trick_clear"` while a completed trick is on the table, else
+  `null`.
+- `hold` is the hold in force, or `null`.
+
+`build_turn_header` reads the live `Game` rather than a snapshot taken at
+dispatch. Readers are rarely more than a frame behind, and replayed frames are
+folded before the client draws, so the header the client renders is current.
 
 ### 6.5 Event catalogue
 
-Legend: **P** = public, broadcast to all four seats and the admin; **S** = sent
-to one seat; **T** = team-private, sent to two seats.
+**P** = broadcast to every seat and the console; **S** = one seat; **T** = the
+two partners who exchanged cards.
 
-| `event:` name | Vis. | Payload | Requirement |
+| `event:` | Vis. | Payload | Requirement |
 | --- | --- | --- | --- |
-| `stream_started` | S | `{seat, player_id, you: {…}}` — who this stream belongs to | §6.2 |
-| `game_configured` | P | seats, names, human/computer, team names, target score | UI-1, UI-3, UI-14 |
-| `dealer_selection_started` | P | `{spread_size: 48, taken: []}` | FR-11a |
+| `stream_started` | S | see §6.2 | RT-5a |
+| `game_configured` | P | `seats: [{player_id, name, type, seat}]`, `teams: [{team_id, name}]`, `winning_score` | UI-1, UI-3 |
+| `seat_replaced` | P | `{player_id, name, type}` | RT-12a |
+| `dealer_selection_started` | P | `{spread_size: 48, taken: []}` | FR-11a, FR-14 |
 | `draw_made` | P | `{player_id, position, card}` | FR-11, FR-15 |
-| `draw_tied` | P | `{cards: {player_id: card}}` then a fresh `dealer_selection_started` | FR-14 |
+| `draw_tied` | P | `{cards: {player_id: card}}` | FR-14 |
 | `dealer_selected` | P | `{dealer_player_id}` | FR-13 |
 | `round_started` | P | `{round_number, dealer_player_id}` | FR-16 |
-| `cards_dealt` | S | `{cards: [12 codes]}` | FR-21, FR-22, NFR-6 |
-| `turn_prompt` | S | phase-specific options — see below | UI-9, UI-10 |
+| `cards_dealt` | S | `{cards: [12 codes]}` | FR-21, FR-22 |
+| `turn_prompt` | S | phase-specific options, below | UI-9, UI-10 |
 | `bid_placed` | P | `{player_id, amount \| null, current_high}` | FR-33 |
 | `contract_offered` | P | `{player_id, amount}` | FR-32 |
 | `round_abandoned` | P | `{declined_by \| null}` | FR-31, FR-32 |
 | `trump_named` | P | `{suit}` | FR-36 |
 | `cards_passed` | T | `{from_player_id, to_player_id, cards}` | FR-38, FR-40 |
-| `meld_exposed` | P | `{player_id, units: [{name, cards, points}], total}` | FR-44, FR-45 |
+| `meld_exposed` | P | `{player_id, cards, units: [{name, points, cards}], total}` | FR-44, FR-45 |
 | `play_begun` | P | `{leader_player_id}` | FR-50a |
 | `contract_tossed_in` | P | `{player_id}` | FR-50b |
-| `seat_thinking` | P | `{player_id}` — a computer seat's delay has begun | RT-7, RT-10 |
+| `seat_thinking` | P | `{player_id}` | RT-7, RT-10 |
 | `card_played` | P | `{player_id, card}` | FR-57 |
 | `trick_completed` | P | `{winner_player_id, cards: [{player_id, card}]}` | FR-54, UI-15 |
-| `trick_cleared` | P | `{winner_player_id, next_leader_player_id}`, the latter `null` after the twelfth trick | UI-15, RT-10 |
-| `round_scored` | P | round number, contract, bid team, `made_contract`, `tossed_in`; per team: meld, card points, last-trick bonus, round total, points applied, cumulative | FR-66 |
+| `trick_cleared` | P | `{winner_player_id, next_leader_player_id \| null}` | UI-15, RT-10 |
+| `round_scored` | P | `round_number, bid_team_id, bid_winner_player_id, contract, made_contract, tossed_in, teams: [{team_id, meld, card_points, last_trick_bonus, round_total, points_applied, cumulative_score}]` | FR-66 |
 | `game_over` | P | `{winning_team_id, ns_score, ew_score}` | FR-71 |
-| `seat_lost` | P | `{player_id}` — that seat has no open stream | RT-12 |
-| `seat_rejoined` | P | `{player_id}` — a stream opened for a seat that had none | RT-12 |
-| `game_abandoned` | P | `{reason}` — the administrator has ended it | RT-12 |
+| `hold_begun` | P | `{hold_id, reason, seconds, ackable}` | RT-10, RT-13 |
+| `hold_ended` | P | `{hold_id, reason}` | RT-10, RT-13 |
+| `seat_lost` | P | `{player_id}` | RT-12 |
+| `seat_rejoined` | P | `{player_id}` | RT-12 |
+| `game_abandoned` | P | `{reason}` | RT-12b |
 
-`turn_prompt` is the mechanism by which the client displays options without
-knowing rules. Its payload is a tagged union on the phase:
+`turn_prompt` is a tagged union on `phase`:
 
 ```json
-{ "phase": "BIDDING",  "minimum_bid": 260, "may_pass": true }
-{ "phase": "TRUMP" }
+{ "phase": "BIDDING",    "minimum_bid": 260, "may_pass": true }
 { "phase": "CONFIRMING", "amount": 250 }
-{ "phase": "PASSING",  "count": 4 }
-{ "phase": "MELDING",  "may_begin_play": true, "may_toss_in": true }
-{ "phase": "PLAYING",  "legal_plays": ["QS","JD","9H"] }
-{ "phase": "DEALER_SELECTION", "taken": [3, 17, 40] }
+{ "phase": "TRUMP" }
+{ "phase": "PASSING",    "count": 4 }
+{ "phase": "MELDING",    "may_begin_play": true, "may_toss_in": true }
+{ "phase": "PLAYING",    "legal_plays": ["QS","JD","9H"] }
 ```
 
-It is emitted to exactly one seat whenever the current player changes, and it is
-regenerated (not resumed) at each change. `legal_plays` comes straight from
-`Round.legal_plays`, so the highlight in the client and the check on the server
-are the same computation — UI-9 and FR-53 cannot disagree.
+It is appended by `_load_save` after every operation that leaves a seat on the
+clock during a round, and regenerated each time. Dealer selection has no prompt:
+any undrawn seat may draw, and the public draw events say which positions are
+taken. `legal_plays` comes from `Round.legal_plays`, so the client's highlight
+and the server's check are the same computation (UI-9, FR-53).
 
 ### 6.6 Privacy, end to end
-
-The chain that satisfies RT-1 and NFR-6 has four links, and every one of them
-lives on the server:
 
 1. The domain emits `CardsDealt` once per player rather than one event holding
    four hands.
 2. `GameService._recipients` maps each private event to its entitled seats.
-3. `_dispatch` calls `notify` for those, `broadcast` for everything else.
-4. The hub routes `notify` only to that seat's queues.
+3. `_dispatch` calls `notify` for those and `broadcast` for the rest.
+4. The hub routes `notify` only to that seat's queues, and replays only a
+   seat's own private frames.
 
-A test asserts the property directly: run a full round, capture every frame
-written to each of the four streams, and assert that no frame delivered to seat
-*X* contains a card code that was in another seat's `cards_dealt`, except cards
-that later appear in a public `card_played`, `meld_exposed`, or a `cards_passed`
-that *X* was party to. `tests/services/test_event_privacy.py` already establishes
-this at the service level; the design extends it to the encoded frames.
+`tests/services/test_event_privacy.py` asserts the property at the service
+level. `LoggingNotification` redacts the two card-carrying private events so
+the audit log is not a leak (NFR-9).
 
-### 6.7 Timed pauses are states, not effects
+### 6.7 Pauses and holds
 
-RT-8 through RT-11 say a pause is a real state the game occupies. The design
-represents each pause as a bracketing pair of events, with the `turn` header's
-`paused` field set in between:
+Every pause is a state the game occupies (RT-8, RT-9), delimited by events
+(RT-10), and visible on every frame's turn header.
 
-| Pause | Opens with | `paused` value | Closes with | Length |
+**Timed pauses** end by themselves and cannot be released:
+
+| Pause | Opens with | On the header | Closes with | Length |
 | --- | --- | --- | --- | --- |
-| Trick clear (UI-15) | `trick_completed` | `"trick_clear"` | `trick_cleared` | `PINOCHLE_TRICK_CLEAR_SECONDS`, default 1.5 |
-| Computer thinking (FR-75c) | `seat_thinking` | `"thinking"` | the action event itself (`bid_placed`, `card_played`, …) | `PINOCHLE_COMPUTER_DELAY_SECONDS`, default 1.0 |
+| Trick clear (UI-15) | `trick_completed` | `paused: "trick_clear"` | `trick_cleared` | `PINOCHLE_TRICK_CLEAR_SECONDS`, 1.5 |
+| Computer thinking (FR-75c) | `seat_thinking` | — | the seat's action event | `PINOCHLE_COMPUTER_DELAY_SECONDS`, 1.0 |
 
-Consequences:
+The trick clear is enforced by `Round`'s pending winner: `play_card` raises
+`WrongPhaseError` until the scheduled `_clear_trick` runs.
 
-- The client's rule stays "render what the last event said" (RT-10). It never
-  starts a timer, and it never predicts when a pause will end.
-- All four clients change state on the same server-published event, so they
-  cannot drift apart (RT-11).
-- **A pause rejects actions.** `Round.play_card` already raises when
-  `_pending_winner is not None` — "The completed trick has not been cleared yet."
-  That is RT-9: the next leader cannot play into a table that still holds the last
-  trick, and the attempt returns `409 wrong_phase` like any other out-of-phase
-  action.
-- The pause is counted by `SchedulerPort` (ARC-9), so a test advances the fake
-  clock rather than sleeping (ARC-10).
+**Holds** wait for any seated player (RT-13). Each is a `Hold` with an id and
+`ackable=True`, begun with `game.begin_hold` (emitting `hold_begun`) and ended
+by `acknowledge` (emitting `hold_ended`):
 
-There is one ordering subtlety worth stating. A client may fire a POST at almost
-the same moment an event arrives that makes the action illegal — for instance
-clicking a card just as the trick-clear pause begins. The server is the
-arbiter: the POST is rejected with `409`, the client shows the rejection
-briefly, and the stream, which is the only thing that drives the display, has
-already moved on. The client never needs to reconcile the two, because the POST
-response carries no state (§5.1).
+| `HoldReason` | Begun by | `_resume_from` then |
+| --- | --- | --- |
+| `DRAW_TIED` | a tied draw, after `draw_tied` | lays a fresh spread, `dealer_selection_started` |
+| `DEALER_SELECTED` | a settled draw, after `dealer_selected` | deals the first round |
+| `ROUND_ABANDONED` | four passes, after `round_abandoned` | rotates the deal, deals |
+| `MELD_EXPOSED` | the second pass, after the four `meld_exposed` | `Round.begin_play` for the auction winner, `play_begun` |
+| `ROUND_SCORED` | every scored round, after `round_scored` | deals the next round, or `game_over` |
 
-### 6.8 Keepalive, backpressure, and slow readers
+Rules that hold throughout:
 
-**Keepalive.** Every `PINOCHLE_SSE_KEEPALIVE_SECONDS` (default 15) with no
-traffic, the generator writes an SSE comment line `: keepalive`. Comments are
-ignored by `EventSource` and by proxies alike, but they keep an idle connection
-from being reaped — and a Pinochle table can be idle for minutes while a human
-thinks (`MELDING` and `CONFIRMING` are untimed by design).
+- A hold is begun only when the table has a human seat; otherwise the service
+  does at once what the release would have done.
+- While a hold stands, the computer driver schedules nothing (§7.2), and a
+  computer seat never releases a hold.
+- `toss_in` is accepted during the meld hold and ends it before scoring.
+- `acknowledge` with a stale id succeeds and emits nothing; with an unknown
+  player id it is `illegal_action`.
+- `HoldReason` also defines `TRICK_CLEAR` and `THINKING`, and `Hold.timed`
+  exists, but nothing begins a timed hold: the two timed pauses above are
+  reported through `paused` and `seat_thinking` instead. The client folds
+  `paused` into a hold-shaped value of its own (§8.3), so it treats both kinds
+  the same way.
 
-**Backpressure.** Each queue is bounded at `PINOCHLE_SSE_QUEUE_MAXSIZE` (default
-256). If a `put_nowait` raises `QueueFull`, the subscriber is hopelessly behind;
-the hub drops that queue, and the generator writes a final `stream_broken` frame
-and closes. Dropping is the only honest response: without a replay journal
-(§6.9) a client that skipped an event can never be correct again, and it is
-better to say so than to render a table that has quietly diverged.
+A client may POST at the moment an event makes its action illegal — clicking
+a card just as a trick completes. The server arbitrates with a `409`, the
+client shows the message briefly, and the stream, which alone drives the
+display, has already moved on.
 
-**Never block the loop.** The generator awaits its own queue and writes to the
-socket; a client that stops reading exerts TCP backpressure on that one
-generator, which is why the bounded queue and the drop rule exist. No other
-seat's delivery is affected.
+### 6.8 Keepalive and backpressure
 
-### 6.9 Disconnection: no reconnection, and how that is enforced
+**Keepalive.** After `PINOCHLE_SSE_KEEPALIVE_SECONDS` (15) with no frame, the
+generator writes the comment `: keepalive`, so that an idle connection is not
+reaped by a proxy — a table can sit on a hold for as long as the players talk.
 
-RT-5 is unambiguous: a client builds its view from the stream it has been
-receiving since it joined, the server constructs no point-in-time snapshot, and
-a client that loses its stream cannot rebuild one. RT-12 says the seat is then
-gone for good, and the other three must be told so they can abandon the game
-deliberately.
+**Backpressure.** Each queue is bounded at `PINOCHLE_SSE_QUEUE_MAXSIZE` (256). A
+`put_nowait` that finds a queue full removes that queue from the fan-out, so
+one reader that has stopped reading cannot hold up the others. See §15 for
+what the dropped reader then sees.
 
-The design enforces this rather than merely refraining from implementing it:
+### 6.9 Reconnection and replay
 
-- **No state endpoint exists.** There is no `GET /api/games/{id}` for players
-  (§5.3). The one admin `GET` returns setup metadata only, never cards.
-- **No journal is kept.** The hub holds queues, not history. Nothing in the
-  process can reconstruct a mid-game view for a new subscriber.
-- **`Last-Event-ID` is ignored.** The stream router does not read the header.
-- **Auto-reconnect is suppressed.** The first thing the stream writes is
-  `retry: 86400000`, setting `EventSource`'s reconnection delay to a day. On
-  `stream_broken` the client also calls `es.close()`, so the browser does not
-  spin through a reconnect loop against a server that cannot help it.
-- **Seat loss is announced.** When a seat's *last* queue is removed, the hub
-  broadcasts `seat_lost`. It is the last queue, not any queue, because FR-10c
-  allows a seat several concurrent connections and closing one of two tabs must
-  not report the seat as gone. Clients render a persistent banner naming the
-  lost seat; the administrator's console offers the abandon action (§5.2, §9).
+RT-5 forbids a snapshot; RT-5a requires a dropped client to recover. The hub's
+per-game history (20,000 entries — several whole games) makes both true:
 
-The one case this leaves rough is a second tab opened *mid-game*: it is
-authorised (FR-10c) and it receives every subsequent event, but it missed the
-deal and cannot draw the hand. Its `stream_started` frame carries
-`"partial": true`, and the client shows "this view joined mid-game" instead of a
-table. §14.1 records the tension between FR-10c and RT-5 that produces this, and
-what would change if RT-5 were relaxed.
+- The stream begins with `retry: 2000`, so `EventSource` retries two seconds
+  after a drop, sending the last `id:` it saw as `Last-Event-ID`.
+- The router replays every frame that seat was entitled to after that number,
+  then goes live. The client folds them exactly as if they had arrived live.
+- A tab opening a seat afresh — a second tab, a reload, or the join link
+  reopened — has no `Last-Event-ID` and is replayed from the start of the game.
+  Mid-game tabs therefore show the whole table.
+- If the history no longer reaches back far enough, `resume` is `incomplete`,
+  the log records it, and the client marks its view partial rather than fold a
+  history with a hole in it.
+- Replayed frames carry the current turn header, not the historical one; the
+  client draws only after folding them all.
 
-### 6.10 Worked sequence: one card, played by a human, answered by a computer
+Seat presence is announced from the stream router: `seat_rejoined` when a
+stream opens for a seat that had none (including its first join), `seat_lost`
+when its last one closes. A seat with two tabs that closes one is not lost.
+
+### 6.10 Worked sequence: a human card, answered by a computer
 
 ```
-South's browser          server                                 all four streams
-      │  POST /play {"card":"QS"}
-      ├───────────────────────────►│ security: token → p-south
-      │                            │ ComputerDriver.play_card → GameService
-      │                            │   Round.play_card validates and mutates
-      │                            │   emit CardPlayed(p-south, QS)
-      │                            │ _dispatch → broadcast
-      │◄───────────────────────────┤ 204
-      │                            │                    event: card_played ──►
-      │                            │                    turn.current = p-west
-      │                            │
-      │                            │ driver observes the event; West is a
-      │                            │ computer → scheduler.call_later(1.0, act)
-      │                            │   emit SeatThinking(p-west)
-      │                            │                    event: seat_thinking ─►
-      │                            │                    turn.paused = "thinking"
-      │                            │
-      │                     (1.0s, counted by the server)
-      │                            │ driver acts: legal_plays → strategy → play
-      │                            │   emit CardPlayed(p-west, KS)
-      │                            │                    event: card_played ───►
-      │                            │ trick now complete
-      │                            │   emit TrickCompleted(winner=p-west)
-      │                            │                    event: trick_completed ►
-      │                            │                    turn.paused="trick_clear"
-      │                            │ scheduler.call_later(1.5, clear)
-      │                     (1.5s, counted by the server)
-      │                            │   Round.clear_trick
-      │                            │   emit TrickCleared(next_leader=p-west)
-      │                            │                    event: trick_cleared ──►
-      │                            │                    turn.current = p-west
+South's browser          server                                   all streams
+      │ POST /play {"card":"QS"}
+      ├──────────────────────────►│ require_seat → p-south
+      │                           │ ComputerDriver.play_card → GameService
+      │                           │   Round.play_card validates and mutates
+      │                           │   CardPlayed(p-south, QS); TurnPrompt → p-west
+      │                           │   dispatch → hub, log, driver
+      │◄──────────────────────────┤ 204          card_played, turn.current = p-west ─►
+      │                           │ driver.pump: West is a computer, no hold
+      │                           │   note_seat_thinking → seat_thinking ──────────────►
+      │                           │   scheduler.call_later(1.0, _act)
+      │                   (1.0 s, counted by the server)
+      │                           │ _act: SeatView → strategy.choose_play → play_card
+      │                           │   CardPlayed(p-west, KS); the trick is complete
+      │                           │   TrickCompleted(winner = p-west)
+      │                           │                card_played, trick_completed,
+      │                           │                turn.paused = "trick_clear" ──────►
+      │                           │ scheduler.call_later(1.5, _clear_trick)
+      │                   (1.5 s, counted by the server)
+      │                           │ Round.clear_trick
+      │                           │   TrickCleared(next_leader = p-west)
+      │                           │                trick_cleared, turn.current = p-west ►
+      │                           │ driver.pump: West leads → seat_thinking … and so on
 ```
-
-Every visible change in every browser is the direct consequence of a frame on
-this diagram. No client computed a delay, decided a winner, or guessed a turn.
 
 ---
 
@@ -868,80 +848,79 @@ this diagram. No client computed a delay, decided a winner, or guessed a turn.
 
 ### 7.1 Shape
 
-`ComputerDriver` is an application-layer object that plays two roles:
+`ComputerDriver` (`pinochle/services/computer_driver.py`) plays two roles:
 
-1. **A decorator over `PlayerActionPort`.** It implements every method by
-   delegating to `GameService`. This is what the web layer is given, so the
-   routers depend on the port and know nothing about computer seats.
-2. **A `NotificationPort` observer.** It is appended to the composite notifier,
-   so it sees every event the service publishes — including those from the
-   service's own scheduler callbacks, such as `TrickCleared`, which no decorator
-   could intercept.
+1. **A decorator over `PlayerActionPort`.** Every method delegates to
+   `GameService`. The container hands the driver to the web layer as
+   `actions`, so routers never know a seat is a computer.
+2. **A `NotificationPort` observer.** Appended to the composite notifier, it
+   sees every event, including those published by scheduler callbacks such as
+   `TrickCleared`, which no decorator could intercept. After any event it asks
+   whether a computer is now due to move.
 
-Being an observer is what makes the driver complete. Every point at which the
-turn can pass to a computer seat — a human's action, a trick clearing, a round
-being scored and the next dealt, dealer selection starting — publishes an event,
-so a single "after any event, look at whose turn it is" rule covers all of them.
+Every point at which the turn can pass to a computer — a human's action, a
+trick clearing, a hold released, a seat replaced, a round dealt — publishes an
+event, so the single rule "after any event, look at whose turn it is" covers
+them all.
 
 ### 7.2 The pump
 
-On observing an event for game *G*, the driver calls `pump(G)`:
-
 ```
-if a pump is already pending for G:      return          # coalesce
-if the game is FINISHED or ABANDONED:    return
-seat = whose turn is it (from the Game aggregate)
-if seat is None or seat is HUMAN:        return
-mark a pump pending for G
-emit SeatThinking(seat)                                  # opens the pause
-scheduler.call_later(delay_seconds, lambda: self._act(G, seat))
+pump(game):
+    if a hold is in force:                   return
+    if DEALER_SELECTION:
+        for each undrawn computer seat, clockwise:  schedule(seat)
+        return
+    seat = Round.current_player, if a round is in progress
+    if seat is a computer:                   schedule(seat)
+
+schedule(seat):
+    if (game, seat) is already pending:      return        # coalesce
+    mark it pending
+    service.note_seat_thinking(game, seat)                 # seat_thinking
+    scheduler.call_later(delay, lambda: _act(game, seat))
 ```
 
-Three details matter:
-
-- **Coalescing.** One `load → execute domain operation → dispatch events →
-  save` cycle can publish several events — four `CardsDealt`, then four
-  `MeldExposed`. Without the pending flag
-  the driver would schedule several callbacks for the same turn. The flag is
-  cleared in `_act`, after the action has been submitted.
-- **Deferral is mandatory.** The driver must never act synchronously inside
-  `_dispatch`, because dispatch runs *before* `GameService` saves the game; a
-  synchronous re-entry would load a stale aggregate and then be overwritten by
-  the outer save. `AsyncioScheduler` guarantees deferral even at delay `0`, by
-  falling back to `loop.call_soon`. `ImmediateScheduler` does not, which is why
-  §4.4 marks it unsuitable once the driver is wired.
-- **Zero delay works.** FR-75c requires the delay be reducible to zero for
-  all-computer test games. With `AsyncioScheduler` the game then runs as fast as
-  the loop can turn, and with `FakeScheduler` it runs as fast as the test calls
-  `advance(0)`.
+- **Coalescing.** One cycle can publish several events (four `cards_dealt`,
+  four `meld_exposed`); the pending set keeps one turn from being scheduled
+  twice. `_act` clears the mark first.
+- **Re-validation.** `_act` reloads the game and does nothing if the seat is no
+  longer the one on the clock, or — in dealer selection — has already drawn.
+- **Deferral is mandatory.** Dispatch runs *before* the service saves, so a
+  synchronous `_act` would load a stale aggregate. `AsyncioScheduler` defers
+  even at delay 0; `ImmediateScheduler` does not, which is why the web
+  container never uses it.
+- **Zero delay works** (FR-75c): with `AsyncioScheduler` an all-computer game
+  runs as fast as the loop turns; with `FakeScheduler`, as fast as the test
+  calls `advance(0)`.
 
 ### 7.3 Seat views keep FR-74 honest
 
-`_act` builds a `SeatView` — a small frozen dataclass holding only what that seat
-is entitled to: its own hand, the public bid history, the trump if named, the
-cards on the table, the exposed meld, the legal plays. The strategy receives the
-`SeatView` and nothing else. It is never handed the `Game`, so it *cannot* read
-another hand; FR-74 is a property of the type signature rather than a discipline.
-
-The driver then calls the same `PlayerActionPort` method a human client's POST
-would reach, so FR-72 and FR-73 are enforced by exactly the same validation, and
-the resulting events are indistinguishable to clients (RT-6).
+`_act` builds a `SeatView` — player id, partner id, own hand, bid history,
+current high bid, trump, cards in the current trick, every exposed meld, and
+legal plays — and the strategy receives only its fields, never the `Game`. It
+cannot read another hand because nothing it is given carries one. The driver
+then calls the same `GameService` method a human's POST reaches, so FR-72 and
+FR-73 are enforced by the same validation, and the resulting events are
+indistinguishable (RT-6).
 
 ### 7.4 The shipped strategy
 
-`ComputerPlayerStrategy` exists and covers draw, trump, pass, and play. FR-75a
-and FR-75b ask for more than it currently does:
+`ComputerPlayerStrategy` (`pinochle/strategies/computer_player_strategy.py`):
 
-- **Bidding (FR-75a)** — new. Estimate = detected meld for each candidate trump
-  suit + a conservative trick estimate from aces held and length in that suit.
-  Bid up to the estimate in 10s; pass above it. The strategy must be given the
-  current high bid and whether it is the opener.
-- **Passing (FR-75b)** — replace "the four lowest" with: pass trump and aces that
-  support the contract while retaining cards that complete the passer's own meld.
-- **Trump and play** — the existing heuristics stand for this release.
+| Decision | Rule | Requirement |
+| --- | --- | --- |
+| Draw | a random untaken position, from the shared seeded `Random` | FR-11b |
+| Bid | valuation = 180 + best suit's (meld + 15 per ace of the suit + 10 per card of the suit beyond four); bid the next increment while it is within the valuation | FR-75a |
+| Bid against partner | once both opponents have passed, the partner with fewer bids gives way, unless it holds a whole run, which is worth one more bid | FR-75d |
+| Lone contract | always accept | FR-75e |
+| Trump | the longest suit | FR-75e |
+| Pass | all trump, highest first; then unprotected aces; then the lowest unprotected cards; protected meld released lowest first only if needed. Used for both directions of the exchange | FR-75b |
+| Meld | always begin play; never toss in | FR-75e |
+| Play | the highest-ranked legal card | FR-75e |
 
-FR-75 requires only that the logic be replaceable, and it is: the strategy is a
-constructor argument to the driver. Selectable difficulty is out of scope.
+The strategy is a constructor argument to the driver, which is what FR-75's
+replaceability amounts to.
 
 ---
 
@@ -950,592 +929,487 @@ constructor argument to the driver. Selectable difficulty is out of scope.
 ### 8.1 Layout
 
 ```
-frontend/
-├── package.json               # devDependency: typescript. No runtime deps.
-├── tsconfig.json
-├── public/
-│   ├── index.html
-│   ├── admin.html
-│   └── styles/
-│       ├── table.css          # green felt, seats, fan geometry (UI-2)
-│       └── admin.css
-├── src/
-│   ├── main.ts                # player entry point
-│   ├── admin.ts               # admin console entry point
-│   ├── net/
-│   │   ├── stream.ts          # EventSource wrapper; typed per-event dispatch
-│   │   └── actions.ts         # fetch() wrappers for the POST endpoints
-│   ├── model/
-│   │   ├── events.ts          # TS interfaces mirroring §6.5 exactly
-│   │   ├── table_state.ts     # reduce(state, event) → state
-│   │   ├── cards.ts           # code parsing, FR-23/FR-23a sort order
-│   │   └── seating.ts         # own seat → left/across/right mapping
-│   ├── view/
-│   │   ├── table.ts           # top-level render(state)
-│   │   ├── seats.ts           # names, partnership colours, turn marker
-│   │   ├── hand.ts            # own fan; legality highlight
-│   │   ├── opponents.ts       # fanned backs, correct counts
-│   │   ├── trick.ts           # four positioned cards
-│   │   ├── spread.ts          # 48 face-down dealer-selection positions
-│   │   ├── bidding.ts, trump.ts, passing.ts, meld.ts
-│   │   ├── scoreboard.ts      # UI-14, UI-14a
-│   │   ├── last_trick.ts      # UI-14b
-│   │   └── banner.ts          # seat lost, stream broken, game over
-│   └── util/
-│       ├── dom.ts             # small element helpers
-│       └── drag.ts            # drag-or-click gesture (UI-8)
-└── dist/                      # tsc output; git-ignored
+frontend/src/
+├── main.ts      # player entry: resolve seat, open stream, fold, render; visible deal
+├── admin.ts     # console entry: setup form, seat board, start / unlink / seat computer / abandon
+├── types.ts     # the wire contract: Frame, TurnHeader, FRAME_TYPES
+├── stream.ts    # EventSource wrapper; connection state; one listener per frame type
+├── token.ts     # seat token from /join/{id}?t=…, admin token from /admin?t=…, sessionStorage
+├── api.ts       # admin API calls; ApiError
+├── actions.ts   # player POSTs
+├── state.ts     # GameState and applyEvent(state, frame) — the reducer
+├── cards.ts     # card codes, FR-23/FR-23a hand order, artwork URLs
+├── layout.ts    # pure: seat placement, fan angles, spread scatter, legality, pause checks
+├── view.ts      # pure: scoreboard lines, bid history, meld lines, summary, status line
+├── notice.ts    # pure: the notice area's sentence and whether it offers Continue
+├── deal.ts      # pure: the visible deal's packet order and projected state
+├── table.ts     # renders the whole table from the state
+├── hand.ts      # the viewer's own hand: fan, legality, click and drag, pass selection
+├── spread.ts    # the scattered dealer-selection spread: drag to move, click to draw
+├── panels.ts    # the action panel: bid, accept/decline, trump, pass tray, meld
+└── log.ts       # the console's raw frame log
 ```
+
+The pure modules (`state`, `cards`, `layout`, `view`, `notice`, `deal`) have no
+DOM dependency, which is what lets them be tested under Node (§11).
 
 ### 8.2 Build
 
-ARC-8 forbids a bundler and any runtime dependency. `tsc` alone satisfies that:
+ARC-8 forbids a bundler and any runtime dependency; `tsc` alone satisfies it.
+`tsconfig.json` targets ES2022 modules with `strict`,
+`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and
+`verbatimModuleSyntax`, from `src/` to `dist/`. The Makefile runs
+`npx -y -p typescript@5 tsc`, so no lockfile and no global install is needed.
 
-```jsonc
-// frontend/tsconfig.json
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "sourceMap": true
-  },
-  "include": ["src/**/*.ts"]
-}
-```
-
-```jsonc
-// frontend/package.json
-{
-  "name": "pinochle-frontend",
-  "private": true,
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "watch": "tsc -p tsconfig.json --watch",
-    "check": "tsc -p tsconfig.json --noEmit"
-  },
-  "devDependencies": { "typescript": "^5.6.0" }
-}
-```
-
-The browser loads the output as native ES modules:
-
-```html
-<script type="module" src="/static/main.js"></script>
-```
-
-**The one gotcha this imposes:** because nothing rewrites the import specifiers,
-every relative import in the TypeScript source must be written with a `.js`
-extension — `import { render } from "./view/table.js";` — even though the file on
-disk is `table.ts`. This is how `tsc` is meant to be used without a bundler, and
-getting it wrong produces a 404 at run time rather than a compile error.
-
-Node is a **build-time** tool only. §10.2's runtime image contains no Node, and a
-developer who does not want npm at all can run `tsc` however they like, or commit
-`dist/`, since the server serves whatever is in `PINOCHLE_FRONTEND_DIR`.
+The pages load the output as native modules
+(`<script type="module" src="/static/main.js">`), so every relative import in
+the source is written with a `.js` extension. Getting that wrong is a 404 at
+run time, not a compile error.
 
 ### 8.3 State: one reducer, one render
 
 ```ts
-const state = initialState();
-stream.on("card_played", e => { apply(state, e); render(state); });
+state = applyEvent(state, frame);   // pure; never mutates its argument
+render();                           // renderTable(state, callbacks)
 ```
 
-`table_state.ts` exports a single `apply(state, envelope)` that folds one event
-into the view state, and `table.ts` exports a single `render(state)`. There is
-no virtual DOM and no framework; `render` is idempotent and cheap enough to run
-on every event, because a Pinochle table is a few dozen elements.
+`applyEvent` applies the frame type's handler, then refreshes `phase`,
+`currentPlayerId`, `paused` and `hold` from the turn header, records the
+highest `seq`, and drops a prompt the header no longer agrees with. The
+header's `paused: "trick_clear"` is folded into `hold` as
+`{id: null, reason: "trick_clear", ackable: false}`, so one `hold` field answers
+"is the table paused, and can anyone release it?".
 
-The state the client holds is exactly what the events gave it: seats and names,
-its own hand, cards on the table, exposed meld, the bid history, cumulative
-scores, the previous trick, the current phase and turn from the `turn` header,
-and any active pause. **It stores no derived rule state.** In particular:
+The state holds exactly what the events gave it: seats, teams and scores, the
+spread and draws, the dealer, this seat's hand and every seat's hand count, bids
+and the high bid, the offer and contract, trump, the pass sent and received,
+meld per seat and per team, the trick, the last trick, tricks taken per team,
+the thinking seat, the prompt, the round summary, and the game result. **It
+holds no derived rule state:**
 
 - it does not compute legal plays — it uses `turn_prompt.legal_plays` (UI-9);
 - it does not decide who won a trick — it waits for `trick_completed`;
-- it does not tally card points during a round. UI-14c forbids showing a running
-  total, and the reducer must not accumulate one even privately, so that the
-  prohibition cannot be undone by a later change to a view module. Trick points
-  enter the state for the first time with `round_scored` (FR-66).
+- it counts tricks per team, never card points; trick points enter the state
+  for the first time with `round_scored` (UI-14c).
+
+`seat_lost`, `seat_rejoined`, `game_abandoned`, `hold_begun` and `hold_ended`
+are subscribed but change nothing: the holds are already on the header, and
+the transport frames are not rendered on the table (§15).
+
+`render` rebuilds the table each time; the table is a few dozen elements. The
+two things a pointer can be holding — a card being dragged from the hand and a
+spread card being moved — are not rebuilt under it, and the action panel and
+notice are rebuilt only when their content changes, so a half-typed bid or a
+Continue button under the pointer survives unrelated frames.
 
 ### 8.4 Geometry and rendering
 
-**Seating (UI-1).** Turn order is clockwise N → E → S → W, so the player who acts
-after you sits to your left on screen. With `me` as the viewer's seat index:
+**Stage (UI-17).** `#stage` is a fixed 1420 × 1000 layout scaled to the window
+with one CSS `transform: scale()` whose ratio `main.ts` sets on resize.
 
-```
-bottom = me            left = (me + 1) % 4
-across = (me + 2) % 4  right = (me + 3) % 4
-```
+**Seating (UI-1).** `layout.placement` puts this seat at the bottom, the next
+clockwise seat on the left, the partner across, and the previous seat on the
+right.
 
-**Hand order (FR-23, FR-23a).** `cards.ts` sorts by suit in the fixed order
-Spades, Hearts, Clubs, Diamonds — alternating black and red — and within a suit
-descending A, 10, K, Q, J, 9. Once `trump_named` arrives, the trump suit moves to
-the leftmost position and the other three follow it still alternating, which is
-why they cannot simply keep their relative order: a red trump in front of
-♠♥♣♦ would strand the other red suit against it. The only re-sort in a round,
-and it is animated with a CSS transform transition so the cards visibly travel
-rather than teleport.
+**Seats (UI-3, UI-5, UI-7).** Each seat shows its name (with "(dealer)"), a
+partnership colour class, an italic name for a computer seat, a trailing "…"
+while it is thinking, a highlight while it is acting, its drawn card during
+dealer selection (FR-11d), a fan of backs sized from `handCounts`, its meld
+grouped by combination while the phase is `MELDING`, and its latest call during
+the auction.
 
-**The trick area (UI-6).** Four absolutely-positioned slots offset toward each
-seat, so all four cards are simultaneously visible and attributable. Cards remain
-in place until `trick_cleared`, then animate toward the winner's seat.
+**Hand order (FR-23, FR-23a).** `cards.sortHand` groups ♠♥♣♦, descending
+A-T-K-Q-J-9. Once trump is named, trump leads and the others follow in
+alternating colour, earlier FR-23 suit first. `trump_named` triggers
+`noteResort`, which marks the hand so the re-sort is animated.
 
-**Card images (UI-16).** `<img src="/assets/cards/fronts/QS.svg">` for faces
-and `/assets/cards/backs/blue.svg` for backs. These URLs refer directly to
-files in `frontend/public/cards/`; no server-side card-image resolver is
-involved. Opponents' hands are fanned backs with the correct remaining count,
-which the client derives from cards played (UI-5).
+**Spread (FR-11c).** `layout.scatter` places each of the 48 backs once per
+spread (keyed by `spreadId`), jittered in a grid over the felt and tilted up to
+24°. `spread.ts` tells a press that travels (move the card, which then stays on
+top) from one that does not (draw it).
 
-**Table (UI-2, UI-17).** A fixed-size table element, centred and scaled to the
-viewport with a single CSS `transform: scale()` driven by one resize listener.
-Chrome and Firefox at desktop sizes are the target; the scaling approach does not
-preclude smaller viewports later, but they are not tested.
+**Trick (UI-6).** Played cards sit offset toward their players in the centre
+layer until `trick_cleared`. The centre shows instead the round summary once
+`round_scored` arrives and the final result once `game_over` does (UI-20).
+
+**Scoreboard (UI-14, UI-14a).** A collapsible panel: team scores with this
+round's meld beside them, round number, contract and bidder, trump, and the
+score played to; beneath, each seat's meld (named until the first trick is
+gathered, then totals only) and the bid history. Separate plaques on the felt
+show the winning bid and the trump suit.
+
+**Artwork (UI-16).** Faces are `/cards/faces/<code>`; backs are `/cards/back`,
+so the configured back is the server's business.
 
 ### 8.5 Interaction
 
-`drag.ts` implements the pair of gestures UI-8 requires — pointer-drag to the
-table centre, and click, exactly equivalent — over the same set of eligible
-elements, and is reused for both the trick play and the four-card pass. Elements
-that are not currently legal get a class that dims them and are not registered as
-drag sources, so the client "refuses to submit an illegal play" (UI-9) before the
-server ever has to.
+- **Play (UI-8, UI-9).** A legal card is clickable and draggable onto the trick
+  layer; both end in the same `onPlay`. Illegal cards are dimmed and inert.
+- **Pass (UI-12).** Clicking or dragging a card moves it from the hand into the
+  pass tray; clicking or dragging it back returns it. Selection is by position
+  in the hand, since a hand can hold both copies of a card. Confirm is enabled
+  at exactly four. The opposing team never receives `cards_passed`, so hiding
+  the exchange from them needs no client check.
+- **Bid (UI-10).** A number field starting at the prompt's minimum, +10 and +50
+  buttons, Bid, and Pass; a bad amount is refused locally before sending.
+- **Lone contract (UI-10a).** Accept *n* or Decline.
+- **Trump (UI-11).** Four suit buttons.
+- **Meld (UI-12a).** For the auction winner: their side's meld, what is still
+  needed in cards, and Play or Toss in. Play releases the meld hold when one
+  stands, and calls `begin-play` directly only when none does.
+- **Draw.** Click a spread card while this seat has not drawn.
+- **Last trick (UI-14b).** A toggle beside the status line shows the previous
+  trick over the current one; it closes itself when the next trick is cleared.
+- **Refusals (NFR-4).** A rejected action shows the server's message in a toast
+  that fades after four seconds.
 
-Bidding (UI-10) offers a stepper constrained to multiples of 10 at or above
-`turn_prompt.minimum_bid`, plus Pass, plus the running bid history. Trump
-(UI-11) offers the four suits. Passing (UI-12) requires exactly
-`turn_prompt.count` selections before Confirm enables, and shows received cards
-to the receiving team only — which needs no client-side check, since the
-opposing team's stream never carries `cards_passed` at all.
+Every action goes through one `attempt` wrapper that refuses to send while the
+stream is not live (RT-5b).
 
-The scoreboard (UI-14, UI-14a) is persistent: cumulative scores, the contract,
-the auction winner, trump, the round's bid history, and each team's meld total,
-the last of these surviving after the exposed meld leaves the table. The
-last-trick view (UI-14b) keeps exactly one previous trick, replaced on each
-`trick_cleared` — the client discards the one before it, so the courtesy cannot
-be abused into a full history.
+### 8.6 Notices, connection status, and the visible deal
+
+**Notice area (UI-19, UI-19a).** `notice(state)` returns one sentence, a kind
+(`result`, `hold`, `final`), a key, and the hold id to release, if any. While a
+hold stands it describes the hold ("Tied for high card - select again.",
+"*name* deals.", "Everyone passed", "Review the meld laid out on the table.",
+the round headline) and, if the hold is ackable, a Continue button that calls
+`acknowledge` with its id. During the trick clear it says who takes the trick.
+Otherwise it shows the newest concluded result: the round headline, a toss-in,
+who took the last trick, the contract and trump, a lone bidder's offer, or who
+deals — the pre-play announcements disappearing once a card is on the table.
+The server sends no display text.
+
+**Connection (RT-5b).** `stream.ts` reports `connecting`, `live`, `down`
+(dropped, browser retrying), or `closed` (refused). `down` and `closed` show a
+persistent banner, and actions are refused until `live` returns.
+
+**Visible deal (FR-21a).** When `cards_dealt` arrives, `main.ts` shows the deal
+as sixteen packets of three, 150 ms apart, clockwise from the dealer's left,
+using `deal.dealingView` to project the state with no prompt. Frames arriving
+meanwhile are queued and applied in order afterwards. This, the toast fade, and
+the Copy button's label are the client's only timers (RT-8).
+
+### 8.7 The seat token in the page
+
+`token.resolveSeat` reads the game id from `/join/{id}` and the token from
+`?t=`, mirroring the token into `sessionStorage` keyed by game. The token is
+left in the address bar: a closed and reopened tab starts with empty
+`sessionStorage`, and the link is the only copy of the token. `sessionStorage`
+rather than `localStorage`, so four seats opened as four tabs of one browser
+stay four seats.
+
+### 8.8 The administrator's console
+
+`admin.html` + `admin.ts`, styled by `style.css`:
+
+- The token field is filled from `?t=` (or by the server when the page is
+  served with a valid one) and remembered in `sessionStorage`.
+- The setup form (team names; per seat a name and human/computer) is pre-filled
+  by the server and refreshed from `GET /api/admin/defaults` once a token is
+  known (FR-7a).
+- Creating a game shows a seat board — seat, name, type, joined/waiting, the
+  join link with a Copy button, and for human seats **Seat computer** and
+  **Unlink**, each behind a confirmation — plus Start, Refresh and Abandon.
+- The console opens the admin stream and shows every frame in a raw log. A
+  `seat_lost`, `seat_rejoined` or `seat_replaced` frame refreshes the seat
+  board by itself (RT-12). For an all-computer table this log is the only way
+  to watch the game.
+- A `forbidden_admin` failure is explained: where the token comes from, and
+  that `/admin?t=<token>` fills it in.
 
 ---
 
-## 9. The administrator's role
+## 9. The administrator's workflow
 
-The administrator is the person who stands the server up and turns four names
-into a game in progress. They have no in-game powers: they cannot see a hand, act
-for a seat, or alter a score. Their authority is entirely at the boundaries —
-setup, and ending a game that cannot continue.
+The administrator stands the server up and turns four names into a game. They
+cannot see a hand, act for a seat, or alter a score; their authority is at the
+boundaries — setup, repair, and ending a game.
 
 ### 9.1 Standing up the server
 
-1. Choose a host reachable by all human players and install Docker.
-2. Set an admin token. Either put `PINOCHLE_ADMIN_TOKEN` in the compose file's
-   environment, or omit it: the server then generates one at startup and writes
-   it to the log, where `docker compose logs pinochle` will show it. A generated
-   token changes on every restart, which is fine for a one-evening game.
-3. Set `PINOCHLE_PUBLIC_BASE_URL` to the URL players will actually type
-   (`https://pinochle.example`). Join links are built from it, so if it is wrong
-   the links will point somewhere unreachable.
-4. `docker compose up -d`, then confirm `GET /healthz` returns `{"status":"ok"}`.
+- **Development:** `make dev` builds the client and runs uvicorn on
+  `127.0.0.1:8000` with reload, admin token `dev`, and prints the console link
+  `http://localhost:8000/admin?t=dev`.
+- **Container:** copy `.env.example` to `.env`, set `PINOCHLE_ADMIN_TOKEN` and
+  `PINOCHLE_PUBLIC_BASE_URL`, then `make docker`. Left unset, the admin token is
+  generated at startup and logged as a warning (`make docker-logs`); it changes
+  on every restart. See `docs/docker-usage.md`.
 
-Because state is in memory (NFR-8) and the process is single-worker (§4.7),
-restarting the container destroys any game in progress. The administrator should
-treat "the server is up" and "the game has started" as the same commitment.
+State is in memory (NFR-8) and the process is single-worker (§4.7), so a
+restart — including a `--reload` in development — destroys any game in
+progress.
 
 ### 9.2 Creating the game
 
-The administrator opens `/admin` and pastes the admin token, which the console
-holds in `sessionStorage` and sends as `X-Admin-Token`. It is never written to
-`localStorage` and never appears in a URL.
+Open `/admin?t=<token>`, adjust the pre-filled form, and Create. Each human
+seat gets a join link. **A join link is a credential** (FR-10a): anyone holding
+it can see that hand and play those cards. Distribute them privately, one each;
+they are shown once and cannot be retrieved. An administrator who also plays
+opens their own seat's link in an ordinary tab.
 
-They then fill in one form (FR-7):
+`make seed` does the same from the command line (South human by default;
+`make seed-watch` for four computers, `make seed-all` for four humans), and
+starts the game once every human tab is open.
 
-- a name for each of the four seats, North, East, South, and West;
-- for each seat, human or computer — freely mixable, including all four of either
-  (FR-2);
-- a display name for each partnership. The team *identifiers* NS and EW are fixed
-  by the seating and are not offered as choices (FR-4a).
+### 9.3 Starting play
 
-Submitting calls `POST /api/admin/games` (§5.2). The response is the game id and
-a **join link for each human seat** (FR-10):
+Start is refused, naming the seat, until every human seat has an open stream
+(FR-10b). A seat whose player will not be coming can be given to the computer
+first. Once started, the game runs itself: draws, ties, the deal, the auction,
+and scoring need nothing from the administrator. The only waits are players'
+decisions and holds, which the players release themselves (RT-13).
 
-```
-https://pinochle.example/join/5c1f7b2e…?t=8Qk3vRz9Xp2LmN…
-```
+### 9.4 During the game
 
-The console displays these with a copy button each, and one warning it should
-state plainly: **a join link is a credential.** It is the sole thing that
-authorises that seat (FR-10a) — anyone holding it can see that hand and play
-those cards. The administrator distributes them one to one, by whatever private
-channel they already use, and does not paste them into a shared channel. The
-tokens are shown exactly once; there is no way to retrieve them later, and no way
-to re-issue one without creating a new game.
+The console shows public events and each seat's connection. If a player drops,
+the seat board shows them waiting, play blocks at their seat, and they can
+rejoin by reopening their link (RT-5a). If they are not coming back, **Seat
+computer** hands the seat over and play resumes from where it stopped; if the
+last human seat is replaced while a hold stands, the hold is released at once
+(RT-12a). **Unlink** cuts off a player's link without seating anyone. **Abandon**
+ends the game with a reason and revokes every link (RT-12b); starting again
+means creating a new game.
 
-If the administrator is also playing (FR-8), they take their own seat's link and
-open it in an ordinary tab. The admin console and the player view are separate
-pages with separate credentials; nothing about being the administrator changes
-what their seat can see.
+### 9.5 Tuning
 
-### 9.3 Waiting for the table to fill
-
-The console keeps its own SSE stream (`GET /api/admin/games/{id}/stream`, §5.2),
-which carries public events plus `seat_lost` / `seat_rejoined`. Before the game
-starts, this is a join board: each human seat shows *waiting* until a stream
-opens for it, then *joined*.
-
-The Start button stays disabled until all four seats are accounted for —
-computer seats are ready immediately, human seats when they have joined. This is
-FR-10b, and the server enforces it too: `POST …/start` returns
-`409 setup_incomplete` if a human seat has no open stream, so a stale console
-cannot start a game that half the table would miss.
-
-### 9.4 Starting play
-
-Pressing Start calls `POST /api/admin/games/{id}/start`, which validates the
-seating (FR-9) and moves the game into `DEALER_SELECTION`. From that moment the
-game runs itself:
-
-- all four clients receive `dealer_selection_started` and render the 48 face-down
-  positions; each player clicks one, and computer seats draw at random through
-  the same endpoint (FR-11a, FR-11b);
-- ties reshuffle and repeat automatically (FR-14);
-- the dealer is announced, the first round is dealt, and play proceeds.
-
-The administrator does nothing further. There is no "next round" button, no
-scoring confirmation, and no timer to manage: the two waits that hold the game
-open, the lone bidder's decision and the meld display, wait on a player, and the
-two timed pauses are counted by the server (§6.7).
-
-### 9.5 During the game
-
-The console shows public state only: phase, whose turn it is, the bid history,
-cumulative scores, and the connection status of each seat. It cannot show a hand,
-because every private event goes out through `notify` and the admin queues are
-subscribed only to `broadcast` (§6.3) — the restriction is structural, not a rule
-the console is trusted to follow.
-
-The one situation demanding a decision is a lost seat. If a human player closes
-their last tab or loses their network, the hub broadcasts `seat_lost`, every
-client shows a banner naming that seat, and play stops there permanently: nothing
-substitutes for a human seat (FR-2a), and the player cannot rejoin (RT-5, RT-12).
-The administrator's choice is then simply when to declare it over. `Abandon`
-(`POST …/abandon` with a reason) broadcasts `game_abandoned`, revokes the tokens,
-and lets everyone close the tab knowing why, rather than waiting on a seat that
-will never act. Starting again means creating a new game and distributing new
-links; there is nothing to resume.
-
-### 9.6 Tuning
-
-Two knobs affect the feel of a game and are set on the container, not per game
-(§10.4): `PINOCHLE_TRICK_CLEAR_SECONDS`, how long a completed trick stays on the
-table (UI-15), and `PINOCHLE_COMPUTER_DELAY_SECONDS`, how long a computer seat
-appears to think (FR-75c). Setting the latter to `0` makes an all-computer game
-run at full speed, which is useful for demonstrating or exercising the server.
+`PINOCHLE_TRICK_CLEAR_SECONDS` (UI-15) and `PINOCHLE_COMPUTER_DELAY_SECONDS`
+(FR-75c) set the pace, per server rather than per game. `make dev-fast` sets
+both to zero.
 
 ---
 
-## 10. Docker
+## 10. Packaging and deployment
 
 ### 10.1 What the image contains
 
-One image runs the whole system: the FastAPI server and the compiled front end,
-including its card artwork. There is no database (NFR-8) and no second service,
-so there is nothing to orchestrate beyond one container.
-
-It is built in two stages. The first uses Node solely to run `tsc`; the second is
-a slim Python runtime that receives the compiled JavaScript. **No Node, no npm,
-and no TypeScript source ship in the runtime image** — which is exactly ARC-8's
-"no bundler or runtime dependency shall be required to run it", made literal.
+One image runs the whole system: the FastAPI server, the card artwork, and the
+compiled client. There is no database and no second service (NFR-8, NFR-11).
 
 ### 10.2 `docker/Dockerfile`
 
-```dockerfile
-# ---------- stage 1: compile the TypeScript front end ----------
-FROM node:22-alpine AS frontend
-WORKDIR /build
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm ci --no-audit --no-fund
-COPY frontend/tsconfig.json ./
-COPY frontend/src ./src
-RUN npm run build          # → /build/dist
+Two stages:
 
-# ---------- stage 2: the runtime ----------
-FROM python:3.12-slim AS runtime
+1. `node:22-slim` copies `frontend/package.json`, `tsconfig.json` and `src/`,
+   and runs `npx -y -p typescript@5 tsc`. The client is always compiled here, and
+   `.dockerignore` excludes `frontend/dist`, so the image cannot ship a stale
+   build.
+2. `python:3.12-slim` installs the package with `pip install .` (NFR-2), copies
+   `frontend/public` and the compiled `dist`, sets
+   `PINOCHLE_FRONTEND_DIR=/app/frontend`, runs as an unprivileged `pinochle`
+   user, and has a `urllib`-based `HEALTHCHECK` on `/healthz`.
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PINOCHLE_FRONTEND_DIR=/app/frontend
-
-WORKDIR /app
-
-# Dependencies first, so a code change does not re-resolve them.
-COPY pyproject.toml README.md ./
-COPY pinochle ./pinochle
-RUN pip install --no-cache-dir .        # NFR-2: plain install is sufficient
-
-# The front end: hand-written assets, plus the compiled output.
-COPY frontend/public ./frontend/public
-COPY --from=frontend /build/dist ./frontend/dist
-
-RUN useradd --system --uid 10001 --create-home pinochle
-USER pinochle
-
-EXPOSE 8000
-
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD python -c "import urllib.request,sys; \
-sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=2).status==200 else 1)"
-
-# --workers 1 is mandatory, not a default: see §4.7.
-CMD ["uvicorn", "pinochle.web.main:app", \
-     "--host", "0.0.0.0", "--port", "8000", \
+```
+CMD ["uvicorn", "pinochle.web.main:app", "--host", "0.0.0.0", "--port", "8000",
      "--workers", "1", "--timeout-keep-alive", "75", "--no-access-log"]
 ```
 
-Notes on the choices:
-
-- `--workers 1` is load-bearing. A second worker would hold a second, empty
-  `InMemoryGameState` and a second SSE hub (§4.7).
-- `--timeout-keep-alive 75` comfortably exceeds the 15-second keepalive interval,
-  so an idle stream is never closed by the server itself.
-- `--no-access-log` is set because the SSE URL carries a seat token in its query
-  string (§6.2); the application's own structured log (§4.9) is the audit trail,
-  and it does not record tokens.
-- The health check uses `urllib` rather than adding `curl` to the image.
-- `pip install .` with no extras is enough, once §12's dependency move is done.
+`--workers 1` is load-bearing (§4.7). `--timeout-keep-alive 75` exceeds the
+keepalive interval. `--no-access-log` keeps stream URLs, which carry a token,
+out of the log.
 
 ### 10.3 `docker/compose.yaml`
 
-```yaml
-services:
-  pinochle:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-    image: pinochle:latest
-    container_name: pinochle
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    environment:
-      PINOCHLE_ADMIN_TOKEN: "${PINOCHLE_ADMIN_TOKEN:-}"
-      PINOCHLE_PUBLIC_BASE_URL: "${PINOCHLE_PUBLIC_BASE_URL:-http://localhost:8000}"
-      PINOCHLE_TRICK_CLEAR_SECONDS: "1.5"
-      PINOCHLE_COMPUTER_DELAY_SECONDS: "1.0"
-      PINOCHLE_LOG_LEVEL: "INFO"
-      PINOCHLE_SSE_KEEPALIVE_SECONDS: "15"
-      PINOCHLE_SSE_QUEUE_MAXSIZE: "256"
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=2)"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-```
-
-No volume is mounted: there is nothing to persist (NFR-8). `restart:
-unless-stopped` keeps the server available across a host reboot, with the
-understanding that any game in flight is lost.
-
-A development override can bind-mount the source and add `--reload`, but note
-that a reload drops every SSE connection and therefore every seat.
+One service, `pinochle`, built from the repository root, `restart:
+unless-stopped`, reading `../.env` as its `env_file`, and publishing
+`${PINOCHLE_BIND_ADDRESS:-127.0.0.1}:${PINOCHLE_PORT:-8000}:8000`. Binding to
+loopback by default is deliberate: a reverse proxy on the host is the expected
+way in. No volume is mounted; there is nothing to persist. The Makefile's
+`docker`, `docker-logs` and `docker-down` targets wrap it.
 
 ### 10.4 Configuration
 
+Read by `Settings.from_env()` from the environment, then `.env` for anything
+the environment does not set (NFR-10). `.env.example` documents every key.
+
 | Variable | Default | Effect | Requirement |
 | --- | --- | --- | --- |
-| `PINOCHLE_ADMIN_TOKEN` | generated at startup and logged | Credential for `/api/admin/*` | FR-6 |
-| `PINOCHLE_PUBLIC_BASE_URL` | `http://localhost:8000` | Host part of the join links | FR-10 |
+| `PINOCHLE_ADMIN_TOKEN` | generated per run and logged | Console credential | FR-6 |
+| `PINOCHLE_PUBLIC_BASE_URL` | `http://localhost:8000` | Host part of join links | FR-10 |
 | `PINOCHLE_TRICK_CLEAR_SECONDS` | `1.5` | Trick-clear pause | UI-15 |
-| `PINOCHLE_COMPUTER_DELAY_SECONDS` | `1.0` | Computer thinking delay; `0` disables | FR-75c, RT-7 |
-| `PINOCHLE_LOG_LEVEL` | `INFO` | Enables the action/event log without a code change | NFR-9 |
-| `PINOCHLE_SSE_KEEPALIVE_SECONDS` | `15` | Comment-frame interval | §6.8 |
-| `PINOCHLE_SSE_QUEUE_MAXSIZE` | `256` | Per-connection buffer before the stream is dropped | §6.8 |
+| `PINOCHLE_COMPUTER_DELAY_SECONDS` | `1.0` | Computer delay; `0` for full speed | FR-75c |
+| `PINOCHLE_CARD_BACK` | `blue` | Bundled back by plain name (`castle`, `frog`, `red2`, …); a path is refused at startup | UI-16 |
+| `PINOCHLE_TEAM_NS`, `PINOCHLE_TEAM_EW` | `North-South`, `East-West` | Setup form's team names | FR-7a |
+| `PINOCHLE_SEAT_<SEAT>_NAME` | `North` … `West` | Setup form's seat names | FR-7a |
+| `PINOCHLE_SEAT_<SEAT>_TYPE` | South `human`, others `computer` | Setup form's seat kinds; anything but `human`/`computer` is refused at startup | FR-7a |
+| `PINOCHLE_LOG_LEVEL` | `INFO` | Log level | NFR-9 |
+| `PINOCHLE_SSE_KEEPALIVE_SECONDS` | `15` | Keepalive interval | §6.8 |
+| `PINOCHLE_SSE_QUEUE_MAXSIZE` | `256` | Per-connection queue bound | §6.8 |
 | `PINOCHLE_FRONTEND_DIR` | `frontend` | Where `public/` and `dist/` are found | §3 |
-| `PINOCHLE_SHUFFLE_SEED` | unset | Seeds the shuffle for reproducible deals | NFR-7 |
+| `PINOCHLE_SHUFFLE_SEED` | unset | Seeds the shuffle and computer draws | NFR-7 |
+| `PINOCHLE_BIND_ADDRESS`, `PINOCHLE_PORT` | `127.0.0.1`, `8000` | Compose port binding only; not read by Python | — |
+
+The default setup-form values also appear in `admin.html`, so the page is
+sensible before the server fills it; `tests/web/test_table_defaults.py` holds
+the two copies to each other.
 
 ### 10.5 Behind a reverse proxy
 
-SSE is the one thing a default proxy configuration reliably breaks, by buffering
-the response until it is "complete" — which, for a stream, is never. The server
-sets `X-Accel-Buffering: no` on the stream response, which nginx honours, but the
-proxy also needs:
-
-```nginx
-location /api/ {
-    proxy_pass              http://pinochle:8000;
-    proxy_http_version      1.1;
-    proxy_set_header        Connection "";     # keep-alive to the upstream
-    proxy_buffering         off;               # essential for SSE
-    proxy_cache             off;
-    proxy_read_timeout      1h;                # a table can idle for a long time
-}
-```
-
-Two further points: the proxy must not compress `text/event-stream` (buffering
-again), and its access-log format should omit or strip the `t` query parameter,
-which carries a seat token (§6.2).
-
-### 10.6 Running it
-
-```
-docker compose -f docker/compose.yaml up -d --build
-docker compose -f docker/compose.yaml logs -f pinochle    # admin token, events
-docker compose -f docker/compose.yaml down
-```
-
-The log is the operational surface. It carries the generated admin token at
-startup and, at `INFO`, every accepted action, every rejection with its reason,
-and every published event — but no hands and no tokens (NFR-9).
+A proxy must not buffer or compress `text/event-stream`. The server sends
+`X-Accel-Buffering: no`, which nginx honours; the location also wants
+`proxy_http_version 1.1`, an empty `Connection` header, `proxy_buffering off`,
+`proxy_cache off`, and a long `proxy_read_timeout`, since a table can sit on a
+hold for a long time. The proxy's access log should omit or strip the `t`
+query parameter. `docs/docker-usage.md` gives a complete Caddy-fronted VPS
+deployment.
 
 ---
 
 ## 11. Testing
 
-The existing suite covers the domain thoroughly and runs without a server or a
-browser (NFR-3). The design extends it in four directions.
+**Server** (`make test-py`, pytest, `asyncio_mode = "auto"`). `tests/` mirrors
+the package:
 
-**Domain and services** — unchanged in kind. New event emissions get assertions
-in the existing service tests.
+- `domain/` — cards, deck, hand legality, bidding, meld detection, tricks,
+  scoring, holds (NFR-3).
+- `ports/` — the ABCs' contracts.
+- `adapters/` — each adapter, including the hub's fan-out, sequence numbers,
+  replay filtering and `close_seat`, and the fake scheduler's clock.
+- `services/` — `Round`, `GameService` events, holds and their release,
+  event privacy, the computer driver's pump and seat views.
+- `strategies/` — bidding valuation, yielding to a partner, passing.
+- `web/` — every router through `httpx.ASGITransport` against
+  `create_app(container)` with a `FakeScheduler`; the status-code mapping;
+  the encoder and turn header; the stream's replay and resume modes; the
+  pages; table defaults; and an end-to-end all-computer game driven to
+  `game_over` on the fake clock.
 
-**The scheduler seam (ARC-10).** `FakeScheduler` holds callbacks against a
-virtual clock. A test of the trick-clear pause plays four cards, asserts that a
-fifth is rejected with `wrong_phase` (RT-9), calls `advance(1.5)`, and asserts
-`trick_cleared` was published. No test sleeps.
+No test sleeps: every pause is advanced on the fake scheduler (ARC-10).
 
-**The SSE adapter and encoder.** Subscribe two queues to one seat and assert both
-receive a `notify` (FR-10c). Assert a `broadcast` reaches the admin queue and a
-`notify` does not (§6.3). Assert the encoder escapes newlines, emits monotonic
-ids, and produces a frame `EventSource` would accept.
+**Client** (`make test-fe`). `tsc` compiles, then `node --test test/*.test.js`
+runs against `dist/`: the reducer (`state`), a replay of a recorded seat stream
+(`replay`, using `test/fixtures/seat-stream.json`), hand order (`cards`),
+layout, notices, view text, and the visible deal. `make record` regenerates the
+fixture from a real all-computer game through the real service and encoder
+(`scripts/record_frames.py`), so it cannot drift from the wire format.
 
-**The web layer.** `httpx.ASGITransport` against `create_app(test_container)`.
-Endpoint tests assert the status-code mapping of §5.5 and that a rejected action
-left the game unchanged (NFR-4). One stream test opens the SSE response, drives
-the game through the fake scheduler, and asserts the exact frame sequence for a
-trick — which is where §6.7's bracketing pairs are pinned down.
-
-**End to end.** One test creates an all-computer game with
-`computer_delay_seconds=0` and a seeded shuffle, drives it to `game_over` through
-the fake clock, and asserts a plausible final score. It is fast, deterministic,
-and exercises every phase including toss-in and abandonment, given the right
-seeds.
-
-**Privacy.** The frame-level assertion described in §6.6, which is the one test
-that would catch a regression in NFR-6 no matter where it was introduced.
-
-**Front end.** `npm run check` (`tsc --noEmit`) is the whole front-end test
-suite. Types in `model/events.ts` mirror §6.5, so a change to an event payload
-that the client does not follow becomes a compile error.
+**Reachability** (`make test-browser`, needs Chrome). `scripts/hit_test.py`
+serves `test/browser/reachability.html`, which replays the recorded stream
+through the real reducer, renderer and stylesheet and, after every frame, asks
+what a click aimed at each enabled control would actually hit (UI-18).
 
 ---
 
 ## 12. Dependencies
 
-`pyproject.toml` needs two changes.
-
-First, the runtime dependencies:
-
 ```toml
 dependencies = [
-    "fastapi",
-    "uvicorn[standard]",
-    "pytest",
-    "pytest-mock",
-    "pytest-asyncio",
-    "httpx",
+    "pytest", "pytest-mock", "pytest-asyncio",
+    "fastapi", "uvicorn[standard]", "httpx", "python-dotenv",
 ]
 ```
 
-Second, `[project.optional-dependencies]` is removed. NFR-2 requires that
-`pip install -e .` alone be sufficient to run the tests, so pytest and the rest
-belong in `[project.dependencies]` — the same rule the Dockerfile relies on in
-§10.2.
-
-No SSE library is needed: Starlette's `StreamingResponse` over an async generator
-is the whole implementation, and `sse-starlette` would add a dependency for
-something that is a dozen lines. The front end has no runtime dependency at all;
-`typescript` is a build-time devDependency (§8.2).
+Test tools sit in `[project.dependencies]`, so `pip install -e .` is enough to
+run everything (NFR-2). There is no SSE library. The client has no runtime
+dependency; `typescript` is its only (build-time) devDependency.
 
 ---
 
-## 13. Suggested build order
+## 13. Tooling
 
-Each step leaves the suite green and the system demonstrable.
+The Makefile is the entry point for development (`make help` lists it):
 
-1. **Domain events.** Add the events of §4.1 and enrich `RoundScored` and
-   `GameOver`; emit them from `GameService`. Pure domain work, fully unit-tested.
-2. **Errors.** Introduce `PinochleError` and its subclasses, and replace the bare
-   `ValueError`s in `Round` and `GameService`.
-3. **Scheduler adapters.** `AsyncioScheduler` and `FakeScheduler`; convert the
-   trick-clear test to the fake clock.
-4. **Seat tokens.** `SeatTokenPort` and `InMemorySeatTokens`.
-5. **Notification adapters.** `SseNotification`, `LoggingNotification`,
-   `CompositeNotification`, and the frame encoder.
-6. **The web layer.** Container, dependencies, error handler, admin router,
-   player router, and stream router; `httpx` tests throughout.
-7. **The computer driver.** `ComputerDriver`, `SeatView`, the pump, and the
-   strategy improvements for FR-75a and FR-75b. At the end of this step an
-   all-computer game runs end to end over HTTP with no browser.
-8. **The front end.** `frontend/` skeleton, the event types, the reducer, then
-   the views in playing order: table and seats, dealer-selection spread, hand,
-   bidding, trump, passing, meld, trick, scoreboard, banners.
-9. **Docker.** The two-stage image and compose file; verify SSE through a proxy.
-10. **Polish.** Animations for the trump re-sort (FR-23a) and the trick sweep,
-    the last-trick view (UI-14b), and the admin console's join board.
+| Target | Does |
+| --- | --- |
+| `make test` | `test-py` and `test-fe` |
+| `make test-browser` | build, then the Chrome reachability check |
+| `make build` / `make watch` | compile the client once / on every save |
+| `make dev` / `make dev-fast` | run the server locally with reload / with every pause at zero |
+| `make seed` / `seed-watch` / `seed-all` | create and start a game from the command line |
+| `make record` | re-record the client's replay fixture |
+| `make docker` / `docker-logs` / `docker-down` | the container |
+| `make clean` | remove build and test artefacts |
 
-Steps 1–7 are testable without a browser, and step 7 ends with a complete,
-exercisable server. That ordering is deliberate: the front end is written against
-a system that already works.
+The server was built in this order, each step leaving the suite green: domain
+events; the error hierarchy; the scheduler adapters; seat tokens; the
+notification adapters and encoder; the web layer; the computer driver (step 7,
+at which point an all-computer game ran end to end over HTTP with no browser);
+the front end; Docker; and polish. `docs/impl.md` records the front-end slices.
 
 ---
 
-## 14. Design decisions and assumptions
+## 14. Design decisions
 
-**14.1 FR-10c and RT-5 pull in opposite directions.** FR-10c permits a seat
-several concurrent connections, all showing the same view. RT-5 forbids the
-server from reconstructing a view for a client that does not already have one.
-Both can hold only when every connection for a seat is opened before the deal —
-which FR-10b makes the normal case. A tab opened mid-game is therefore accepted,
-authorised, and fed every subsequent event, but it cannot show a table; it
-displays "joined mid-game" instead (§6.9). The design deliberately does *not*
-keep a per-seat event journal, because replaying one would let a dropped client
-rebuild, which RT-5 explicitly denies. Should that requirement ever be relaxed, a
-journal is a small change confined to `SseNotification` and would make both
-mid-game tabs and true reconnection work; nothing else in the design would move.
+**14.1 Replay instead of snapshots.** RT-5 forbids a server-built snapshot, and
+RT-5a requires recovery. Keeping the dispatched events per game, tagged with
+their recipient, satisfies both: a client's view is still built only from
+events, but it can be handed the events it missed. The same mechanism makes a
+second tab opened mid-game show the whole table, which a live-only stream
+could not.
 
-**14.2 The turn header and `turn_prompt` are additions.** The requirements list
-the events to be published (RT-4) but not how a client learns whose turn it is or
-which cards are legal. Deriving either on the client would violate ARC-2, so the
-server states both: public turn and phase on every frame, private options to the
-acting seat (§6.4, §6.5).
+**14.2 The turn header and `turn_prompt`.** Deriving whose turn it is or which
+cards are legal on the client would violate ARC-2, so the server states both:
+the public turn, pause and hold on every frame, and private options to the
+acting seat.
 
 **14.3 `seat_lost`, `seat_rejoined`, and `game_abandoned` are transport-level
-events.** RT-12 requires the other players be told a seat is gone, but the domain
-knows nothing about connections and should not. These three are published by the
-hub and the admin router, not by `Game`, and they are the only events in §6.5
-that do not originate in the domain.
+events.** The domain knows nothing of connections and should not. These three
+are published by the stream router and the admin router, not by `Game`, and
+live in `pinochle/web/transport_events.py`.
 
-**14.4 The admin's abandon action is inferred.** RT-12 says the remaining players
-should abandon the game deliberately rather than wait; it does not say who ends
-it. Giving the administrator an explicit action, and everyone else a clear
-announcement, seemed the smallest thing that satisfies the intent.
+**14.4 One hold concept, released by anyone.** A hold names a pause; any one
+seated player releases it; a release names its hold so a late click does
+nothing; and a hold never times out, because a timer would resume the game
+while the players are still reading. Requiring all four, or the
+administrator, would make the table slower than the conversation around it.
 
-**14.5 The seat token travels in the SSE query string.** `EventSource` cannot set
-headers, and FR-10a makes the token the sole credential, so there is no second
-mechanism to fall back on. §6.2 and §10.5 describe the mitigations. A cookie set
-at join time would keep it out of URLs, at the cost of introducing a credential
-that is not the token; the design chose to keep FR-10a literal.
+**14.5 No hold without a human.** A hold at an all-computer table could never
+end. The service tests the seats' kind, not their connection, so a human seat
+that has gone quiet still blocks — that is RT-12's case, remedied by seating
+a computer, which releases the hold if it was the last human.
 
-**14.6 One process, one worker.** NFR-5 allows one game at a time and NFR-8 keeps
-state in memory, so the design commits to a single event loop in a single worker
-and takes the simplicity that buys: no locks, no serialisation, atomic
-domain-operation-and-dispatch cycles. It is recorded here because it is
-invisible in the code and fatal to violate.
+**14.6 The seat token travels in the stream URL.** `EventSource` cannot set
+headers, and FR-10a makes the token the only credential. Mitigations: uvicorn's
+access log is off, the application never logs tokens, and a proxy should strip
+`t` from its log. The token is left in the address bar deliberately (§8.7).
 
-**14.7 Front-end ownership supersedes the card-image portion of ARC-5.** ARC-5
-currently names card image resolution as a driven server port. This design no
-longer includes that port: immutable artwork used only for presentation lives in
-`frontend/public/cards/` and is resolved by static browser URLs. ARC-5 must be
-amended to remove card image resolution when the requirements are next updated.
+**14.7 One process, one worker.** NFR-5 and NFR-8 let the design commit to a
+single event loop in a single worker, and take the simplicity that buys: no
+locks and atomic operation cycles. It is invisible in the code and fatal to
+violate.
+
+**14.8 Artwork is served by the server.** The card images ship inside the
+Python package and are resolved through `CardImagePort`, so that a
+configured back is a server setting and a face is addressed by the same code
+the stream uses.
+
+**14.9 A cosmetic deal.** The server sends each hand whole; the client shows it
+arriving three cards at a time. The animation is presentation only, queues
+frames rather than dropping them, and decides nothing, so RT-8's rule that the
+client holds no timers affecting the game still stands.
+
+---
+
+## 15. Known limitations
+
+These are behaviours of the current code that fall short of what a reader of
+the requirements might expect, recorded so they are not mistaken for intent.
+
+1. **The player's table does not render `seat_lost`, `seat_rejoined` or
+   `game_abandoned`.** Only the console reacts to them. A player waiting on an
+   absent seat sees a table that is simply waiting, and after an abandon their
+   stream stays open but silent while their actions start failing with
+   `forbidden_seat`.
+2. **A dropped slow reader is not told.** When a queue overflows it is removed
+   from the fan-out, but its generator keeps writing keepalives, so the client
+   still reports itself live while receiving no events. No `stream_broken` frame
+   is sent.
+3. **The thinking mark can linger.** `seat_thinking` sets the thinking seat,
+   and only `card_played` or a new round clears it, so after a computer bids,
+   names trump or passes, the "…" stays on its name until the next
+   `seat_thinking`. The server never sets `paused: "thinking"`, although the
+   turn header supports it.
+4. **Rule rejections and accepted actions are not logged.** Only published
+   events, refused credentials and stream lifecycle are. The lifespan's
+   docstring still mentions `action.accepted`.
+5. **FR-64 tests trick points, not tricks.** A non-bidding team whose tricks
+   held only Jacks and Nines, and did not include the last, scores nothing even
+   though it took a trick.
+6. **The auction winner passes trump back.** The computer's pass selection is
+   the same in both directions, so a computer auction winner gives its partner
+   its trump.
+7. **`HoldReason.TRICK_CLEAR`, `HoldReason.THINKING` and `Hold.timed` are
+   unused.** The timed pauses are reported another way (§6.7).
+8. **`pinochle/app.py` is vestigial.** `create_default_app` predates the web
+   container and is not used by it.
+9. **Unlink is still offered after the game is over.** Seating a computer is
+   refused then, but unlinking is not.
