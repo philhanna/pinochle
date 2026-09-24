@@ -3,6 +3,30 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.3.0] - 2026-09-24
+
+### Added
+- When all four players pass, the throw-in is announced and held until any
+  seat clicks Continue before the next hand is dealt (FR-31, RT-13). An
+  all-computer table deals on at once
+
+### Changed
+- A computer seat passes all its trump first (highest first), then aces, then
+  the lowest filler, releasing protected meld only when that still falls short.
+  Trump is passed even when it is part of the passer's own meld
+- A computer seat no longer bids against its own partner once both opponents
+  have passed: the seat that has bid fewer times gives way, unless it holds a
+  whole run and bids once more to name that suit trump. Giving way never bids
+  past the hand's FR-75a valuation
+- Each player's meld sits on its own panel edged in the partnership's colour,
+  and the left and right seats stack their meld in a column beside the hand,
+  with a small gap between hand and meld
+- Cards chosen for the pass leave the hand for the pass tray instead of staying
+  highlighted in the hand; a card in the tray returns to the hand by click or
+  drag
+- Shorter notices for a tied dealer draw ("Tied for high card - select again.")
+  and an all-pass throw-in ("Everyone passed")
+
 ## [1.2.0] - 2026-09-23
 
 ### Added
@@ -461,6 +485,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
+[1.3.0]: https://github.com/philhanna/pinochle/compare/1.2.0..1.3.0
+[1.2.0]: https://github.com/philhanna/pinochle/compare/1.1.0..1.2.0
 [1.1.0]: https://github.com/philhanna/pinochle/compare/1.0.0..1.1.0
 [1.0.0]: https://github.com/philhanna/pinochle/compare/1.0.0-RC1..1.0.0
 [1.0.0-RC1]: https://github.com/philhanna/pinochle/compare/0.5.0..1.0.0-RC1
