@@ -6,7 +6,9 @@
 
 import { faceUrl, type CardCode, type SuitName } from "./cards.js";
 import { SUITS, holdBeforePlay, minimumBid, passCount, suitGlyph } from "./layout.js";
-import { dropIntoSelection, selectedCards, type HandCallbacks } from "./hand.js";
+import {
+  chosenCards, dropIntoSelection, returnToHand, selectedCards, trayDragData, type HandCallbacks,
+} from "./hand.js";
 import type { GameState } from "./state.js";
 
 /** What the panels do when a control is used. */
@@ -140,7 +142,8 @@ function trumpPanel(callbacks: PanelCallbacks): HTMLElement {
  * The pass: choose exactly four and confirm (UI-12).
  *
  * The tray is a drop target as well as a readout, so dragging works here
- * exactly as it does over the table (UI-8).
+ * exactly as it does over the table (UI-8). A card in it goes back to the
+ * hand the same two ways it came: clicked, or dragged there.
  */
 function passPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   const count = passCount(state);
@@ -154,11 +157,17 @@ function passPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   const tray = document.createElement("div");
   tray.className = "tray";
   tray.id = "pass-tray";
-  tray.append(...chosen.map((card) => {
+  tray.append(...chosenCards(state).map(({ card, index }) => {
     const image = document.createElement("img");
     image.className = "card small";
     image.src = faceUrl(card);
     image.alt = card;
+    image.title = "Click, or drag it back to your hand, to keep this card";
+    image.draggable = true;
+    image.addEventListener("click", () => returnToHand(index, state, callbacks));
+    image.addEventListener("dragstart", (event) => {
+      event.dataTransfer?.setData("text/plain", trayDragData(index));
+    });
     return image;
   }));
   for (let i = chosen.length; i < count; i += 1) {
@@ -175,7 +184,9 @@ function passPanel(state: GameState, callbacks: PanelCallbacks): HTMLElement {
   const confirm = button(`Pass these ${count}`, "primary", () => callbacks.onPass(chosen));
   confirm.disabled = chosen.length !== count;
 
-  panel.append(hint("Click a card, or drag it here."), tray, row(confirm));
+  panel.append(
+    hint("Click a card, or drag it here. Click or drag one back to keep it."), tray, row(confirm),
+  );
   return panel;
 }
 

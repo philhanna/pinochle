@@ -53,24 +53,49 @@ export function markResorted(root: HTMLElement): void {
   window.setTimeout(() => root.classList.remove("resorted"), 900);
 }
 
-/** Draw this seat's hand into `root` (UI-4). */
+/**
+ * Draw this seat's hand into `root` (UI-4).
+ *
+ * A card picked out for the pass leaves the hand for the tray, and the fan
+ * closes up behind it: a card left standing in the hand, only marked, read
+ * as a card still being held. The hand is also where a card dragged back out
+ * of the tray is dropped.
+ */
 export function renderHand(root: HTMLElement, state: GameState, callbacks: HandCallbacks): void {
   const passing = passCount(state) > 0;
   if (!passing && selected.size > 0) {
     clearSelection();
   }
 
-  const angles = fanAngles(state.hand.length);
-  root.replaceChildren(...state.hand.map((card, index) => (
-    cardElement(card, index, angles[index] ?? 0, state, passing, callbacks)
+  const held = state.hand.flatMap((card, index) => (
+    passing && selected.has(index) ? [] : [{ card, index }]
+  ));
+  const angles = fanAngles(held.length);
+  root.replaceChildren(...held.map(({ card, index }, position) => (
+    cardElement(card, index, position, angles[position] ?? 0, state, passing, callbacks)
   )));
   root.classList.toggle("choosing", passing);
+
+  // Assigned rather than added, so a hand drawn many times holds one of each.
+  root.ondragover = (event) => {
+    if (passing) {
+      event.preventDefault();
+    }
+  };
+  root.ondrop = (event) => {
+    event.preventDefault();
+    const index = trayIndex(event);
+    if (passing && index !== null) {
+      returnToHand(index, state, callbacks);
+    }
+  };
 }
 
 /** One card in the hand, tilted into the fan, with both gestures wired to it. */
 function cardElement(
   card: CardCode,
   index: number,
+  position: number,
   angle: number,
   state: GameState,
   passing: boolean,
@@ -89,11 +114,11 @@ function cardElement(
   // The order goes into a custom property rather than into z-index itself, so
   // that the stacking stays in the stylesheet with the rest of the fan's
   // look: an inline z-index would outrank anything table.css had to say about
-  // it. Nothing does change it now — a card pointed at or picked out keeps
-  // its place in the hand and is marked in colour alone — and that is a rule
-  // worth keeping where it can be seen.
+  // it. Nothing does change it now — a card pointed at keeps its place in
+  // the hand and is marked in colour alone — and that is a rule worth keeping
+  // where it can be seen.
   element.style.setProperty("--angle", `${angle}deg`);
-  element.style.setProperty("--stack", String(index));
+  element.style.setProperty("--stack", String(position));
 
   // UI-9: legality is shown at all times during play, not only on hover, and
   // an illegal card is not merely unstyled — it cannot be submitted.
@@ -101,10 +126,6 @@ function cardElement(
     element.classList.toggle("legal", playable);
     element.classList.toggle("illegal", !playable);
   }
-  if (passing && selected.has(index)) {
-    element.classList.add("chosen");
-  }
-
   element.addEventListener("click", () => {
     if (passing) {
       toggle(index, state, callbacks);
@@ -140,12 +161,49 @@ function toggle(index: number, state: GameState, callbacks: HandCallbacks): void
 
 /** The cards currently picked out, in hand order. */
 export function selectedCards(state: GameState): CardCode[] {
+  return chosenCards(state).map(({ card }) => card);
+}
+
+/**
+ * The cards currently picked out with their places in the hand, in hand order.
+ *
+ * The tray needs the place as well as the card, to say which of two twins it
+ * is handing back.
+ */
+export function chosenCards(state: GameState): { card: CardCode; index: number }[] {
   return [...selected]
     .sort((a, b) => a - b)
     .flatMap((index) => {
       const card = state.hand[index];
-      return card === undefined ? [] : [card];
+      return card === undefined ? [] : [{ card, index }];
     });
+}
+
+/** Put a card picked out for the pass back into the hand. */
+export function returnToHand(index: number, state: GameState, callbacks: HandCallbacks): void {
+  if (selected.delete(index)) {
+    callbacks.onSelectionChange(selectedCards(state));
+  }
+}
+
+/**
+ * The drag data a card in the pass tray carries: its place in the hand, marked
+ * so that it cannot be mistaken for a card dragged out of the hand itself.
+ */
+export function trayDragData(index: number): string {
+  return `${TRAY_PREFIX}${index}`;
+}
+
+const TRAY_PREFIX = "tray:";
+
+/** The hand position a drag out of the tray carried, or null for any other. */
+function trayIndex(event: DragEvent): number | null {
+  const raw = event.dataTransfer?.getData("text/plain") ?? "";
+  if (!raw.startsWith(TRAY_PREFIX)) {
+    return null;
+  }
+  const index = Number(raw.slice(TRAY_PREFIX.length));
+  return Number.isInteger(index) ? index : null;
 }
 
 /**

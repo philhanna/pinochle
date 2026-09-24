@@ -847,16 +847,9 @@ body.table-page {
 #hand .card.illegal { filter: brightness(0.62) saturate(0.7); cursor: not-allowed; }
 
 #hand.choosing .card { cursor: pointer; }
-/* Picked out for the pass. The card does not move and does not change places,
-   so the colour is the whole of the mark, and it has to be legible on a strip
-   a few millimetres wide: a thick gold ring, a glow around it, and the card
-   itself warmed behind both. The hand holds two of every card (FR-17), so the
-   twin of a chosen card may be lying right beside it; what distinguishes them
-   is which strip is gold, and the tray above shows what is in it either way. */
-#hand .card.chosen {
-  box-shadow: 0 0 0 4px var(--ns), 0 0 18px 4px rgba(255, 212, 121, 0.55);
-  filter: brightness(1.1) saturate(1.15);
-}
+/* A card picked out for the pass leaves the hand for the tray (hand.ts), and
+   is handed back from there the same way: clicked, or dragged. */
+#pass-tray img.card { cursor: pointer; }
 #hand .card.lifted { opacity: 0.4; }
 
 /* Over the felt at the top, clear of every control. */

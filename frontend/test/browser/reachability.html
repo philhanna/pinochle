@@ -122,8 +122,8 @@ try {
     fitStage();
     if (!passChecked && state.prompt?.phase === "PASSING") {
       passChecked = true;
-      blocked.push(...chosenCardsUnreachable(index, frame, state));
-      checked["#hand .card.chosen"] = document.querySelectorAll("#hand .card.chosen").length;
+      blocked.push(...passRoundTripFails(index, frame, state));
+      checked["#pass-tray img.card"] = document.querySelectorAll("#pass-tray img.card").length;
       // The replay owns the selection from here on, as a player would not.
       clearSelection();
       renderTable(state, callbacks);
@@ -172,61 +172,47 @@ try {
 }
 
 /**
- * Check that a card in the fan can still be taken by the strip of it showing.
+ * Check that a card picked for the pass moves to the tray, and can come back.
  *
- * Nothing in the hand changes places: a card pointed at or picked out keeps
- * its position in the fan, so all that is ever exposed of it -- of every card
- * but the last -- is the narrow strip down its left edge carrying its rank
- * and suit. That strip is therefore the whole of the target, and a card whose
- * strip takes no click cannot be chosen at all, however correctly it is drawn.
- *
- * Two neighbours are chosen because adjacent is where covering happens, and
- * the check is made on the strip rather than the middle of the card, which a
- * neighbour covers by design (that is what a fan is).
+ * A picked card leaves the hand for the tray (hand.ts), so the checks are that
+ * it did leave, that it is in the tray where a click can reach it, and that
+ * clicking it there puts it back in the hand. Two are picked, and one handed
+ * back, so the tray is checked while it holds more than one card.
  */
-function chosenCardsUnreachable(index, frame, state) {
+function passRoundTripFails(index, frame, state) {
+  const fault = (control, label, blocker) => ({
+    frame: index, type: frame.type, phase: state.phase, control, label, blocker,
+  });
+  const found = [];
+  const before = document.querySelectorAll("#hand .card").length;
   const hand = [...document.querySelectorAll("#hand .card")];
   const first = Math.max(0, Math.floor(hand.length / 2) - 1);
   hand[first]?.click();
-  hand[first + 1]?.click();
+  // The hand is redrawn by the click, so the second pick is taken afresh.
+  document.querySelectorAll("#hand .card")[first]?.click();
 
-  const found = [];
-  for (const element of document.querySelectorAll("#hand .card.chosen")) {
-    if (!stripTakesTheClick(element)) {
-      found.push({
-        frame: index,
-        type: frame.type,
-        phase: state.phase,
-        control: "#hand .card.chosen",
-        label: element.alt,
-        blocker: "nothing along its left strip takes a click -- the card "
-          + "cannot be chosen",
-      });
+  const left = document.querySelectorAll("#hand .card").length;
+  if (left !== before - 2) {
+    found.push(fault("#hand .card", "", `picking two cards left ${left} of ${before} in the hand`));
+  }
+  const tray = [...document.querySelectorAll("#pass-tray img.card")];
+  if (tray.length !== 2) {
+    found.push(fault("#pass-tray img.card", "", `the tray holds ${tray.length} cards, not 2`));
+  }
+  for (const element of tray) {
+    const blocker = whatCovers(element);
+    if (blocker !== null) {
+      found.push(fault("#pass-tray img.card", element.alt, blocker));
     }
+  }
+
+  tray[0]?.click();
+  const back = document.querySelectorAll("#hand .card").length;
+  if (back !== before - 1) {
+    found.push(fault("#pass-tray img.card", tray[0]?.alt ?? "",
+      `clicking a card in the tray left ${back} of ${before} in the hand`));
   }
   return found;
-}
-
-/**
- * Whether any point down the exposed left edge of `element` hits it.
- *
- * The cards are rotated, so the strip is not a rectangle and its corners are
- * not the card's: several points are tried down the left of the card's box
- * and one hit is enough, which is the question a player's aim asks too.
- */
-function stripTakesTheClick(element) {
-  const box = element.getBoundingClientRect();
-  for (const fraction of [0.3, 0.4, 0.5, 0.6, 0.7]) {
-    for (const across of [0.06, 0.1, 0.14]) {
-      const hit = document.elementFromPoint(
-        box.left + box.width * across, box.top + box.height * fraction,
-      );
-      if (hit === element) {
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 /**
