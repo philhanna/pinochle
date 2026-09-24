@@ -222,7 +222,9 @@ timed. The only server-owned pause left is the trick clear (UI-15).
   player wins the auction at their last stated bid, which becomes the contract.
 - **FR-31** If all four players pass without any bid being placed, the round
   shall be abandoned. No score shall change, the deal shall pass to the next
-  player clockwise, and a new round shall begin.
+  player clockwise, and a new round shall begin. The table shall be told that
+  the hand has been thrown in and the next will be dealt, and the new round
+  shall not be dealt until a seated player releases that notice (RT-13).
 - **FR-32** If exactly one player places a bid and the other three all pass,
   that player — whoever they are, not only the player left of the dealer —
   shall be offered the option to decline the contract. If they decline, the

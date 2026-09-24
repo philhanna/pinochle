@@ -365,6 +365,44 @@ def test_inheriting_the_auction_is_not_a_lone_bid(table):
     assert notifier.of_type(ContractOffered) == []
 
 
+def test_an_all_pass_waits_for_continue_before_the_next_deal(table):
+    """FR-31: the thrown-in hand stays on screen until any seat clicks Continue."""
+    service, state, notifier = table
+    game_id = deal(service, state)
+    game = state.load(game_id)
+    dealer = game.dealer_id
+    for _ in range(4):
+        service.place_bid(game_id, game.current_round.current_player, None)
+
+    game = state.load(game_id)
+    assert game.current_hold is not None
+    assert game.current_hold.reason is HoldReason.ROUND_ABANDONED
+    assert game.current_hold.ackable
+    assert notifier.names().count("RoundStarted") == 1
+
+    service.acknowledge(game_id, "S", game.current_hold.id)
+    game = state.load(game_id)
+    assert game.current_hold is None
+    assert game.dealer_id != dealer
+    assert game.current_round.phase == RoundPhase.BIDDING
+    assert notifier.names().count("RoundStarted") == 2
+
+
+def test_a_declined_lone_bid_deals_again_without_holding(table):
+    """FR-32: declining is the bidder's own choice, so nothing waits on it."""
+    service, state, notifier = table
+    game_id = deal(service, state)
+    round_state = state.load(game_id).current_round
+    bidder = round_state.current_player
+    service.place_bid(game_id, bidder, 250)
+    for _ in range(3):
+        service.place_bid(game_id, round_state.current_player, None)
+    service.confirm_contract(game_id, bidder, accept=False)
+
+    assert state.load(game_id).current_hold is None
+    assert notifier.names().count("RoundStarted") == 2
+
+
 # ---------------------------------------------------------------------------
 # turn_prompt
 # ---------------------------------------------------------------------------

@@ -370,6 +370,8 @@ class GameService(AdminPort, PlayerActionPort):
             self._start_round(game)
         elif released.reason is HoldReason.ROUND_SCORED:
             self._finish_or_deal(game)
+        elif released.reason is HoldReason.ROUND_ABANDONED:
+            self._deal_next_round(game)
         elif released.reason is HoldReason.MELD_EXPOSED:
             winner = game.current_round.bid_winner
             if winner is None:
@@ -709,10 +711,17 @@ class GameService(AdminPort, PlayerActionPort):
         self._load_save(game_id, _confirm)
 
     def _abandon_round(self, game: Game, declined_by: str | None) -> None:
-        """End a round before play and deal the next one, scores untouched."""
+        """End a round before play and deal the next one, scores untouched.
+
+        A round nobody bid on (FR-31) waits for a seat's Continue before the
+        next hand is dealt: otherwise the four passes are swept off the table
+        by fresh cards before anyone has seen that the hand was thrown in.
+        """
         game.emit(RoundAbandoned(game_id=game.id, declined_by=declined_by))
-        game.rotate_dealer()
-        self._start_round(game)
+        if declined_by is None and self._has_human_seat(game):
+            game.begin_hold(HoldReason.ROUND_ABANDONED, ackable=True)
+            return
+        self._deal_next_round(game)
 
     def name_trump(self, game_id: str, player_id: str, suit: Suit) -> None:
         """Record the named trump suit for the active round."""
