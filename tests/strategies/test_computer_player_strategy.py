@@ -149,9 +149,40 @@ def test_choose_cards_to_pass_prefers_trump_and_aces():
     ])
     passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=3)
     assert set(passed) == {
-        Card(Rank.ACE, Suit.HEARTS),   # an ace, wherever it lies
         Card(Rank.TEN, Suit.SPADES),   # trump
         Card(Rank.KING, Suit.SPADES),  # trump
+        Card(Rank.ACE, Suit.HEARTS),   # an ace, wherever it lies
+    }
+
+
+def test_choose_cards_to_pass_takes_every_trump_before_any_ace():
+    """Trump outranks everything: no ace goes while a trump card is still held."""
+    hand = make_hand([
+        (Rank.ACE, Suit.HEARTS), (Rank.ACE, Suit.DIAMONDS), (Rank.ACE, Suit.CLUBS),
+        (Rank.NINE, Suit.SPADES), (Rank.JACK, Suit.SPADES), (Rank.QUEEN, Suit.SPADES),
+        (Rank.KING, Suit.SPADES),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=4)
+    assert set(passed) == {
+        Card(Rank.KING, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES), Card(Rank.NINE, Suit.SPADES),
+    }
+
+
+def test_choose_cards_to_pass_passes_trump_even_when_it_is_own_meld():
+    """A trump marriage and the trump nine are still passed, meld or not.
+
+    The bid team's meld is both hands' meld added together, so the marriage
+    scores the same in the bidder's hand — and there it also takes tricks.
+    """
+    hand = make_hand([
+        (Rank.KING, Suit.SPADES), (Rank.QUEEN, Suit.SPADES), (Rank.NINE, Suit.SPADES),
+        (Rank.ACE, Suit.HEARTS), (Rank.NINE, Suit.CLUBS), (Rank.JACK, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(hand, trump=Suit.SPADES, count=3)
+    assert set(passed) == {
+        Card(Rank.KING, Suit.SPADES), Card(Rank.QUEEN, Suit.SPADES),
+        Card(Rank.NINE, Suit.SPADES),
     }
 
 

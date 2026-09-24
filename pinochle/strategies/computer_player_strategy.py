@@ -41,9 +41,8 @@ class ComputerPlayerStrategy:
     - Bidding: meld plus a conservative trick estimate, bid in 10s up to
       that estimate (FR-75a).
     - Trump: pick the suit with the most cards in hand.
-    - Passing: give the partner cards that support the contract — trump and
-      aces — while keeping whatever completes the passer's own meld
-      (FR-75b).
+    - Passing: give the partner every trump first, then aces, while keeping
+      whatever completes the passer's own meld among the rest (FR-75b).
     - Playing: always play the highest legal card.
     """
 
@@ -106,17 +105,24 @@ class ComputerPlayerStrategy:
 
     @staticmethod
     def choose_cards_to_pass(hand_cards: list[Card], trump: Suit, count: int = 4) -> list[Card]:
-        """Return ``count`` cards to pass: trump and aces, not the passer's own meld.
+        """Return ``count`` cards to pass: every trump first, then aces.
 
-        FR-75b: cards that are part of a marriage, pinochle, an arounds set,
-        or the trump nine are protected from being passed, even if they are
-        trump or an ace.  If protecting meld would leave fewer than
-        ``count`` cards to choose from — an unusually meld-rich hand — the
-        least valuable protected cards are released instead, because FR-42
-        requires exactly ``count`` cards and FR-73 forbids submitting an
-        illegal one.
+        FR-75b: trump takes priority over everything else — all of it goes,
+        highest first, before an ace or anything else is considered, and
+        before the passer's own meld is consulted.  Holding trump back to
+        protect meld costs the partnership nothing to give up: the bid
+        team's meld is both hands' meld added together, so a trump marriage
+        or the trump nine scores the same in the bidder's hand as in the
+        passer's, and in the bidder's hand it also plays.
+
+        Among what is left, cards that are part of a marriage, pinochle, or
+        an arounds set are protected from being passed, even if they are
+        aces.  If protecting meld would leave fewer than ``count`` cards to
+        choose from — an unusually meld-rich hand — the least valuable
+        protected cards are released instead, because FR-42 requires exactly
+        ``count`` cards and FR-73 forbids submitting an illegal one.
         """
-        protected_budget = ComputerPlayerStrategy._protected_counts(hand_cards, trump)
+        protected_budget = ComputerPlayerStrategy._protected_counts(hand_cards)
 
         def take_protected(card: Card) -> bool:
             key = (card.rank, card.suit)
@@ -125,22 +131,21 @@ class ComputerPlayerStrategy:
                 return True
             return False
 
-        def is_support(card: Card) -> bool:
-            return card.suit == trump or card.rank == Rank.ACE
-
         indices = range(len(hand_cards))
-        unprotected = [i for i in indices if not take_protected(hand_cards[i])]
-        protected = [i for i in indices if i not in unprotected]
-
-        support = sorted(
-            (i for i in unprotected if is_support(hand_cards[i])),
+        trumps = sorted(
+            (i for i in indices if hand_cards[i].suit == trump),
             key=lambda i: -hand_cards[i].rank.value,
         )
+        others = [i for i in indices if hand_cards[i].suit != trump]
+        unprotected = [i for i in others if not take_protected(hand_cards[i])]
+        protected = [i for i in others if i not in unprotected]
+
+        aces = [i for i in unprotected if hand_cards[i].rank == Rank.ACE]
         filler = sorted(
-            (i for i in unprotected if not is_support(hand_cards[i])),
+            (i for i in unprotected if hand_cards[i].rank != Rank.ACE),
             key=lambda i: hand_cards[i].rank.value,
         )
-        chosen = (support + filler)[:count]
+        chosen = (trumps + aces + filler)[:count]
 
         if len(chosen) < count:
             protected.sort(key=lambda i: hand_cards[i].rank.value)
@@ -149,12 +154,15 @@ class ComputerPlayerStrategy:
         return [hand_cards[i] for i in chosen]
 
     @staticmethod
-    def _protected_counts(hand_cards: list[Card], trump: Suit) -> Counter:
+    def _protected_counts(hand_cards: list[Card]) -> Counter:
         """Approximate which (rank, suit) cards complete the hand's own meld.
 
         A lightweight mirror of ``detect_meld``'s categories, used only to
         decide what not to pass — exact scoring is ``meld.py``'s job, and
-        this only needs to be a reasonable guess at what to protect.
+        this only needs to be a reasonable guess at what to protect.  Trump
+        is not consulted: ``choose_cards_to_pass`` passes every trump card
+        ahead of this, so protecting the trump nine or a trump marriage
+        could have no effect.
         """
         counts = Counter((c.rank, c.suit) for c in hand_cards)
         protected: Counter = Counter()
@@ -172,9 +180,6 @@ class ComputerPlayerStrategy:
             if all(counts[(rank, s)] for s in Suit):
                 for s in Suit:
                     protected[(rank, s)] += 1
-
-        if counts[(Rank.NINE, trump)]:
-            protected[(Rank.NINE, trump)] += 1
 
         return protected
 
