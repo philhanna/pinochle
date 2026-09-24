@@ -2,7 +2,7 @@
 import random
 from collections import Counter
 
-from pinochle.domain.bid import BID_INCREMENT, MINIMUM_BID
+from pinochle.domain.bid import BID_INCREMENT, MINIMUM_BID, BidEntry
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
@@ -14,6 +14,9 @@ from pinochle.domain.meld import total_meld
 _ACE_TRICK_VALUE = 15
 _LENGTH_TRICK_VALUE = 10
 _NORMAL_SUIT_LENGTH = 4
+
+# The five ranks that make a run, in one suit: A-10-K-Q-J.
+_RUN_RANKS = (Rank.ACE, Rank.TEN, Rank.KING, Rank.QUEEN, Rank.JACK)
 
 # What a bidder assumes its partner brings to the contract (FR-75a).
 #
@@ -39,7 +42,8 @@ class ComputerPlayerStrategy:
 
     Strategy:
     - Bidding: meld plus a conservative trick estimate, bid in 10s up to
-      that estimate (FR-75a).
+      that estimate (FR-75a), and give way rather than bid against a
+      partner once both opponents have passed.
     - Trump: pick the suit with the most cards in hand.
     - Passing: give the partner every trump first, then aces, while keeping
       whatever completes the passer's own meld among the rest (FR-75b).
@@ -70,7 +74,13 @@ class ComputerPlayerStrategy:
         return self._rng.choice(available)
 
     @staticmethod
-    def choose_bid(hand_cards: list[Card], current_high_bid: int) -> int | None:
+    def choose_bid(
+        hand_cards: list[Card],
+        current_high_bid: int,
+        bid_history: list[BidEntry] | None = None,
+        player_id: str | None = None,
+        partner_id: str | None = None,
+    ) -> int | None:
         """Bid the next increment while it stays within a conservative estimate.
 
         FR-75a: for each candidate trump suit, estimate the hand's worth as
@@ -81,13 +91,29 @@ class ComputerPlayerStrategy:
         increment at a time (rather than jumping straight to the estimate)
         lets the auction stop as soon as someone else's estimate is higher,
         exactly as a cautious human bidder would.
+
+        The valuation alone would go on bidding after both opponents have
+        passed, when the only bidder left to beat is the partner; who the
+        other seats are and what they have done is what says to stop, so
+        ``bid_history``, ``player_id`` and ``partner_id`` are consulted for
+        that.  Omitting them — as a test valuing a hand on its own does —
+        leaves only the valuation.
         """
         estimate = _PARTNER_CONTRIBUTION + max(
             total_meld(hand_cards, suit) + ComputerPlayerStrategy._trick_estimate(hand_cards, suit)
             for suit in Suit
         )
         candidate = current_high_bid + BID_INCREMENT if current_high_bid else MINIMUM_BID
-        return candidate if candidate <= estimate else None
+        if candidate > estimate:
+            return None
+
+        if bid_history is not None and player_id is not None and partner_id is not None:
+            if ComputerPlayerStrategy._should_yield_to_partner(
+                hand_cards, bid_history, player_id, partner_id
+            ):
+                return None
+
+        return candidate
 
     @staticmethod
     def _trick_estimate(hand_cards: list[Card], suit: Suit) -> int:
@@ -96,6 +122,78 @@ class ComputerPlayerStrategy:
         length = sum(1 for c in hand_cards if c.suit == suit)
         extra_length = max(0, length - _NORMAL_SUIT_LENGTH)
         return aces * _ACE_TRICK_VALUE + extra_length * _LENGTH_TRICK_VALUE
+
+    @staticmethod
+    def _should_yield_to_partner(
+        hand_cards: list[Card],
+        bid_history: list[BidEntry],
+        player_id: str,
+        partner_id: str,
+    ) -> bool:
+        """Return ``True`` when this seat should stop bidding against its partner.
+
+        Once both opponents have passed and both partners are still in, the
+        auction is already won: every further bid raises the contract this
+        partnership must make, against nobody.  The seat that has bid fewer
+        times gives way, because the partnership has heard less about that
+        hand than the other — and one of the two must, or they would raise
+        each other until a valuation ran out.
+
+        A seat holding a whole run (A-10-K-Q-J of one suit) is the
+        exception: with the contract's best trump suit and 150 of meld in
+        its own twelve cards, it is worth one bid to take the contract and
+        name that suit itself.  One bid, though — if the partner answers
+        with another bid instead of passing, this seat gives way on its
+        next turn.
+        """
+        passed = {entry.player_id for entry in bid_history if entry.amount is None}
+        if partner_id in passed or len(passed - {player_id, partner_id}) < 2:
+            return False
+
+        mine = ComputerPlayerStrategy._bid_count(bid_history, player_id)
+        theirs = ComputerPlayerStrategy._bid_count(bid_history, partner_id)
+        if mine >= theirs:
+            return False
+
+        if not ComputerPlayerStrategy._holds_a_run(hand_cards):
+            return True
+
+        duel = ComputerPlayerStrategy._entries_once_alone(bid_history, player_id, partner_id)
+        return ComputerPlayerStrategy._bid_count(duel, player_id) > 0
+
+    @staticmethod
+    def _bid_count(bid_history: list[BidEntry], player_id: str) -> int:
+        """Return how many actual bids, as opposed to passes, ``player_id`` made."""
+        return sum(
+            1 for entry in bid_history
+            if entry.player_id == player_id and entry.amount is not None
+        )
+
+    @staticmethod
+    def _holds_a_run(hand_cards: list[Card]) -> bool:
+        """Return ``True`` if some suit's whole run is in this one hand."""
+        counts = Counter((c.rank, c.suit) for c in hand_cards)
+        return any(all(counts[(rank, suit)] for rank in _RUN_RANKS) for suit in Suit)
+
+    @staticmethod
+    def _entries_once_alone(
+        bid_history: list[BidEntry],
+        player_id: str,
+        partner_id: str,
+    ) -> list[BidEntry]:
+        """Return the history from the moment the second opponent passed.
+
+        What is counted in it is the one extra bid a run is worth: bids made
+        earlier were made against opponents who were still bidding, and
+        spending the exception on those would be spending it on nothing.
+        """
+        opponents_out: set[str] = set()
+        for index, entry in enumerate(bid_history):
+            if entry.amount is None and entry.player_id not in (player_id, partner_id):
+                opponents_out.add(entry.player_id)
+                if len(opponents_out) == 2:
+                    return bid_history[index + 1:]
+        return []
 
     @staticmethod
     def choose_trump(hand_cards: list[Card]) -> Suit:

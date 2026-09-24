@@ -148,7 +148,13 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
         phase = round_state.phase
 
         if phase == RoundPhase.BIDDING:
-            amount = self._strategy.choose_bid(view.hand, view.current_high_bid)
+            amount = self._strategy.choose_bid(
+                view.hand,
+                view.current_high_bid,
+                view.bid_history,
+                view.player_id,
+                view.partner_id,
+            )
             self._service.place_bid(game_id, seat, amount)
         elif phase == RoundPhase.CONFIRMING:
             # A computer's own conservative estimate already decided
@@ -173,6 +179,7 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
         """Build the seat's own private view (FR-74) for the strategy to act on."""
         return SeatView(
             player_id=player_id,
+            partner_id=round_state.partner_of(player_id),
             hand=list(round_state.hand(player_id)),
             bid_history=round_state.bid_history,
             current_high_bid=round_state.current_high_bid,

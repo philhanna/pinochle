@@ -1,6 +1,6 @@
 # tests.strategies.test_computer_player_strategy
 from pinochle.strategies.computer_player_strategy import ComputerPlayerStrategy
-from pinochle.domain.bid import MINIMUM_BID
+from pinochle.domain.bid import MINIMUM_BID, BidEntry
 from pinochle.domain.cards.card import Card
 from pinochle.domain.cards.rank import Rank
 from pinochle.domain.cards.suit import Suit
@@ -135,6 +135,127 @@ def test_choose_bid_passes_once_the_current_high_exceeds_the_estimate():
     ])
     assert ComputerPlayerStrategy.choose_bid(hand, current_high_bid=250) is None
 
+
+# ---------------------------------------------------------------------------
+# choose_bid against a partner, once both opponents have passed
+# ---------------------------------------------------------------------------
+
+# Seats in clockwise order: "me" and "partner" are one team, the two
+# opponents the other.
+ME, PARTNER, LEFT, RIGHT = "me", "partner", "left", "right"
+
+
+def strong_hand() -> list[Card]:
+    """A hand whose own valuation keeps bidding well past the minimum."""
+    return make_hand([
+        (Rank.ACE, Suit.SPADES), (Rank.KING, Suit.SPADES),
+        (Rank.QUEEN, Suit.SPADES), (Rank.JACK, Suit.SPADES),
+        (Rank.NINE, Suit.SPADES), (Rank.NINE, Suit.SPADES),
+        (Rank.ACE, Suit.HEARTS), (Rank.ACE, Suit.DIAMONDS),
+        (Rank.ACE, Suit.CLUBS), (Rank.KING, Suit.HEARTS),
+        (Rank.QUEEN, Suit.HEARTS), (Rank.TEN, Suit.CLUBS),
+    ])
+
+
+def hand_with_a_run() -> list[Card]:
+    """``strong_hand`` plus the ten of spades, which completes the run."""
+    hand = strong_hand()
+    hand[4] = Card(Rank.TEN, Suit.SPADES)
+    return hand
+
+
+def bids(*entries: tuple[str, int | None]) -> list[BidEntry]:
+    """Build a bid history from ``(player_id, amount)`` tuples."""
+    return [BidEntry(player_id=p, amount=a) for p, a in entries]
+
+
+def test_choose_bid_yields_to_a_partner_once_both_opponents_have_passed():
+    """Bidding on here only raises a contract this partnership has already won."""
+    history = bids((LEFT, None), (PARTNER, 250), (RIGHT, None))
+    assert ComputerPlayerStrategy.choose_bid(
+        strong_hand(), 250, history, ME, PARTNER
+    ) is None
+
+
+def test_choose_bid_does_not_yield_while_an_opponent_is_still_bidding():
+    """With an opponent still in, the auction is a real one: keep bidding."""
+    history = bids((LEFT, None), (PARTNER, 250), (RIGHT, 260))
+    assert ComputerPlayerStrategy.choose_bid(
+        strong_hand(), 260, history, ME, PARTNER
+    ) == 270
+
+
+def test_choose_bid_does_not_yield_once_the_partner_has_passed():
+    """Nobody is left to yield to: this seat is taking the contract."""
+    history = bids(
+        (LEFT, None), (PARTNER, 250), (RIGHT, None), (ME, 260), (PARTNER, None),
+    )
+    assert ComputerPlayerStrategy.choose_bid(
+        strong_hand(), 260, history, ME, PARTNER
+    ) == 270
+
+
+def test_choose_bid_does_not_yield_when_it_has_bid_as_often_as_its_partner():
+    """Only the seat that has bid fewer times gives way.
+
+    On a level count neither seat is the one to give way — and if both did,
+    the partnership would pass out a contract it had already won.  Here the
+    seat bid before its partner did, so when the second opponent drops out
+    the count is even.
+    """
+    history = bids((LEFT, None), (ME, 250), (PARTNER, 260), (RIGHT, None))
+    assert ComputerPlayerStrategy.choose_bid(
+        strong_hand(), 260, history, ME, PARTNER
+    ) == 270
+
+
+def test_choose_bid_takes_one_more_bid_holding_a_whole_run():
+    """A run in one hand is worth taking the contract to name that trump.
+
+    The same position as the yielding test above; only the hand differs.
+    """
+    history = bids((LEFT, None), (PARTNER, 250), (RIGHT, None))
+    assert ComputerPlayerStrategy.choose_bid(
+        hand_with_a_run(), 250, history, ME, PARTNER
+    ) == 260
+
+
+def test_choose_bid_yields_after_spending_the_runs_one_extra_bid():
+    """One extra bid, not an argument: the partner bid again, so this seat stops."""
+    history = bids(
+        (LEFT, None), (PARTNER, 250), (RIGHT, None), (ME, 260), (PARTNER, 270),
+    )
+    assert ComputerPlayerStrategy.choose_bid(
+        hand_with_a_run(), 270, history, ME, PARTNER
+    ) is None
+
+
+def test_choose_bid_run_exception_counts_only_bids_made_once_alone():
+    """Bids made while an opponent was still in are not the extra bid.
+
+    Bidding here goes partner, opponent, this seat, opponent, so this seat
+    has twice bid a live auction before the second opponent drops out — and
+    its one run-backed bid is still unspent.
+    """
+    history = bids(
+        (PARTNER, 250), (LEFT, 260), (ME, 270), (RIGHT, 280),
+        (PARTNER, 290), (LEFT, None), (ME, 300), (RIGHT, None),
+        (PARTNER, 310),
+    )
+    assert ComputerPlayerStrategy.choose_bid(
+        hand_with_a_run(), 310, history, ME, PARTNER
+    ) == 320
+
+
+def test_choose_bid_yields_only_within_its_own_valuation():
+    """Giving way never turns into bidding past what the hand is worth."""
+    weak = make_hand([
+        (Rank.NINE, Suit.HEARTS), (Rank.NINE, Suit.CLUBS),
+        (Rank.JACK, Suit.HEARTS), (Rank.JACK, Suit.CLUBS),
+        (Rank.QUEEN, Suit.HEARTS), (Rank.KING, Suit.CLUBS),
+    ])
+    history = bids((LEFT, None), (PARTNER, 250), (RIGHT, None))
+    assert ComputerPlayerStrategy.choose_bid(weak, 250, history, ME, PARTNER) is None
 
 # ---------------------------------------------------------------------------
 # choose_cards_to_pass (FR-75b)

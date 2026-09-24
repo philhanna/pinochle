@@ -117,6 +117,29 @@ def test_an_all_computer_game_runs_to_completion_at_zero_delay():
     assert game.round_number > 0
 
 
+def test_a_seat_view_names_the_partner_across_the_table():
+    """The bidding strategy has to know which other seat it is playing with.
+
+    Who partners whom is public at a real table — only the partner's cards
+    are not (FR-74), and the view still carries just the one hand.
+    """
+    service, driver, state, scheduler, game_id = make_table(
+        ALL_COMPUTER_PLAYERS, delay_seconds=0, seed=7,
+    )
+    service.start_game(game_id)
+    for _ in range(100):
+        round_state = state.load(game_id).current_round
+        if round_state is not None:
+            break
+        scheduler.advance(0)
+    else:
+        raise AssertionError("the round never began")
+
+    view = driver._build_seat_view(round_state, "N")
+    assert view.partner_id == "S"
+    assert view.player_id == "N"
+
+
 def test_an_all_computer_table_is_never_held():
     """RT-13: a hold nobody could ever release would stop the game, not pause it.
 

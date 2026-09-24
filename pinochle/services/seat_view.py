@@ -17,6 +17,9 @@ class SeatView:
 
     Attributes:
         player_id: The seat this view belongs to.
+        partner_id: The seat across the table, on this seat's team.  Who
+            partners whom is public at a real table; only the partner's
+            cards are not (FR-74).
         hand: The seat's own cards.
         bid_history: Every bid and pass made so far in the auction.
         current_high_bid: The high bid standing, or 0 if none has been made.
@@ -29,6 +32,7 @@ class SeatView:
     """
 
     player_id: str
+    partner_id: str
     hand: list[Card]
     bid_history: list[BidEntry]
     current_high_bid: int
