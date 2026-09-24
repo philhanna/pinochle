@@ -84,7 +84,7 @@ function held(state: GameState, hold: Hold): Notice {
       return say(dealerText(state), state.dealerPlayerId);
     case "round_abandoned":
       return say(
-        "Everyone passed — this hand is thrown in, and the next one will be dealt.",
+        "Everyone passed",
         state.roundNumber,
       );
     case "meld_exposed":
