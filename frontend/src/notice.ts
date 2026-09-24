@@ -79,7 +79,7 @@ function held(state: GameState, hold: Hold): Notice {
         state.thinkingPlayerId,
       );
     case "draw_tied":
-      return say("Tied for high card — the deck is thrown again.", state.spreadId);
+      return say("Tied for high card - select again.", state.spreadId);
     case "dealer_selected":
       return say(dealerText(state), state.dealerPlayerId);
     case "round_abandoned":
