@@ -10,10 +10,43 @@ Repository: [github.com/philhanna/pinochle](https://github.com/philhanna/pinochl
 
 ## Running it
 
+You need Python 3.12 or later, and Node.js (`make` compiles the TypeScript
+front end with `npx`). First clone the repository, create a virtual
+environment in `.venv`, activate it, and install:
+
+**Linux and macOS**
+
 ```sh
+git clone https://github.com/philhanna/pinochle.git
+cd pinochle
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .          # everything, tests included
+```
+
+**Windows (PowerShell)**
+
+```powershell
+git clone https://github.com/philhanna/pinochle.git
+cd pinochle
+py -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .          # everything, tests included
+```
+
+In `cmd.exe`, activate with `.venv\Scripts\activate.bat` instead. If
+PowerShell refuses to run the activation script, allow it once with
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+
+Then start the server:
+
+```sh
 make dev                  # server on http://localhost:8000, admin token "dev"
 ```
+
+The `make` targets need `make` and `bash`, which Linux has and macOS gets
+with the Xcode command line tools (`xcode-select --install`). On Windows, run
+them from WSL or Git Bash.
 
 `make dev` prints a console link with the admin token already in it — open
 that, create a game, and open each human seat's join link in **its own tab**:
