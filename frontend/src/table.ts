@@ -63,11 +63,11 @@ export function renderTable(
 /**
  * Each team's won tricks, as a face-down stack with the card points taken so
  * far on its back (UI-14c). North-South's lies to the left of North's hand and
- * East-West's below East, wherever those seats fall on this client's table.
+ * East-West's below West, wherever those seats fall on this client's table.
  * Appended to the seat, so it must run after the seats are drawn.
  */
 function renderTakenStacks(state: GameState): void {
-  const anchors = [["NS", "NORTH", "left"], ["EW", "EAST", "below"]] as const;
+  const anchors = [["NS", "NORTH", "left"], ["EW", "WEST", "below"]] as const;
   for (const [teamId, seatName, side] of anchors) {
     const seat = state.seats.find((s) => s.seat === seatName);
     const spot = seat === undefined ? null : spotOf(state, seat.playerId);
