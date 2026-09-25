@@ -315,6 +315,7 @@ test("clearing a trick makes it the reviewable last trick (UI-14b)", () => {
   assert.equal(state.lastTrick.plays.length, 4);
   assert.equal(state.leaderPlayerId, "p-south");
   assert.deepEqual(state.tricksTaken, { NS: 1 });
+  assert.deepEqual(state.trickPoints, { NS: 20 });
 });
 
 // ---------------------------------------------------------------------------

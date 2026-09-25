@@ -95,16 +95,17 @@ test("the trick never holds more than four cards", () => {
   });
 });
 
-test("no card-point total exists until the round is scored (UI-14c)", () => {
-  // Counting the cards as they fall is part of playing well, so the client
-  // must not be able to show a running total even by accident. Before the
-  // round summary arrives, no card-point figure is anywhere in the state.
+test("trick points never exceed what the round summary reports (UI-14c)", () => {
+  // The stacks' running totals exclude the last-trick bonus, so at the end of
+  // play they must equal the summary's card points exactly.
   replayAll((state) => {
-    if (state.roundSummary === null) {
-      assert.ok(
-        !JSON.stringify(state).includes("cardPoints"),
-        `a card-point total appeared mid-round, at seq ${state.lastSeq}`,
-      );
+    if (state.roundSummary !== null && state.roundSummary.roundNumber === state.roundNumber) {
+      for (const team of state.roundSummary.teams) {
+        assert.ok(
+          (state.trickPoints[team.teamId] ?? 0) === team.cardPoints || state.tricksTaken[team.teamId] === undefined,
+          `stack total differs from the summary at seq ${state.lastSeq}`,
+        );
+      }
     }
   });
 });

@@ -183,8 +183,7 @@ function dealerText(state: GameState): string {
  * How many tricks have been gathered this round, both teams together.
  *
  * Used only to tell one trick from the next in a notice's key. It is a count
- * of tricks, never of the points in them, which UI-14c keeps off the screen
- * until the round is over.
+ * of tricks.
  */
 function tricksPlayed(state: GameState): number {
   return Object.values(state.tricksTaken).reduce((total, taken) => total + taken, 0);

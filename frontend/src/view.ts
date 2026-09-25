@@ -17,8 +17,8 @@ export interface ScoreLine {
  * The scoreboard: scores, contract, auction winner, trump, and the meld
  * totals that stay up for the whole round (UI-14, UI-14a).
  *
- * Deliberately no running card-point total (UI-14c): counting the cards as
- * they fall is part of playing well.
+ * The card points taken so far are not here: they ride on the trick stacks
+ * (UI-14c).
  */
 export function scoreboard(state: GameState): ScoreLine[] {
   const lines: ScoreLine[] = state.teams.map((team) => ({
@@ -145,7 +145,7 @@ export interface SummaryRow {
   bid: boolean;
 }
 
-/** The round summary, the one place card points appear (FR-66, UI-14c). */
+/** The round summary, where the last-trick bonus first appears (FR-66). */
 export function summaryRows(state: GameState): SummaryRow[] {
   const summary = state.roundSummary;
   if (summary === null) {

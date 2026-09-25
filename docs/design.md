@@ -989,8 +989,8 @@ holds no derived rule state:**
 
 - it does not compute legal plays — it uses `turn_prompt.legal_plays` (UI-9);
 - it does not decide who won a trick — it waits for `trick_completed`;
-- it counts tricks per team, never card points; trick points enter the state
-  for the first time with `round_scored` (UI-14c).
+- it counts tricks and their card points per team, for the stacks of UI-14c;
+  the last-trick bonus enters the state only with `round_scored`.
 
 `seat_lost`, `seat_rejoined`, `game_abandoned`, `hold_begun` and `hold_ended`
 are subscribed but change nothing: the holds are already on the header, and

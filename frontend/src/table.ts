@@ -30,7 +30,7 @@ export interface TableCallbacks extends PanelCallbacks {
 let showingLastTrick = false;
 
 /** Whether the scoreboard is open. Closed, it is its own button and no more. */
-let scoreboardOpen = true;
+let scoreboardOpen = false;
 
 /** Draw the whole table. */
 export function renderTable(
@@ -39,6 +39,7 @@ export function renderTable(
   renderSeats(state);
   renderDealFlight(state, dealPacket);
   renderSpreadInto(state, callbacks);
+  renderTakenStacks(state);
   renderCentre(state, callbacks);
   renderScoreboard(state);
   renderContract(state);
@@ -56,6 +57,45 @@ export function renderTable(
       pendingResort = false;
       markResorted(hand);
     }
+  }
+}
+
+/**
+ * Each team's won tricks, as a face-down stack with the card points taken so
+ * far on its back (UI-14c). The opponents' sits beside the top seat, this
+ * seat's own team's beside the bottom one.
+ */
+function renderTakenStacks(state: GameState): void {
+  const spots = placement(state);
+  const ours = spots.bottom?.teamId ?? null;
+  for (const [id, mine] of [["taken-ours", true], ["taken-theirs", false]] as const) {
+    const element = byId(id);
+    if (element === null) {
+      continue;
+    }
+    const team = state.teams.find((t) => (t.teamId === ours) === mine);
+    const tricks = team === undefined ? 0 : state.tricksTaken[team.teamId] ?? 0;
+    if (team === undefined || tricks === 0) {
+      element.hidden = true;
+      element.replaceChildren();
+      continue;
+    }
+    // A few offset backs suggest a pile that grows, without one per trick.
+    const layers = Math.min(tricks, 4);
+    const backs = Array.from({ length: layers }, (_, layer) => {
+      const image = document.createElement("img");
+      image.className = "card small back";
+      image.src = backUrl();
+      image.alt = "";
+      image.style.setProperty("--layer", String(layer));
+      return image;
+    });
+    const points = text("taken-points", String(state.trickPoints[team.teamId] ?? 0));
+    element.style.setProperty("--layers", String(layers));
+    element.className = `taken team-${team.teamId.toLowerCase()}`;
+    element.title = `${team.name}: ${tricks} ${tricks === 1 ? "trick" : "tricks"}`;
+    element.replaceChildren(...backs, points);
+    element.hidden = false;
   }
 }
 

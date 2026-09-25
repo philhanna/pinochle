@@ -12,13 +12,13 @@
 //
 // Two rules follow, and both are enforced by tests:
 //
-//   * It holds no card-point total for a round in progress (UI-14c). Counting
-//     the cards as they fall is part of playing well; trick points appear only
-//     in the round summary, after play is over.
+//   * Each team's card points from tricks taken are kept for the round, for the
+//     stacks beside the table (UI-14c). The last-trick bonus is not among
+//     them: it is known only when play is over and appears in the round summary.
 //   * It holds only this seat's own cards. Other hands are counts (UI-5), and
 //     the server never sends anything else (NFR-6).
 
-import { removeOne, sortHand, type CardCode, type SuitName } from "./cards.js";
+import { rankLetterOf, removeOne, sortHand, type CardCode, type SuitName } from "./cards.js";
 import type { Frame, FrameType, TurnHeader } from "./types.js";
 
 /** A seat name as the wire gives it. */
@@ -188,8 +188,10 @@ export interface GameState {
   /** Set while a completed trick is still on the table (UI-15). */
   trickWinnerPlayerId: string | null;
   lastTrick: CompletedTrick | null;
-  /** Tricks taken per team. A count, never a card-point total (UI-14c). */
+  /** Tricks taken per team. */
   tricksTaken: Record<string, number>;
+  /** Card points in those tricks per team, without the last-trick bonus (UI-14c). */
+  trickPoints: Record<string, number>;
   tossedInBy: string | null;
 
   /** The seat currently inside its move delay (RT-7, RT-10). */
@@ -243,6 +245,7 @@ export function initialState(): GameState {
     trickWinnerPlayerId: null,
     lastTrick: null,
     tricksTaken: {},
+    trickPoints: {},
     tossedInBy: null,
     thinkingPlayerId: null,
     prompt: null,
@@ -623,8 +626,8 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
    * The trick is gathered to its winner (UI-15, RT-10).
    *
    * What it held becomes the last trick, reviewable until the next one is
-   * cleared in its turn (UI-14b). Only the count is kept, never the points
-   * those cards are worth (UI-14c).
+   * cleared in its turn (UI-14b). The winning team's count and card points
+   * grow by it (UI-14c).
    */
   trick_cleared: (state, p) => {
     const winnerPlayerId = p["winner_player_id"] as string;
@@ -638,6 +641,12 @@ const HANDLERS: Partial<Record<FrameType, Handler>> = {
       tricksTaken: teamId === undefined
         ? state.tricksTaken
         : { ...state.tricksTaken, [teamId]: (state.tricksTaken[teamId] ?? 0) + 1 },
+      trickPoints: teamId === undefined
+        ? state.trickPoints
+        : {
+          ...state.trickPoints,
+          [teamId]: (state.trickPoints[teamId] ?? 0) + cardPoints(state.trick),
+        },
     };
   },
 
@@ -714,6 +723,13 @@ interface SeatPayload {
   seat: SeatName;
 }
 
+/** What the cards of a trick are worth: aces and tens 10, kings and queens 5. */
+function cardPoints(plays: Play[]): number {
+  return plays.reduce((total, play) => total + (CARD_POINTS[rankLetterOf(play.card)] ?? 0), 0);
+}
+
+const CARD_POINTS: Record<string, number> = { A: 10, T: 10, K: 5, Q: 5 };
+
 /** Shape of one play inside the `trick_completed` payload. */
 interface PlayPayload {
   player_id: string;
@@ -775,6 +791,7 @@ function clearRound(state: GameState): GameState {
     trickWinnerPlayerId: null,
     lastTrick: null,
     tricksTaken: {},
+    trickPoints: {},
     tossedInBy: null,
     thinkingPlayerId: null,
     prompt: null,

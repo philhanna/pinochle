@@ -935,3 +935,43 @@ body.table-page {
 @media (prefers-reduced-motion: reduce) {
   #hand.resorted .card { animation: none; }
 }
+
+/* --- Tricks taken (UI-14c) ----------------------------------------------- */
+
+/* A face-down pile per team, each trick played to it adding a card to the
+   pile's edge, with the card points taken so far on the top one's back. The
+   opponents' lies to the left of the top seat, this seat's team's above the
+   bottom bar. */
+.taken {
+  position: absolute;
+  z-index: 5;
+  width: calc(var(--card-w-small) + 18px);
+  height: calc(var(--card-h-small) + 18px);
+  pointer-events: auto;
+}
+
+#taken-theirs { top: 14px; left: calc(50% - 360px); }
+#taken-ours { bottom: 200px; left: 18px; }
+
+.taken .card {
+  position: absolute;
+  top: calc(var(--layer) * 6px);
+  left: calc(var(--layer) * 6px);
+}
+
+.taken-points {
+  position: absolute;
+  top: calc(var(--card-h-small) / 2 + (var(--layers) - 1) * 6px);
+  left: calc(var(--card-w-small) / 2 + (var(--layers) - 1) * 6px);
+  transform: translate(-50%, -50%);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.taken.team-ns .taken-points { box-shadow: 0 0 0 2px var(--ns); }
+.taken.team-ew .taken-points { box-shadow: 0 0 0 2px var(--ew); }

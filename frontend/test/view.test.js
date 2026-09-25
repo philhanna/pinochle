@@ -59,7 +59,7 @@ test("the meld total survives the cards being gathered up (UI-14a)", () => {
   assert.equal(scoreboard(state)[0].value, "0  (+40 meld)");
 });
 
-test("there is no card-point line anywhere on the scoreboard (UI-14c)", () => {
+test("card points taken ride on the trick stacks, not the scoreboard (UI-14c)", () => {
   const state = [
     frame("trick_completed", {
       winner_player_id: "p-south",
@@ -68,7 +68,7 @@ test("there is no card-point line anywhere on the scoreboard (UI-14c)", () => {
     frame("trick_cleared", { winner_player_id: "p-south", next_leader_player_id: "p-south" }),
   ].reduce(applyEvent, seated());
   const text = JSON.stringify(scoreboard(state)).toLowerCase();
-  assert.ok(!text.includes("point"), "counting the cards is the player's job");
+  assert.ok(!text.includes("point"), "the scoreboard carries no card-point line");
 });
 
 test("the contract names its holder once trump is named", () => {
