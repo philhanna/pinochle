@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.5.0] - 2026-09-24
+
+### Added
+- The trick being taken slides into the winner's face-down stack
+
+### Changed
+- The computer auction winner keeps its trump when passing back to its
+  partner, sending aces and low cards instead
+
 ## [1.4.0] - 2026-09-24
 
 ### Added
