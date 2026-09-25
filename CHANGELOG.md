@@ -3,6 +3,24 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.4.0] - 2026-09-24
+
+### Added
+- Each team's taken tricks show as a face-down stack with the card points
+  counted
+
+### Changed
+- Trick piles are anchored to the North and East seats, with the East-West
+  pile below West
+- An empty card fan keeps its footprint so seats don't jump on the last trick
+- Design and requirements docs rewritten to match the code
+
+### Fixed
+- Environment settings test isolation
+
+### Removed
+- docs/impl.md
+
 ## [1.3.0] - 2026-09-24
 
 ### Added
