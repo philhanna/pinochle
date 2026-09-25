@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.5.1] - 2026-09-24
+
+### Added
+- prompt.md: a full build prompt for the four-player web Pinochle game
+
+### Changed
+- On dealer selection, the face-down cards are scattered over a slightly
+  smaller area, so they lie a little closer together
+
 ## [1.5.0] - 2026-09-24
 
 ### Added
@@ -512,6 +521,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
+[1.5.1]: https://github.com/philhanna/pinochle/compare/1.5.0..1.5.1
 [1.5.0]: https://github.com/philhanna/pinochle/compare/1.4.0..1.5.0
 [1.4.0]: https://github.com/philhanna/pinochle/compare/1.3.0..1.4.0
 [1.3.0]: https://github.com/philhanna/pinochle/compare/1.2.0..1.3.0
