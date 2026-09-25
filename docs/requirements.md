@@ -540,7 +540,10 @@ Two kinds of waiting stop the game:
   interval — 1.5 seconds by default — and shall then be cleared automatically
   to the winner. Clearing shall not require any player action. The interval
   shall be counted by the server, which publishes an event when the trick is
-  cleared (RT-8).
+  cleared (RT-8). The clearing shall be shown as an animation: the four cards
+  are gathered into one pile, turned face down and carried to the winning
+  team's stack. It is cosmetic and client-side, and is omitted when the player
+  prefers reduced motion.
 - **UI-16** Card artwork shall be served by the server for both faces and
   backs, in SVG and in 96-dpi PNG. Faces shall be addressed by the same
   two-character card code the event stream uses. The card back shown on the

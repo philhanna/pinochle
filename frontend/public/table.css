@@ -981,3 +981,21 @@ body.table-page {
 
 .taken.team-ns .taken-points { box-shadow: 0 0 0 2px var(--ns); }
 .taken.team-ew .taken-points { box-shadow: 0 0 0 2px var(--ew); }
+
+/* --- The trick taken in (UI-15) ------------------------------------------ */
+
+/* The real cards stay in the state until the clones land, so they are hidden
+   rather than removed while the clones fly. */
+.sweeping .trick .played { visibility: hidden; }
+
+.sweep { position: fixed; inset: 0; z-index: 1000; pointer-events: none; }
+.sweep-card { position: fixed; }
+.sweep-inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; }
+.sweep-inner .card {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+.sweep-inner .sweep-back { transform: rotateY(180deg); }

@@ -67,11 +67,8 @@ export function renderTable(
  * Appended to the seat, so it must run after the seats are drawn.
  */
 function renderTakenStacks(state: GameState): void {
-  const anchors = [["NS", "NORTH", "left"], ["EW", "WEST", "below"]] as const;
-  for (const [teamId, seatName, side] of anchors) {
-    const seat = state.seats.find((s) => s.seat === seatName);
-    const spot = seat === undefined ? null : spotOf(state, seat.playerId);
-    const element = spot === null ? null : byId(`seat-${spot}`);
+  for (const [teamId, seatName, side] of TAKEN_ANCHORS) {
+    const element = takenSeatElement(state, seatName);
     const tricks = state.tricksTaken[teamId] ?? 0;
     if (element === null || tricks === 0) {
       continue;
@@ -93,6 +90,39 @@ function renderTakenStacks(state: GameState): void {
     pile.append(...backs, text("taken-points", String(state.trickPoints[teamId] ?? 0)));
     element.append(pile);
   }
+}
+
+const TAKEN_ANCHORS = [["NS", "NORTH", "left"], ["EW", "WEST", "below"]] as const;
+
+/** The seat a team's stack is drawn beside, wherever it falls on this table. */
+function takenSeatElement(state: GameState, seatName: string): HTMLElement | null {
+  const seat = state.seats.find((s) => s.seat === seatName);
+  const spot = seat === undefined ? null : spotOf(state, seat.playerId);
+  return spot === null ? null : byId(`seat-${spot}`);
+}
+
+/**
+ * Where the stack of the team that took a trick is, or will be if it is the
+ * team's first: the one the trick is carried to (UI-15).
+ */
+export function takenStackRect(state: GameState, winnerPlayerId: string): DOMRect | null {
+  const teamId = state.seats.find((s) => s.playerId === winnerPlayerId)?.teamId;
+  const anchor = TAKEN_ANCHORS.find(([team]) => team === teamId);
+  const element = anchor === undefined ? null : takenSeatElement(state, anchor[1]);
+  if (anchor === undefined || element === null) {
+    return null;
+  }
+  const existing = element.querySelector(`.taken.team-${anchor[0].toLowerCase()}`);
+  if (existing !== null) {
+    return existing.getBoundingClientRect();
+  }
+  const probe = document.createElement("div");
+  probe.className = `taken taken-${anchor[2]}`;
+  probe.style.visibility = "hidden";
+  element.append(probe);
+  const rect = probe.getBoundingClientRect();
+  probe.remove();
+  return rect;
 }
 
 /** Keep the auction winner and contract amount visible in the lower-left. */

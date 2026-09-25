@@ -12,9 +12,10 @@ import { resetPanel } from "./panels.js";
 import { openStream, playerStreamUrl, type ConnectionState } from "./stream.js";
 import { applyEvent, initialState, type GameState } from "./state.js";
 import {
-  hideLastTrick, noteResort, renderTable, showConnection, showError,
+  hideLastTrick, noteResort, renderTable, showConnection, showError, takenStackRect,
   type TableCallbacks,
 } from "./table.js";
+import { sweepTrick } from "./sweep.js";
 import { resolveSeat } from "./token.js";
 import type { Frame, Seat } from "./types.js";
 
@@ -40,6 +41,9 @@ let dealPacketInFlight: number | null = null;
 
 /** Frames that arrived while the visible deal was catching up. */
 const queuedFrames: Frame[] = [];
+
+/** Whether a completed trick is being carried to its stack (UI-15). */
+let trickSweeping = false;
 
 main();
 
@@ -76,10 +80,18 @@ function main(): void {
 
 /** Apply a frame now, or preserve its order behind the visible deal. */
 function receiveFrame(frame: Frame): void {
-  if (dealPacketsShown !== null) {
+  if (dealPacketsShown !== null || trickSweeping) {
     queuedFrames.push(frame);
     return;
   }
+  if (frame.type === "trick_cleared" && beginSweep(frame)) {
+    return;
+  }
+  applyFrame(frame);
+}
+
+/** Fold a frame into the state and draw it. */
+function applyFrame(frame: Frame): void {
   state = applyEvent(state, frame);
   afterFrame(frame);
   if (frame.type === "cards_dealt" && state.hand.length > 0) {
@@ -87,6 +99,35 @@ function receiveFrame(frame: Frame): void {
   } else {
     render();
   }
+}
+
+/**
+ * Carry the trick to the winner's stack before the frame is folded in, so the
+ * table still holds it while it flies. Frames that arrive meanwhile wait.
+ */
+function beginSweep(frame: Frame): boolean {
+  const winner = frame.payload["winner_player_id"];
+  const target = typeof winner === "string" ? takenStackRect(state, winner) : null;
+  if (target === null) {
+    return false;
+  }
+  const landed = () => {
+    trickSweeping = false;
+    // Not receiveFrame: that would sweep the same trick again, forever.
+    applyFrame(frame);
+    while (queuedFrames.length > 0 && !trickSweeping && dealPacketsShown === null) {
+      const next = queuedFrames.shift();
+      if (next !== undefined) {
+        receiveFrame(next);
+      }
+    }
+  };
+  trickSweeping = true;
+  if (sweepTrick(target, landed)) {
+    return true;
+  }
+  trickSweeping = false;
+  return false;
 }
 
 /** Reveal one clockwise packet at a human dealer's pace. */
