@@ -406,7 +406,7 @@ body.table-page {
 /* --- The dealer-selection spread (FR-11, FR-11a, FR-11c) ---------------- */
 
 /* The deck thrown across the middle of the felt, not dealt into ranks: this
-   is the area it is thrown over — the inner two thirds of the table — and
+   is the area it is thrown over — the inner three fifths of the table — and
    script places each card inside it (layout.ts's scatter).
 
    Under the scoreboard, which is opaque and keeps its corner: a card that
@@ -416,7 +416,7 @@ body.table-page {
    all while the spread is up, which is table.ts's business. */
 #spread {
   position: absolute;
-  inset: 16.7%;
+  inset: 20%;
   z-index: 3;
   /* Only the cards take a click. The area is most of the table, and would
      otherwise swallow everything aimed anywhere near it. */
