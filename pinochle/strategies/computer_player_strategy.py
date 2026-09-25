@@ -202,7 +202,12 @@ class ComputerPlayerStrategy:
         return max(counts, key=lambda s: counts[s])
 
     @staticmethod
-    def choose_cards_to_pass(hand_cards: list[Card], trump: Suit, count: int = 4) -> list[Card]:
+    def choose_cards_to_pass(
+        hand_cards: list[Card],
+        trump: Suit,
+        count: int = 4,
+        keep_trump: bool = False,
+    ) -> list[Card]:
         """Return ``count`` cards to pass: every trump first, then aces.
 
         FR-75b: trump takes priority over everything else — all of it goes,
@@ -219,6 +224,11 @@ class ComputerPlayerStrategy:
         choose from — an unusually meld-rich hand — the least valuable
         protected cards are released instead, because FR-42 requires exactly
         ``count`` cards and FR-73 forbids submitting an illegal one.
+
+        ``keep_trump`` is set for the auction winner passing back: trump
+        goes to the hand that will play it, never away from it, so none is
+        passed back.  Only a hand holding so much trump that fewer than
+        ``count`` other cards remain gives any up, lowest first.
         """
         protected_budget = ComputerPlayerStrategy._protected_counts(hand_cards)
 
@@ -243,11 +253,17 @@ class ComputerPlayerStrategy:
             (i for i in unprotected if hand_cards[i].rank != Rank.ACE),
             key=lambda i: hand_cards[i].rank.value,
         )
-        chosen = (trumps + aces + filler)[:count]
+        if keep_trump:
+            chosen = (aces + filler)[:count]
+        else:
+            chosen = (trumps + aces + filler)[:count]
 
         if len(chosen) < count:
             protected.sort(key=lambda i: hand_cards[i].rank.value)
             chosen = chosen + protected[:count - len(chosen)]
+
+        if len(chosen) < count:
+            chosen = chosen + trumps[::-1][:count - len(chosen)]
 
         return [hand_cards[i] for i in chosen]
 

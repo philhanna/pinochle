@@ -355,6 +355,54 @@ def test_choose_cards_to_pass_falls_back_to_low_filler_when_no_support_remains()
     assert set(passed) == {Card(Rank.NINE, Suit.HEARTS), Card(Rank.NINE, Suit.CLUBS)}
 
 
+def test_choose_cards_to_pass_back_keeps_every_trump():
+    """The auction winner passing back sends no trump, aces and low cards instead."""
+    hand = make_hand([
+        (Rank.ACE, Suit.SPADES), (Rank.TEN, Suit.SPADES), (Rank.NINE, Suit.SPADES),
+        (Rank.ACE, Suit.HEARTS), (Rank.NINE, Suit.CLUBS), (Rank.JACK, Suit.CLUBS),
+        (Rank.TEN, Suit.DIAMONDS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(
+        hand, trump=Suit.SPADES, count=4, keep_trump=True,
+    )
+    assert set(passed) == {
+        Card(Rank.ACE, Suit.HEARTS), Card(Rank.NINE, Suit.CLUBS),
+        Card(Rank.JACK, Suit.CLUBS), Card(Rank.TEN, Suit.DIAMONDS),
+    }
+
+
+def test_choose_cards_to_pass_back_breaks_meld_before_giving_up_trump():
+    """Protected non-trump meld is released ahead of any trump card."""
+    hand = make_hand([
+        (Rank.KING, Suit.HEARTS), (Rank.QUEEN, Suit.HEARTS),
+        (Rank.ACE, Suit.SPADES), (Rank.NINE, Suit.SPADES),
+        (Rank.TEN, Suit.CLUBS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(
+        hand, trump=Suit.SPADES, count=3, keep_trump=True,
+    )
+    assert set(passed) == {
+        Card(Rank.TEN, Suit.CLUBS), Card(Rank.KING, Suit.HEARTS),
+        Card(Rank.QUEEN, Suit.HEARTS),
+    }
+
+
+def test_choose_cards_to_pass_back_gives_up_lowest_trump_only_when_forced():
+    """A hand nearly all trump still passes exactly `count`, lowest trump first."""
+    hand = make_hand([
+        (Rank.ACE, Suit.SPADES), (Rank.TEN, Suit.SPADES),
+        (Rank.NINE, Suit.SPADES), (Rank.JACK, Suit.SPADES),
+        (Rank.NINE, Suit.HEARTS),
+    ])
+    passed = ComputerPlayerStrategy.choose_cards_to_pass(
+        hand, trump=Suit.SPADES, count=3, keep_trump=True,
+    )
+    assert set(passed) == {
+        Card(Rank.NINE, Suit.HEARTS), Card(Rank.NINE, Suit.SPADES),
+        Card(Rank.JACK, Suit.SPADES),
+    }
+
+
 # ---------------------------------------------------------------------------
 # choose_draw_position (FR-11b, NFR-7)
 # ---------------------------------------------------------------------------

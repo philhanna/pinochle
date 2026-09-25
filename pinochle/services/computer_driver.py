@@ -164,7 +164,11 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
             suit = self._strategy.choose_trump(view.hand)
             self._service.name_trump(game_id, seat, suit)
         elif phase == RoundPhase.PASSING:
-            cards = self._strategy.choose_cards_to_pass(view.hand, view.trump)
+            cards = self._strategy.choose_cards_to_pass(
+                view.hand,
+                view.trump,
+                keep_trump=view.player_id == view.bid_winner,
+            )
             self._service.pass_cards(game_id, seat, cards)
         elif phase == RoundPhase.MELDING:
             # FR-75/75a/75b govern only bidding and passing; a computer
@@ -180,6 +184,7 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
         return SeatView(
             player_id=player_id,
             partner_id=round_state.partner_of(player_id),
+            bid_winner=round_state.bid_winner,
             hand=list(round_state.hand(player_id)),
             bid_history=round_state.bid_history,
             current_high_bid=round_state.current_high_bid,

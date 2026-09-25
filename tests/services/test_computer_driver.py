@@ -4,7 +4,7 @@ import random
 from pinochle.adapters.composite_notification import CompositeNotification
 from pinochle.adapters.fake_scheduler import FakeScheduler
 from pinochle.adapters.in_memory_game_state import InMemoryGameState
-from pinochle.domain.game import GamePhase
+from pinochle.domain.game import CardsPassed, GamePhase, TrumpNamed
 from pinochle.domain.player import Player, PlayerType, Position
 from pinochle.domain.team import EW_TEAM_ID, NS_TEAM_ID, Team
 from pinochle.ports.notification_port import NotificationPort
@@ -115,6 +115,35 @@ def test_an_all_computer_game_runs_to_completion_at_zero_delay():
     scores = {team_id: team.cumulative_score for team_id, team in game.teams.items()}
     assert max(scores.values()) >= 2000
     assert game.round_number > 0
+
+
+def test_the_auction_winner_never_passes_trump_back():
+    """FR-75b: the partner's pass carries trump in; the pass back carries none out."""
+    service, driver, state, scheduler, game_id = make_table(
+        ALL_COMPUTER_PLAYERS, delay_seconds=0, seed=7,
+    )
+    recorder = _RecordingNotifier()
+    service._notifier.append(recorder)
+    service.start_game(game_id)
+    for _ in range(20000):
+        if state.load(game_id).phase == GamePhase.FINISHED:
+            break
+        scheduler.advance(0)
+
+    # Each pass is delivered to both partners, so the pass back is told
+    # apart by who sent it: the seat that received the first one.
+    trump = None
+    first_passer = None
+    passes_back = 0
+    for event in recorder.events:
+        if isinstance(event, TrumpNamed):
+            trump, first_passer = event.suit, None
+        elif isinstance(event, CardsPassed):
+            first_passer = first_passer or event.from_player_id
+            if event.from_player_id != first_passer:
+                passes_back += 1
+                assert all(card.suit != trump for card in event.cards)
+    assert passes_back > 0
 
 
 def test_a_seat_view_names_the_partner_across_the_table():

@@ -732,7 +732,8 @@ Two kinds of waiting stop the game:
   complete its own non-trump meld — marriages, pinochle, and any
   arounds — are kept back, and released lowest first only when fewer than four
   cards would otherwise be available. The auction winner passing back uses the
-  same selection.
+  same selection except that it passes no trump, unless it holds so much that
+  fewer than four other cards remain.
 - **FR-75c** A computer player's action shall be delayed by a configurable
   interval, defaulting to one second, so that human players can follow the
   play. The delay shall be reducible to zero so that all-computer games can be
