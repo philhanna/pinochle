@@ -2,7 +2,7 @@
 
 A four-player Pinochle game for the web: a Python server that owns every rule,
 and a browser client per player that renders the table from that player's seat.
-
+![Table](./pinochle.png)
 Rules: [Pinochle on Wikipedia](https://en.wikipedia.org/wiki/Pinochle).
 Repository: [github.com/philhanna/pinochle](https://github.com/philhanna/pinochle).
 
