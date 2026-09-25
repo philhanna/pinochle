@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.5.2] - 2026-09-25
+
+### Added
+- A screenshot of the table in the README
+
 ## [1.5.1] - 2026-09-24
 
 ### Added
@@ -521,6 +526,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
+[1.5.2]: https://github.com/philhanna/pinochle/compare/1.5.1..1.5.2
 [1.5.1]: https://github.com/philhanna/pinochle/compare/1.5.0..1.5.1
 [1.5.0]: https://github.com/philhanna/pinochle/compare/1.4.0..1.5.0
 [1.4.0]: https://github.com/philhanna/pinochle/compare/1.3.0..1.4.0
