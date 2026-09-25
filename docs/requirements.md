@@ -532,9 +532,9 @@ Two kinds of waiting stop the game:
   reviewable.
 - **UI-14c** Each team's tricks taken shall be shown face down as a stack, in
   the size of the cards drawn for the deal, with the cumulative card points of
-  those tricks on the back of the stack. North-South's stack lies to the left of
-  North's hand and East-West's below West's, wherever those seats fall on the
-  table. The last-trick
+  those tricks on the back of the stack. Whichever player is viewing, the
+  stack of the team seated at the top lies to the left of the top hand and the
+  other team's below the left hand. The last-trick
   bonus is not included: it appears only in the round summary of FR-66.
 - **UI-15** A completed trick shall remain visible for a fixed, configurable
   interval — 1.5 seconds by default — and shall then be cleared automatically

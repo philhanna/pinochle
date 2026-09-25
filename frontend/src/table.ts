@@ -62,13 +62,13 @@ export function renderTable(
 
 /**
  * Each team's won tricks, as a face-down stack with the card points taken so
- * far on its back (UI-14c). North-South's lies to the left of North's hand and
- * East-West's below West, wherever those seats fall on this client's table.
+ * far on its back (UI-14c). The top seat's team's lies to the left of the top
+ * hand and the other team's below the left hand, whoever is viewing.
  * Appended to the seat, so it must run after the seats are drawn.
  */
 function renderTakenStacks(state: GameState): void {
-  for (const [teamId, seatName, side] of TAKEN_ANCHORS) {
-    const element = takenSeatElement(state, seatName);
+  for (const [teamId, spot, side] of takenAnchors(state)) {
+    const element = byId(`seat-${spot}`);
     const tricks = state.tricksTaken[teamId] ?? 0;
     if (element === null || tricks === 0) {
       continue;
@@ -92,13 +92,21 @@ function renderTakenStacks(state: GameState): void {
   }
 }
 
-const TAKEN_ANCHORS = [["NS", "NORTH", "left"], ["EW", "WEST", "below"]] as const;
-
-/** The seat a team's stack is drawn beside, wherever it falls on this table. */
-function takenSeatElement(state: GameState, seatName: string): HTMLElement | null {
-  const seat = state.seats.find((s) => s.seat === seatName);
-  const spot = seat === undefined ? null : spotOf(state, seat.playerId);
-  return spot === null ? null : byId(`seat-${spot}`);
+/**
+ * Where each team's stack is drawn: beside the top seat, to its left, for that
+ * seat's team, and below the left seat for the other. The two are always
+ * opponents, so each team has exactly one.
+ */
+function takenAnchors(state: GameState): [string, Spot, "left" | "below"][] {
+  const spots = placement(state);
+  const anchors: [string, Spot, "left" | "below"][] = [];
+  for (const [spot, side] of [["top", "left"], ["left", "below"]] as const) {
+    const seat = spots[spot];
+    if (seat !== null) {
+      anchors.push([seat.teamId, spot, side]);
+    }
+  }
+  return anchors;
 }
 
 /**
@@ -107,8 +115,8 @@ function takenSeatElement(state: GameState, seatName: string): HTMLElement | nul
  */
 export function takenStackRect(state: GameState, winnerPlayerId: string): DOMRect | null {
   const teamId = state.seats.find((s) => s.playerId === winnerPlayerId)?.teamId;
-  const anchor = TAKEN_ANCHORS.find(([team]) => team === teamId);
-  const element = anchor === undefined ? null : takenSeatElement(state, anchor[1]);
+  const anchor = takenAnchors(state).find(([team]) => team === teamId);
+  const element = anchor === undefined ? null : byId(`seat-${anchor[1]}`);
   if (anchor === undefined || element === null) {
     return null;
   }

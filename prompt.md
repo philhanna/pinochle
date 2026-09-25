@@ -733,8 +733,9 @@ orders are exactly ♠♥♣♦, ♥♠♦♣, ♣♥♠♦, ♦♠♥♣. `face
   total, applied, score; bidding team highlighted); after `game_over`, the
   final result.
 - Trick stacks (UI-14c): each team's taken tricks as a face-down stack of
-  back-size cards with the team's card-point total on it; NS's stack to the
-  left of North's hand, EW's below West's, wherever those seats fall.
+  back-size cards with the team's card-point total on it; for any viewer, the
+  top seat's team's stack to the left of the top hand, the other team's below
+  the left hand.
 - Trick sweep (`sweep.ts`): on `trick_cleared`, the four cards gather into one
   pile (0–30 % of the flight), flip face down (to 55 %), then fly to the
   winning team's stack; 1000 ms total. Skipped under
