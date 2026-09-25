@@ -42,24 +42,27 @@ class Hand:
     def legal_plays(self, trick: Trick | None, trump: Suit) -> list[Card]:
         """Return the subset of cards that may legally be played into ``trick``.
 
-        Pinochle obliges a player not merely to follow suit but to try to win:
+        A player must follow suit, but is obliged to beat the best card so far
+        only when playing trump:
 
         - Leading, or no card played yet: any card.
-        - Holding the led suit: must follow it, and must beat the best card of
-          the led suit already played if able.
+        - Holding the led suit: must follow it.  If trump was led, must also
+          beat the best trump already played if able.
         - Void in the led suit but holding trump: must trump, and must overtrump
           the best trump already played if able.
         - Void in both: any card.
 
         The whole trick is needed rather than just the led suit, because the
-        obligation to beat depends on what has already been played.
+        obligation to overtrump depends on what has already been played.
         """
         if trick is None or not trick.cards:
             return list(self._cards)
 
         following = self.cards_of_suit(trick.lead_suit)
         if following:
-            return self._must_beat(following, trick.cards, trick.lead_suit)
+            if trick.lead_suit == trump:
+                return self._must_beat(following, trick.cards, trump)
+            return following
 
         trumps = self.cards_of_suit(trump)
         if trumps:

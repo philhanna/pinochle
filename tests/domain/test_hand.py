@@ -38,15 +38,15 @@ def test_must_follow_suit():
     assert all(c.suit == Suit.HEARTS for c in legal)
 
 
-def test_must_beat_the_led_suit_when_able():
-    """A player holding a higher card of the led suit must play one."""
+def test_need_not_beat_a_non_trump_led_suit():
+    """Following a non-trump lead, any card of the led suit will do."""
     hand = Hand([
         card(Rank.NINE, Suit.HEARTS),
         card(Rank.ACE, Suit.HEARTS),
         card(Rank.TEN, Suit.HEARTS),
     ])
     legal = hand.legal_plays(trick_of(card(Rank.KING, Suit.HEARTS)), TRUMP)
-    assert sorted(c.rank.value for c in legal) == [Rank.TEN.value, Rank.ACE.value]
+    assert len(legal) == 3
 
 
 def test_may_play_low_when_unable_to_beat():
@@ -96,8 +96,14 @@ def test_trump_led_requires_beating_the_highest_trump():
     ]
 
 
-def test_led_suit_beaten_by_trump_does_not_force_the_impossible():
-    """A led-suit card need only beat the led suit, never an intervening trump."""
+def test_may_undertrump_a_trump_lead_when_unable_to_beat():
+    """Holding no higher trump, any trump may follow a trump lead."""
+    hand = Hand([card(Rank.NINE, TRUMP), card(Rank.JACK, TRUMP)])
+    assert len(hand.legal_plays(trick_of(card(Rank.ACE, TRUMP)), TRUMP)) == 2
+
+
+def test_led_suit_beaten_by_trump_allows_any_led_suit_card():
+    """Following a plain suit that has been trumped, any led-suit card will do."""
     hand = Hand([card(Rank.NINE, Suit.HEARTS), card(Rank.ACE, Suit.HEARTS)])
     trick = trick_of(card(Rank.KING, Suit.HEARTS), card(Rank.NINE, TRUMP))
-    assert hand.legal_plays(trick, TRUMP) == [card(Rank.ACE, Suit.HEARTS)]
+    assert len(hand.legal_plays(trick, TRUMP)) == 2

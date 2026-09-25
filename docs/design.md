@@ -177,7 +177,7 @@ $PROJECT_ROOT/
 | Module | Contents |
 | --- | --- |
 | `cards/card.py`, `rank.py`, `suit.py`, `deck.py` | `Card` (equal by rank and suit, so the two copies are interchangeable — FR-19), `Rank` in Pinochle order (FR-18), `Suit`, and the 48-card `Deck` with a seedable `shuffle(rng)` (NFR-7). |
-| `hand.py` | `Hand`, including `legal_plays(trick, trump)`, the single implementation of FR-53's follow-and-beat, trump-and-overtrump rule. |
+| `hand.py` | `Hand`, including `legal_plays(trick, trump)`, the single implementation of FR-53's follow-suit, trump-and-overtrump rule. |
 | `trick.py` | `Trick` and `TrickPlay`; `winner()` implements FR-54 and, by keeping the first of two identical cards, FR-55. |
 | `bid.py` | `BiddingRound` and `BidEntry`, `MINIMUM_BID = 250`, `BID_INCREMENT = 10`. The auction ends when one bidder remains after a bid, or when all four have passed (FR-24–FR-31). |
 | `meld.py` | `MeldUnit`, `detect_meld(cards, trump)` (FR-47–FR-49), `total_meld`, and `cards_in_meld`, which returns the physical cards to lay face up, each once (FR-44). |

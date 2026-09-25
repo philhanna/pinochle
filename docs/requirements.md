@@ -368,9 +368,9 @@ Two kinds of waiting stop the game:
 - **FR-53** The following play restrictions shall be enforced in order, and the
   server shall reject any card that violates them:
   1. If the player holds one or more cards of the led suit, they shall play a
-     card of the led suit; and if they hold a card of the led suit that beats
-     the highest card of the led suit already played, they shall play such a
-     card.
+     card of the led suit. They need not beat the highest card already played,
+     unless trump was led: then, if they hold a trump that beats the highest
+     trump already played, they shall play such a trump.
   2. Otherwise, if the player holds one or more trumps, they shall play a
      trump; and if a trump has already been played and they hold a higher
      trump, they shall play a higher trump.

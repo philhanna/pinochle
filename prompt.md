@@ -228,8 +228,8 @@ any category needs).
 
 - Auction winner leads trick 1; play is clockwise; 12 tricks.
 - `Hand.legal_plays(trick, trump)` — the single implementation of:
-  1. If you hold the led suit you must follow; and if you hold a led-suit card
-     that beats the highest led-suit card played so far, you must play one.
+  1. If you hold the led suit you must follow, but need not beat — unless
+     trump was led, when you must beat the highest trump if you can.
   2. Else, if you hold trump you must trump; and if trump has been played and
      you can beat the highest trump, you must.
   3. Else any card.
