@@ -939,9 +939,8 @@ body.table-page {
 /* --- Tricks taken (UI-14c) ----------------------------------------------- */
 
 /* A face-down pile per team, each trick played to it adding a card to the
-   pile's edge, with the card points taken so far on the top one's back. The
-   opponents' lies to the left of the top seat, this seat's team's above the
-   bottom bar. */
+   pile's edge, with the card points taken so far on the top one's back. It is
+   a child of the seat it sits beside. */
 .taken {
   position: absolute;
   z-index: 5;
@@ -950,8 +949,10 @@ body.table-page {
   pointer-events: auto;
 }
 
-#taken-theirs { top: 14px; left: calc(50% - 360px); }
-#taken-ours { bottom: 200px; left: 18px; }
+/* Beside the fan of the seat it belongs to: left of it, level with its cards
+   and close, or below it, centred. */
+.taken-left { right: calc(100% + 8px); bottom: 0; }
+.taken-below { top: calc(100% + 12px); left: 50%; margin-left: calc(var(--card-w-small) / -2 - 9px); }
 
 .taken .card {
   position: absolute;

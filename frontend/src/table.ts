@@ -9,7 +9,7 @@ import { backUrl, faceUrl } from "./cards.js";
 import { DEAL_PACKET_MS, dealOrder } from "./deal.js";
 import { backsFan, droppedCard, isDragging, markResorted, renderHand } from "./hand.js";
 import {
-  isPaused, placement, playHasBegun, suitGlyph, trickCards, type Spot,
+  isPaused, placement, playHasBegun, spotOf, suitGlyph, trickCards, type Spot,
 } from "./layout.js";
 import { renderPanel, type PanelCallbacks } from "./panels.js";
 import { notice } from "./notice.js";
@@ -62,22 +62,18 @@ export function renderTable(
 
 /**
  * Each team's won tricks, as a face-down stack with the card points taken so
- * far on its back (UI-14c). The opponents' sits beside the top seat, this
- * seat's own team's beside the bottom one.
+ * far on its back (UI-14c). North-South's lies to the left of North's hand and
+ * East-West's below East, wherever those seats fall on this client's table.
+ * Appended to the seat, so it must run after the seats are drawn.
  */
 function renderTakenStacks(state: GameState): void {
-  const spots = placement(state);
-  const ours = spots.bottom?.teamId ?? null;
-  for (const [id, mine] of [["taken-ours", true], ["taken-theirs", false]] as const) {
-    const element = byId(id);
-    if (element === null) {
-      continue;
-    }
-    const team = state.teams.find((t) => (t.teamId === ours) === mine);
-    const tricks = team === undefined ? 0 : state.tricksTaken[team.teamId] ?? 0;
-    if (team === undefined || tricks === 0) {
-      element.hidden = true;
-      element.replaceChildren();
+  const anchors = [["NS", "NORTH", "left"], ["EW", "EAST", "below"]] as const;
+  for (const [teamId, seatName, side] of anchors) {
+    const seat = state.seats.find((s) => s.seat === seatName);
+    const spot = seat === undefined ? null : spotOf(state, seat.playerId);
+    const element = spot === null ? null : byId(`seat-${spot}`);
+    const tricks = state.tricksTaken[teamId] ?? 0;
+    if (element === null || tricks === 0) {
       continue;
     }
     // A few offset backs suggest a pile that grows, without one per trick.
@@ -90,12 +86,12 @@ function renderTakenStacks(state: GameState): void {
       image.style.setProperty("--layer", String(layer));
       return image;
     });
-    const points = text("taken-points", String(state.trickPoints[team.teamId] ?? 0));
-    element.style.setProperty("--layers", String(layers));
-    element.className = `taken team-${team.teamId.toLowerCase()}`;
-    element.title = `${team.name}: ${tricks} ${tricks === 1 ? "trick" : "tricks"}`;
-    element.replaceChildren(...backs, points);
-    element.hidden = false;
+    const pile = document.createElement("div");
+    pile.className = `taken taken-${side} team-${teamId.toLowerCase()}`;
+    pile.style.setProperty("--layers", String(layers));
+    pile.title = `${tricks} ${tricks === 1 ? "trick" : "tricks"}`;
+    pile.append(...backs, text("taken-points", String(state.trickPoints[teamId] ?? 0)));
+    element.append(pile);
   }
 }
 
