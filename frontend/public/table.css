@@ -323,6 +323,11 @@ body.table-page {
 .fan .card { margin-right: calc(var(--fan-strip) - var(--card-w-back)); }
 .fan .card:last-child { margin-right: 0; }
 
+/* An empty fan keeps the room of a single card. Otherwise the seat shrinks to
+   its label when the last card is played, the seats centred on the side jump,
+   and whatever is anchored to the seat -- the trick piles -- goes with them. */
+.fan:empty { width: var(--card-w-back); height: var(--card-h-back); }
+
 .fan.vertical { --fan-strip: 14px; flex-direction: column; }
 .fan.vertical .card { margin: 0 0 calc(var(--fan-strip) - var(--card-h-back)) 0; }
 .fan.vertical .card:last-child { margin-bottom: 0; }
