@@ -3,6 +3,15 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.5.3] - 2026-09-25
+
+### Changed
+- Following a plain suit no longer obliges a player to beat the highest
+  card of that suit; the must-beat rule applies only when playing trump
+- Trick piles are placed by screen position, not compass seat: the top
+  seat's team's pile sits left of the top hand and the other team's below
+  the left hand, whichever player is viewing
+
 ## [1.5.2] - 2026-09-25
 
 ### Added
@@ -526,6 +535,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
+[1.5.3]: https://github.com/philhanna/pinochle/compare/1.5.2..1.5.3
 [1.5.2]: https://github.com/philhanna/pinochle/compare/1.5.1..1.5.2
 [1.5.1]: https://github.com/philhanna/pinochle/compare/1.5.0..1.5.1
 [1.5.0]: https://github.com/philhanna/pinochle/compare/1.4.0..1.5.0
