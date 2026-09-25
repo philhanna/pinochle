@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [Unreleased]
+
+### Changed
+- README: "Running it" now covers cloning the repository and creating and
+  activating a `.venv` before installing, with steps for Linux, macOS, and
+  Windows, and notes that Node.js, `make`, and `bash` are needed
+
 ## [1.5.3] - 2026-09-25
 
 ### Changed
@@ -535,6 +542,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.5.3..HEAD
 [1.5.3]: https://github.com/philhanna/pinochle/compare/1.5.2..1.5.3
 [1.5.2]: https://github.com/philhanna/pinochle/compare/1.5.1..1.5.2
 [1.5.1]: https://github.com/philhanna/pinochle/compare/1.5.0..1.5.1
