@@ -558,7 +558,7 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/1.6.0..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.6.1..HEAD
 [1.6.1]: https://github.com/philhanna/pinochle/compare/1.6.0..1.6.1
 [1.6.0]: https://github.com/philhanna/pinochle/compare/1.5.4..1.6.0
 [1.5.4]: https://github.com/philhanna/pinochle/compare/1.5.3..1.5.4
