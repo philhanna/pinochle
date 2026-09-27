@@ -3,7 +3,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  bidCall, bidHistory, contractText, gameOverText, meldIsExposed, meldLines, scoreboard,
+  bidCall, bidHistory, contractText, gameOverText, meldIsExposed, meldLines, neededText, scoreboard,
   seatLabel, statusLine, summaryHeadline, summaryRows, trumpText, winningBidText,
 } from "../dist/view.js";
 import { notice } from "../dist/notice.js";
@@ -78,6 +78,32 @@ test("the contract names its holder once trump is named", () => {
   ].reduce(applyEvent, seated());
   assert.equal(contractText(state), "260 — East");
   assert.equal(trumpText(state), "♥ Hearts");
+});
+
+test("the plaque shows what the holder's side needs once the meld is shown", () => {
+  const named = [
+    frame("bid_placed", { player_id: "p-east", amount: 260, current_high: 260 }),
+    frame("trump_named", { suit: "HEARTS" }),
+  ].reduce(applyEvent, seated());
+  assert.equal(neededText(named), "", "nothing before the meld is exposed");
+
+  const melded = [
+    frame("meld_exposed", { player_id: "p-north", units: [], total: 20 }),
+    frame("meld_exposed", { player_id: "p-east", units: [], total: 40 }),
+    frame("meld_exposed", { player_id: "p-south", units: [], total: 60 }),
+    frame("meld_exposed", { player_id: "p-west", units: [], total: 30 }),
+  ].reduce(applyEvent, named);
+  assert.equal(neededText(melded), "Needed 190");
+});
+
+test("meld covering the contract leaves nothing needed", () => {
+  const state = [
+    frame("bid_placed", { player_id: "p-south", amount: 250, current_high: 250 }),
+    frame("trump_named", { suit: "SPADES" }),
+    frame("meld_exposed", { player_id: "p-south", units: [], total: 200 }),
+    frame("meld_exposed", { player_id: "p-north", units: [], total: 80 }),
+  ].reduce(applyEvent, seated());
+  assert.equal(neededText(state), "Needed 0");
 });
 
 test("an offered contract is shown as offered until it is accepted (FR-32)", () => {

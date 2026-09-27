@@ -566,6 +566,7 @@ body.table-page {
 }
 
 #contract-indicator { left: 18px; color: #111; }
+#contract-indicator .needed { display: block; font-size: 1.1rem; }
 #trump-indicator { right: 18px; }
 #trump-indicator.red { color: #c5222a; }
 #trump-indicator.black { color: #111; }

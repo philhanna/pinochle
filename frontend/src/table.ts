@@ -17,7 +17,7 @@ import { isMovingCard, renderSpread } from "./spread.js";
 import type { GameState } from "./state.js";
 import type { ConnectionState } from "./stream.js";
 import {
-  bidCall, bidHistory, gameOverText, meldIsExposed, meldLines, scoreboard, seatLabel,
+  bidCall, bidHistory, gameOverText, meldIsExposed, meldLines, neededText, scoreboard, seatLabel,
   statusLine, summaryHeadline, summaryRows, trumpText, winningBidText,
 } from "./view.js";
 
@@ -133,14 +133,21 @@ export function takenStackRect(state: GameState, winnerPlayerId: string): DOMRec
   return rect;
 }
 
-/** Keep the auction winner and contract amount visible in the lower-left. */
+/**
+ * Keep the auction winner and contract amount visible in the lower-left, with
+ * what is still needed in cards beneath it once the meld is shown.
+ */
 function renderContract(state: GameState): void {
   const element = byId("contract-indicator");
   if (element === null) {
     return;
   }
   const contract = winningBidText(state);
-  element.textContent = contract;
+  const needed = neededText(state);
+  element.replaceChildren(contract);
+  if (needed !== "") {
+    element.append(text("needed", needed));
+  }
   element.hidden = contract === "";
 }
 

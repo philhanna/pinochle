@@ -65,6 +65,21 @@ export function winningBidText(state: GameState): string {
   return winner === null ? "" : `${nameOf(state, winner.playerId)} — ${winner.amount}`;
 }
 
+/**
+ * What the contract holder's side still needs in cards once its meld is on
+ * the table, for the line under the lower-left plaque; empty before then.
+ * Every seat's meld is exposed together, so the holder's own entry is enough.
+ */
+export function neededText(state: GameState): string {
+  const contract = state.contract;
+  if (contract === null || state.meld[contract.playerId] === undefined) {
+    return "";
+  }
+  const teamId = state.seats.find((seat) => seat.playerId === contract.playerId)?.teamId;
+  const meld = teamId === undefined ? 0 : state.teamMeld[teamId] ?? 0;
+  return `Needed ${Math.max(0, contract.amount - meld)}`;
+}
+
 /** The trump suit, with its symbol (UI-14). */
 export function trumpText(state: GameState): string {
   if (state.trump === null) {
