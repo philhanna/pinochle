@@ -3,6 +3,11 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.6.1] - 2026-09-27
+
+### Changed
+- The contract plaque now words the points still needed as "Needs N"
+
 ## [1.6.0] - 2026-09-27
 
 ### Added
