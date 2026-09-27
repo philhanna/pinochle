@@ -93,7 +93,7 @@ test("the plaque shows what the holder's side needs once the meld is shown", () 
     frame("meld_exposed", { player_id: "p-south", units: [], total: 60 }),
     frame("meld_exposed", { player_id: "p-west", units: [], total: 30 }),
   ].reduce(applyEvent, named);
-  assert.equal(neededText(melded), "Needed 190");
+  assert.equal(neededText(melded), "Needs 190");
 });
 
 test("meld covering the contract leaves nothing needed", () => {
@@ -103,7 +103,7 @@ test("meld covering the contract leaves nothing needed", () => {
     frame("meld_exposed", { player_id: "p-south", units: [], total: 200 }),
     frame("meld_exposed", { player_id: "p-north", units: [], total: 80 }),
   ].reduce(applyEvent, seated());
-  assert.equal(neededText(state), "Needed 0");
+  assert.equal(neededText(state), "Needs 0");
 });
 
 test("an offered contract is shown as offered until it is accepted (FR-32)", () => {

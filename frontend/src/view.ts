@@ -77,7 +77,7 @@ export function neededText(state: GameState): string {
   }
   const teamId = state.seats.find((seat) => seat.playerId === contract.playerId)?.teamId;
   const meld = teamId === undefined ? 0 : state.teamMeld[teamId] ?? 0;
-  return `Needed ${Math.max(0, contract.amount - meld)}`;
+  return `Needs ${Math.max(0, contract.amount - meld)}`;
 }
 
 /** The trump suit, with its symbol (UI-14). */
