@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.6.0] - 2026-09-27
+
+### Added
+- Once the meld is shown, the contract plaque in the lower-left shows what
+  the contract holder's side still needs in cards to make the bid
+
 ## [1.5.4] - 2026-09-27
 
 ### Added
@@ -547,7 +553,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/1.5.4..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.6.0..HEAD
+[1.6.0]: https://github.com/philhanna/pinochle/compare/1.5.4..1.6.0
 [1.5.4]: https://github.com/philhanna/pinochle/compare/1.5.3..1.5.4
 [1.5.3]: https://github.com/philhanna/pinochle/compare/1.5.2..1.5.3
 [1.5.2]: https://github.com/philhanna/pinochle/compare/1.5.1..1.5.2
