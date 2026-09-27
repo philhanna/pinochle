@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 
+### Added
+- `docs/strategy.md`: a high-level design for an AlphaZero-like self-play
+  training system that learns the computer player's bidding, trump,
+  passing, and play decisions
+
 ### Changed
 - README: "Running it" now covers cloning the repository and creating and
   activating a `.venv` before installing, with steps for Linux, macOS, and
