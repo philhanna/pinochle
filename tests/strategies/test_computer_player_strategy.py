@@ -34,6 +34,38 @@ def test_choose_play_picks_highest():
     assert ComputerPlayerStrategy.choose_play(legal) == Card(Rank.ACE, Suit.HEARTS)
 
 
+def test_choose_play_plays_highest_when_partner_is_winning():
+    """FR-75e: onto a trick the partner is taking, play the highest card."""
+    legal = make_hand([
+        (Rank.NINE, Suit.HEARTS),
+        (Rank.ACE, Suit.HEARTS),
+        (Rank.KING, Suit.HEARTS),
+    ])
+    card = ComputerPlayerStrategy.choose_play(legal, trick_winner="S", partner_id="S")
+    assert card == Card(Rank.ACE, Suit.HEARTS)
+
+
+def test_choose_play_plays_lowest_when_an_opponent_is_winning():
+    """FR-75e: onto a trick an opponent is taking, play the lowest card."""
+    legal = make_hand([
+        (Rank.KING, Suit.HEARTS),
+        (Rank.NINE, Suit.HEARTS),
+        (Rank.ACE, Suit.HEARTS),
+    ])
+    card = ComputerPlayerStrategy.choose_play(legal, trick_winner="E", partner_id="S")
+    assert card == Card(Rank.NINE, Suit.HEARTS)
+
+
+def test_choose_play_leads_the_highest():
+    """With nobody winning yet — on lead — play the highest card."""
+    legal = make_hand([
+        (Rank.NINE, Suit.CLUBS),
+        (Rank.TEN, Suit.DIAMONDS),
+    ])
+    card = ComputerPlayerStrategy.choose_play(legal, trick_winner=None, partner_id="S")
+    assert card == Card(Rank.TEN, Suit.DIAMONDS)
+
+
 # ---------------------------------------------------------------------------
 # choose_bid (FR-75a)
 # ---------------------------------------------------------------------------

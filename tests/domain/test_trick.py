@@ -59,6 +59,30 @@ def test_winner_raises_if_incomplete():
         t.winner()
 
 
+def test_current_winner_is_none_before_the_lead():
+    """Nobody is winning a trick no card has been played into."""
+    assert Trick(lead_player_id="N", trump=TRUMP).current_winner is None
+
+
+def test_current_winner_tracks_a_partial_trick():
+    """The seat ahead so far is known before all four cards are down."""
+    t = Trick(lead_player_id="N", trump=TRUMP)
+    t.play("N", Card(Rank.KING, Suit.HEARTS))
+    assert t.current_winner == "N"
+    t.play("E", Card(Rank.ACE, Suit.HEARTS))
+    assert t.current_winner == "E"
+    t.play("S", Card(Rank.NINE, Suit.SPADES))  # trump
+    assert t.current_winner == "S"
+
+
+def test_current_winner_keeps_the_first_of_equal_cards():
+    """A duplicate of the winning card does not take the lead from it."""
+    t = Trick(lead_player_id="N", trump=TRUMP)
+    t.play("N", Card(Rank.ACE, Suit.HEARTS))
+    t.play("E", Card(Rank.ACE, Suit.HEARTS))
+    assert t.current_winner == "N"
+
+
 def test_play_raises_after_four_cards():
     """A fifth card should not be accepted into a completed trick."""
     t = make_trick([

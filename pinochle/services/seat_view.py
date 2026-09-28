@@ -27,6 +27,9 @@ class SeatView:
         current_high_bid: The high bid standing, or 0 if none has been made.
         trump: The trump suit, once named; ``None`` before then.
         cards_on_table: The cards played into the trick in progress so far.
+        trick_winner: The seat whose card is winning the trick in progress;
+            ``None`` before the lead.  Who played which card is public at a
+            real table (FR-57).
         exposed_meld: Every player's recorded meld, once exposed after the
             pass — meld is public at a real table, so this is not limited
             to the seat's own.
@@ -41,5 +44,6 @@ class SeatView:
     current_high_bid: int
     trump: Suit | None
     cards_on_table: list[Card]
+    trick_winner: str | None
     exposed_meld: dict[str, list[MeldUnit]]
     legal_plays: list[Card]

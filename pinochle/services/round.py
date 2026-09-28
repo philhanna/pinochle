@@ -391,6 +391,11 @@ class Round:
         return self._current_trick.plays if self._current_trick else []
 
     @property
+    def current_trick_winner(self) -> str | None:
+        """Return the seat winning the trick in progress, or ``None`` before the lead."""
+        return self._current_trick.current_winner if self._current_trick else None
+
+    @property
     def tossed_in(self) -> bool:
         """Return whether the auction winner conceded instead of playing."""
         return self._tossed_in

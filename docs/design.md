@@ -897,12 +897,12 @@ schedule(seat):
 ### 7.3 Seat views keep FR-74 honest
 
 `_act` builds a `SeatView` — player id, partner id, own hand, bid history,
-current high bid, trump, cards in the current trick, every exposed meld, and
-legal plays — and the strategy receives only its fields, never the `Game`. It
-cannot read another hand because nothing it is given carries one. The driver
-then calls the same `GameService` method a human's POST reaches, so FR-72 and
-FR-73 are enforced by the same validation, and the resulting events are
-indistinguishable (RT-6).
+current high bid, trump, cards in the current trick and who is winning it,
+every exposed meld, and legal plays — and the strategy receives only its
+fields, never the `Game`. It cannot read another hand because nothing it is
+given carries one. The driver then calls the same `GameService` method a
+human's POST reaches, so FR-72 and FR-73 are enforced by the same validation,
+and the resulting events are indistinguishable (RT-6).
 
 ### 7.4 The shipped strategy
 
@@ -917,7 +917,7 @@ indistinguishable (RT-6).
 | Trump | the longest suit | FR-75e |
 | Pass | all trump, highest first; then unprotected aces; then the lowest unprotected cards; protected meld released lowest first only if needed. Used for both directions of the exchange | FR-75b |
 | Meld | always begin play; never toss in | FR-75e |
-| Play | the highest-ranked legal card | FR-75e |
+| Play | the highest-ranked legal card when leading or when the partner is winning the trick; the lowest when an opponent is winning it | FR-75e |
 
 The strategy is a constructor argument to the driver, which is what FR-75's
 replaceability amounts to.

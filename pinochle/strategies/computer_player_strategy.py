@@ -47,7 +47,8 @@ class ComputerPlayerStrategy:
     - Trump: pick the suit with the most cards in hand.
     - Passing: give the partner every trump first, then aces, while keeping
       whatever completes the passer's own meld among the rest (FR-75b).
-    - Playing: always play the highest legal card.
+    - Playing: the highest legal card when leading or when the partner is
+      winning the trick; the lowest when an opponent is winning it.
     """
 
     def __init__(self, rng: random.Random | None = None):
@@ -298,6 +299,18 @@ class ComputerPlayerStrategy:
         return protected
 
     @staticmethod
-    def choose_play(legal_cards: list[Card]) -> Card:
-        """Return the highest-ranked card among the legal options."""
-        return max(legal_cards, key=lambda c: c.rank.value)
+    def choose_play(
+        legal_cards: list[Card],
+        trick_winner: str | None = None,
+        partner_id: str | None = None,
+    ) -> Card:
+        """Return the highest legal card, or the lowest if an opponent is winning.
+
+        FR-75e: with the partner winning the trick, the highest card adds
+        the most to a trick the partnership is taking; with an opponent
+        winning it, the lowest gives the least away.  Leading — nobody
+        winning yet — plays the highest.
+        """
+        opponent_winning = trick_winner is not None and trick_winner != partner_id
+        pick = min if opponent_winning else max
+        return pick(legal_cards, key=lambda c: c.rank.value)

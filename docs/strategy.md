@@ -16,11 +16,11 @@ passing and play
 | `choose_bid` | 180 + best suit's meld and trick estimate, one increment at a time; yield to partner | FR-75a, FR-75d |
 | `choose_trump` | the longest suit | FR-75e |
 | `choose_cards_to_pass` | all trump, then aces, then low cards; protect own meld | FR-75b |
-| `choose_play` | the highest-ranked legal card | FR-75e |
+| `choose_play` | the highest legal card if partner is winning or leading, else the lowest | FR-75e |
 
 These rules are placeholders: `_PARTNER_CONTRIBUTION` is commented as "to be
-tuned by playing games", and "play the highest card" throws points away on
-every trick it cannot win.
+tuned by playing games", and "high to partner, low to opponent" knows nothing
+of counters, cutting with trump, or whether a higher card could win the trick.
 
 This document describes a training system, modelled on AlphaZero, that learns
 all four decisions by self-play. The system produces a trained network, a
@@ -359,10 +359,10 @@ meld, if that scores better.
 - **Actions:** 24 card types, masked to `Round.legal_plays` (FR-53).
 - **Search:** this is where PIMC is strongest. After meld is exposed, much of
   each hand is known, and after a few tricks the sampler is nearly exact.
-- The network learns what "highest card" misses: playing low when partner
-  is winning the trick, "smearing" counters (A, 10, K, Q) onto a partner's
-  winning trick, saving trump to cut, and playing for the last-trick 10
-  (FR-60).
+- The network learns what the fixed rule misses: "smearing" counters (A, 10,
+  K, Q) rather than simply the highest card onto a partner's winning trick,
+  playing high enough to take a trick an opponent is winning, saving trump to
+  cut, and playing for the last-trick 10 (FR-60).
 
 ### 8.5 Free extensions
 

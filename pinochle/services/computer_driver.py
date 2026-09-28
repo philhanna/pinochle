@@ -175,7 +175,9 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
             # always plays the contract out rather than tossing it in.
             self._service.begin_play(game_id, seat)
         elif phase == RoundPhase.PLAYING:
-            card = self._strategy.choose_play(view.legal_plays)
+            card = self._strategy.choose_play(
+                view.legal_plays, view.trick_winner, view.partner_id
+            )
             self._service.play_card(game_id, seat, card)
 
     @staticmethod
@@ -190,6 +192,7 @@ class ComputerDriver(PlayerActionPort, NotificationPort):
             current_high_bid=round_state.current_high_bid,
             trump=round_state.trump,
             cards_on_table=round_state.current_trick_cards,
+            trick_winner=round_state.current_trick_winner,
             exposed_meld=round_state.all_meld(),
             legal_plays=(
                 round_state.legal_plays(player_id)

@@ -73,6 +73,18 @@ class Trick:
         """
         if not self.is_complete:
             raise ValueError("Trick is not yet complete.")
+        return self.current_winner
+
+    @property
+    def current_winner(self) -> str | None:
+        """Return the player_id whose card is winning the trick so far.
+
+        The same rules as ``winner()``, applied to however many cards have
+        been played; ``None`` before the lead.  Among equal cards the first
+        played stays ahead.
+        """
+        if not self._plays:
+            return None
 
         lead = self.lead_suit
         winning_play = self._plays[0]

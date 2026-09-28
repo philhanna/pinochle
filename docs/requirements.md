@@ -743,9 +743,10 @@ Two kinds of waiting stop the game:
   who has bid fewer times passes — unless it holds a whole run, in which case
   it may bid once more to take the contract and name that suit.
 - **FR-75e** A computer player shall name as trump the suit in which it holds
-  the most cards; shall play the highest-ranked of its legal cards; shall
-  always accept a lone contract; and shall always play a contract out rather
-  than toss it in.
+  the most cards; when playing to a trick, shall play the highest-ranked of
+  its legal cards if its partner is winning the trick (or it is leading), and
+  the lowest-ranked if an opponent is winning it; shall always accept a lone
+  contract; and shall always play a contract out rather than toss it in.
 
 ---
 
