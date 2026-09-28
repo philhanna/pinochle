@@ -3,6 +3,13 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning].
 The format is based on [Keep a Changelog].
 
+## [1.6.2] - 2026-09-27
+
+### Changed
+- A computer player now plays its highest legal card when its partner is
+  winning the trick (or it is leading) and its lowest when an opponent is
+  winning it
+
 ## [1.6.1] - 2026-09-27
 
 ### Changed
@@ -558,7 +565,8 @@ Start of Go version
 
 [Semantic Versioning]: http://semver.org
 [Keep a Changelog]: http://keepachangelog.com
-[Unreleased]: https://github.com/philhanna/pinochle/compare/1.6.1..HEAD
+[Unreleased]: https://github.com/philhanna/pinochle/compare/1.6.2..HEAD
+[1.6.2]: https://github.com/philhanna/pinochle/compare/1.6.1..1.6.2
 [1.6.1]: https://github.com/philhanna/pinochle/compare/1.6.0..1.6.1
 [1.6.0]: https://github.com/philhanna/pinochle/compare/1.5.4..1.6.0
 [1.5.4]: https://github.com/philhanna/pinochle/compare/1.5.3..1.5.4
